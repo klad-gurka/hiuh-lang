@@ -98,8 +98,9 @@ Hejdå
 ```
 Grej <namn>(<parametrar>)
     <satser>
-Hejdå
 ```
+
+(Hejdå är valfritt – block avslutas automatiskt)
 
 ### Jämförelseoperatorer
 

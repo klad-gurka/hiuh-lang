@@ -11,10 +11,10 @@
 
 ## Designprinciper
 
-### Inga citattecken, inget plus för strängar!
+### Inga citattecken, inga hakparenteser, inget plus för strängar!
 **Citattecken (`"`, `'`) är JÄVULENS PÅFUND!** Kräver Shift på mobil.
-
-Istället för `text + text` → `text sammanfogat med text`
+**Hakparenteser (`[]`) är JÄVULENS PÅFUND!** Svårt på mobil.
+**Kommatecken (,) och punkt (.) är däremot helt okej!**
 
 Istället för `Skriv "hej"` → `Skriv hej` (allt efter kommandot är texten!)
 

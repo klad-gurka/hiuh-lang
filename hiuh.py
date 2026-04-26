@@ -96,7 +96,7 @@ def tokenize(src):
         
         # ARITMETIK: x plus y, x minus y, x gånger y, x delat y
         elif len(words) >= 3:
-            if 'plus' in words:
+            if 'pluss' in words:
                 idx = words.index('plus')
                 left = ' '.join(words[:idx])
                 right = ' '.join(words[idx+1:])

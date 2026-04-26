@@ -11,14 +11,10 @@
 
 ## Designprinciper
 
-### Inga citattecken, inga hakparenteser, inget plus, inget minus!
-**Citattecken (`"`, `'`) är JÄVULENS PÅFUND!** Förbjudna.
-**Hakparenteser (`[]`) är JÄVULENS PÅFUND!** Förbjudna.
-**Plus (`+`) är JÄVULENS PÅFUND!** Förbjudet för strängar.
+### Inga citattecken, inget plus för strängar!
+**Citattecken (`"`, `'`) är JÄVULENS PÅFUND!** Kräver Shift på mobil.
 
 Istället för `text + text` → `text sammanfogat med text`
-Istället för `lista[i]` → `element i ur lista`
-Istället för `text[i]` → `tecken i ur text`
 
 Istället för `Skriv "hej"` → `Skriv hej` (allt efter kommandot är texten!)
 

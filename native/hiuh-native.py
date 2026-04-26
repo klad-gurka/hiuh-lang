@@ -306,9 +306,14 @@ def compile_to_asm(stmts):
             loop_start = new_label()
             loop_end = new_label()
             
-            code.append(f"    mov ${start}, {reg}  # for {var}")
+            # Resolve start and end values
+            start_r = resolve(start)
+            end_r = resolve(end)
+            
+            code.append(f"    mov {start_r}, {reg}  # for {var}")
             code.append(f"{loop_start}:")
-            code.append(f"    cmp ${end}, {reg}")
+            code.append(f"    mov {end_r}, %rax")
+            code.append(f"    cmp %rax, {reg}")
             code.append(f"    jge {loop_end}")
             
             for s in body:

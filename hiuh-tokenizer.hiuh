@@ -1,10 +1,10 @@
-# Minimal tokenizer
+# Minimal tokenizer - bygger ord från input
 Läs
-. Läs in input
-
-För i från 0 till 10
+. Loopa igenom alla tecken
+Sätt max_tecken till 64
+För i från 0 till max_tecken
     tecken i ur källa
-    . Tecknet är nu i r15
+    . r15 = tecken på position i
+    . TODO: bygg ord genom att jämföra med mellanslag
 Hejdå
-
 Skriv Klart

@@ -75,7 +75,7 @@ def parse(tokens):
                 body.append(tokens[i])
                 i += 1
             if i < len(tokens) and tokens[i][0] == 'END':
-                i += 1  # skip END
+                i += 1
             stmts.append(('FOR', tok[1], tok[2], tok[3], body))
         elif tok[0] == 'EXIT':
             stmts.append(tok)
@@ -91,8 +91,6 @@ def compile_to_asm(stmts):
     data = []
     strings = []
     
-    # Simple register allocation: r12, r13, r14, r15 for user vars
-    # rax, rcx, rdx, rsi, rdi, rbp used for temp
     var_reg = {}
     next_reg = 0
     reg_names = ['%r12', '%r13', '%r14', '%r15']
@@ -110,14 +108,11 @@ def compile_to_asm(stmts):
         return f'L{labels[0]}'
     
     def resolve(v):
-        """Get register or immediate for value"""
         try:
             return f'${int(v)}'
         except:
-            # It's a variable - get its register directly
             if v in var_reg:
                 return var_reg[v]
-            # Unknown variable, use r12
             return '%r12'
     
     def compile_stmt(stmt):
@@ -134,16 +129,13 @@ def compile_to_asm(stmts):
             code.append(f"    syscall")
         
         elif op == 'SKRIV_VAR':
-            # For now, just print a newline
-            strings.append(".")
-            idx = len(strings) - 1
-            code.append(f"    lea msg_{idx}(%rip), %rsi")
-            code.append(f"    mov $1, %edx")
-            code.append(f"    mov $1, %edi")
-            code.append(f"    mov $1, %eax")
-            code.append(f"    syscall")
-            code.append(f"    mov $5, %edx  # placeholder len")
-            code.append(f"    mov $1, %edi")
+            reg = var_reg.get(stmt[1], '%r12')
+            code.append(f"    mov {reg}, %r12  # print {stmt[1]}")
+            # Store value in buffer and print
+            code.append(f"    lea num_buf(%rip), %rsi")
+            code.append(f"    mov %r12b, (%rsi)")
+            code.append(f"    mov $1, %rdx")
+            code.append(f"    mov $1, %rdi")
             code.append(f"    mov $1, %eax")
             code.append(f"    syscall")
         
@@ -161,7 +153,6 @@ def compile_to_asm(stmts):
             reg = alloc_var(var)
             r1 = resolve(left)
             r2 = resolve(right)
-            # Use rcx as temp, then store to destination
             code.append(f"    mov {r1}, %rcx  # {var} = {left} + {right}")
             code.append(f"    add {r2}, %rcx")
             code.append(f"    mov %rcx, {reg}")
@@ -176,13 +167,11 @@ def compile_to_asm(stmts):
             loop_start = new_label()
             loop_end = new_label()
             
-            # Initialize
             code.append(f"    mov ${start}, {reg}  # for {var}")
             code.append(f"{loop_start}:")
             code.append(f"    cmp ${end}, {reg}")
             code.append(f"    jge {loop_end}")
             
-            # Loop body
             for s in body:
                 compile_stmt(s)
             
@@ -192,26 +181,26 @@ def compile_to_asm(stmts):
         
         elif op == 'EXIT':
             code.append(f"    mov ${stmt[1]}, %edi")
-            code.append(f"    mov $60, %eax")
+            code.append(f"    mov $60, %rax")
             code.append(f"    syscall")
     
-    # Compile all
+    has_exit = False
     for stmt in stmts:
         compile_stmt(stmt)
+        if stmt[0] == 'EXIT':
+            has_exit = True
     
-    # Default exit if not present
-    if not any(s[0] == 'EXIT' for s in stmts):
+    if not has_exit:
         code.append(f"    mov $0, %edi")
-        code.append(f"    mov $60, %eax")
+        code.append(f"    mov $60, %rax")
         code.append(f"    syscall")
     
-    # Data section
     data.append(".data")
     for i, s in enumerate(strings):
         escaped = s.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
         data.append(f"msg_{i}: .ascii \"{escaped}\\n\\0\"")
+    data.append("num_buf: .byte 0")
     
-    # Output
     out = []
     out.append(".text")
     out.append(".globl _start")

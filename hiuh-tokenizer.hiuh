@@ -1,11 +1,14 @@
-# Minimal tokenizer i HIUH
-# Nästa steg: implementera TECKEN UR för att indexera strängar
+# Minimal tokenizer - läs och hitta ord
+# För varje tecken: om det är 32 (mellanslag) eller 10 (newline), avsluta ordet
 
-Sätt källa till "Sätt"
-Sätt tokens till lista
+Läs
 
-# För nu, hardcoda output för test
-# Real tokenizer behöver: tecken i ur text, jämförelser, sammanfogat
+# Nu finns input i input_buf
+# Loopa igenom och skriv ut tecken
 
-Skriv Nu kör vi tokenizer
-Skriv källa
+Sätt x till 0
+Sätt tecken till 0
+
+# För test: skriv ut x (antal tecken)
+Skriv Test:
+Skriv värdet av x

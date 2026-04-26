@@ -98,11 +98,12 @@ Hejdå
 ```
 Grej <namn> <param1> <param2>
     <satser>
+Hejdå
 
 Anropa <namn> med <arg1> <arg2>
 ```
 
-(Hejdå är valfritt – block avslutas automatiskt)
+(Hejdå är **obligatoriskt** för `Grej`-block)
 
 ### Jämförelseoperatorer
 

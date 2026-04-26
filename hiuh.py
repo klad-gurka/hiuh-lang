@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-HIUH Compiler - Med variabler och fler features för själv-hostning
+HIUH Compiler - Full feature set including arithmetic and comparisons
+No special characters: no [], no +, no quotes!
 """
 
 import sys
@@ -93,6 +94,53 @@ def tokenize(src):
             rest = ' '.join(words[1:])
             tokens.append(('FILE_WRITE', rest, lineno))
         
+        # ARITMETIK: x plus y, x minus y, x gånger y, x delat y
+        elif len(words) >= 3:
+            if 'plus' in words:
+                idx = words.index('plus')
+                left = ' '.join(words[:idx])
+                right = ' '.join(words[idx+1:])
+                tokens.append(('OP_PLUS', f'{left}:{right}', lineno))
+            elif 'minus' in words:
+                idx = words.index('minus')
+                left = ' '.join(words[:idx])
+                right = ' '.join(words[idx+1:])
+                tokens.append(('OP_MINUS', f'{left}:{right}', lineno))
+            elif 'gånger' in words:
+                idx = words.index('gånger')
+                left = ' '.join(words[:idx])
+                right = ' '.join(words[idx+1:])
+                tokens.append(('OP_MUL', f'{left}:{right}', lineno))
+            elif 'delat' in words:
+                idx = words.index('delat')
+                left = ' '.join(words[:idx])
+                right = ' '.join(words[idx+1:])
+                tokens.append(('OP_DIV', f'{left}:{right}', lineno))
+            else:
+                tokens.append(('EXPR', stripped, lineno))
+        
+        # JÄMFÖRELSER: x är y, x är större än y, x är mindre än y
+        elif 'är' in words and 'större' in words and 'än' in words:
+            ei = words.index('är')
+            si = words.index('större')
+            ni = words.index('än')
+            left = ' '.join(words[:ei])
+            right = ' '.join(words[ni+1:])
+            tokens.append(('CMP_GT', f'{left}:{right}', lineno))
+        elif 'är' in words and 'mindre' in words and 'än' in words:
+            ei = words.index('är')
+            mi = words.index('mindre')
+            ni = words.index('än')
+            left = ' '.join(words[:ei])
+            right = ' '.join(words[ni+1:])
+            tokens.append(('CMP_LT', f'{left}:{right}', lineno))
+        elif 'är' in words:
+            ei = words.index('är')
+            left = ' '.join(words[:ei])
+            right = ' '.join(words[ei+1:])
+            if right and right != 'större' and right != 'mindre':
+                tokens.append(('CMP_EQ', f'{left}:{right}', lineno))
+        
         # ELEMENT ... UR
         elif 'element' in words and 'ur' in words:
             try:
@@ -151,6 +199,18 @@ def parse(tokens):
             parts = val.split(':', 1)
             stmts.append(('SATT', parts[0], parts[1] if len(parts) > 1 else ''))
             i += 1
+        elif typ in ('OP_PLUS', 'OP_MINUS', 'OP_MUL', 'OP_DIV'):
+            parts = val.split(':')
+            left = parts[0]
+            right = parts[1] if len(parts) > 1 else ''
+            stmts.append((typ, left, right))
+            i += 1
+        elif typ in ('CMP_GT', 'CMP_LT', 'CMP_EQ'):
+            parts = val.split(':')
+            left = parts[0]
+            right = parts[1] if len(parts) > 1 else ''
+            stmts.append((typ, left, right))
+            i += 1
         elif typ == 'LIST_NEW':
             stmts.append(('LIST_NEW', val))
             i += 1
@@ -175,7 +235,7 @@ def parse(tokens):
         elif typ == 'FOR':
             parts = val.split(':')
             var, start, end = parts[0], parts[1] if len(parts) > 1 else '0', parts[2] if len(parts) > 2 else '10'
-            body, i = parse_block(tokens, i)
+            body, i = parse_block(tokens, i + 1)
             stmts.append(('FOR', var, start, end, body))
         elif typ == 'EXIT':
             stmts.append(('EXIT', val))
@@ -204,6 +264,14 @@ def parse_block(tokens, start_i):
         elif typ == 'SATT':
             parts = tokens[i][1].split(':', 1)
             body.append(('SATT', parts[0], parts[1] if len(parts) > 1 else ''))
+            i += 1
+        elif typ in ('OP_PLUS', 'OP_MINUS', 'OP_MUL', 'OP_DIV'):
+            parts = tokens[i][1].split(':')
+            body.append((typ, parts[0], parts[1] if len(parts) > 1 else ''))
+            i += 1
+        elif typ in ('CMP_GT', 'CMP_LT', 'CMP_EQ'):
+            parts = tokens[i][1].split(':')
+            body.append((typ, parts[0], parts[1] if len(parts) > 1 else ''))
             i += 1
         elif typ == 'LIST_NEW':
             body.append(('LIST_NEW', tokens[i][1]))
@@ -274,41 +342,45 @@ def parse_if(tokens, start_i):
 class Compiler:
     def __init__(self):
         self.strings = []
-        self.variables = {}  # name -> (type, index)
+        self.variables = {}
         self.next_var_idx = 0
-        self.next_string_idx = 0
         self.code = []
         self.label_counter = 0
     
-    def add_string(self, s):
-        if s not in self.strings:
-            self.strings.append(s)
-        return self.strings.index(s)
-    
-    def alloc_var(self, name, vtype='i32'):
+    def alloc_var(self, name):
         if name not in self.variables:
-            self.variables[name] = (vtype, self.next_var_idx)
+            self.variables[name] = self.next_var_idx
             self.next_var_idx += 1
         return self.variables[name]
+    
+    def get_var_idx(self, name):
+        if name in self.variables:
+            return self.variables[name]
+        return None
     
     def new_label(self):
         self.label_counter += 1
         return f'L{self.label_counter}'
+    
+    def resolve_value(self, val):
+        """Returns (is_var, value)"""
+        try:
+            return False, int(val)
+        except:
+            return True, val
     
     def compile_statement(self, stmt):
         op = stmt[0]
         
         if op == 'SKRIV':
             s = stmt[1]
-            idx = self.add_string(s)
-            off = idx * 64
+            off = len(self.strings) * 64
+            self.strings.append(s)
             self.code.append(f'    (call $fd_write (i32.const 1) (i32.const {off}) (i32.const {len(s)}) (i32.const 0))')
         
         elif op == 'SKRIV_VAR':
             var = stmt[1]
-            if var in self.variables:
-                _, idx = self.variables[var]
-                # Load var and print as number
+            if self.get_var_idx(var) is not None:
                 self.code.append(f'    (call $print_i32 (global.get ${var}))')
             else:
                 self.code.append(f'    ;; FEL: {var} är inte definierad')
@@ -317,36 +389,86 @@ class Compiler:
             name = stmt[1]
             val = stmt[2]
             self.alloc_var(name)
-            # Try to parse as integer
-            try:
-                num = int(val)
-                self.code.append(f'    (global.set ${name} (i32.const {num}))')
-            except:
-                # It's a variable reference
-                if val in self.variables:
-                    _, idx = self.variables[val]
-                    self.code.append(f'    (global.set ${name} (global.get ${val}))')
-                else:
-                    self.code.append(f'    ;; FEL: okänd variabel {val}')
+            
+            # Check for arithmetic operations
+            is_var, resolved = self.resolve_value(val)
+            
+            if not is_var:
+                self.code.append(f'    (global.set ${name} (i32.const {resolved}))')
+            elif self.get_var_idx(val) is not None:
+                self.code.append(f'    (global.set ${name} (global.get ${val}))')
+            else:
+                self.code.append(f'    ;; FEL: okänd variabel {val}')
         
-        elif op == 'LIST_INIT':
-            name = stmt[1]
-            items_str = stmt[2]
-            if items_str:
-                items = [x.strip() for x in items_str.split(',')]
-                self.alloc_var(name)
-                # Store pointer to list data
-                ptr = 32768 + len(items) * 4
-                self.code.append(f'    (global.set ${name} (i32.const {ptr}))')
+        elif op in ('OP_PLUS', 'OP_MINUS', 'OP_MUL', 'OP_DIV'):
+            # For Sätt x till a plus b, we need a temp var
+            left, right = stmt[1], stmt[2]
+            self.alloc_var('_tmp')
+            
+            # Load left
+            is_var_l, val_l = self.resolve_value(left)
+            if is_var_l:
+                idx = self.get_var_idx(val_l)
+                if idx is not None:
+                    self.code.append(f'    (global.set $_tmp (global.get ${val_l}))')
+                else:
+                    self.code.append(f'    ;; FEL: okänd {val_l}')
+            else:
+                self.code.append(f'    (global.set $_tmp (i32.const {val_l}))')
+            
+            # Load right and apply op
+            is_var_r, val_r = self.resolve_value(right)
+            op_map = {'OP_PLUS': 'add', 'OP_MINUS': 'sub', 'OP_MUL': 'mul', 'OP_DIV': 'div_s'}
+            wasm_op = op_map.get(op, 'add')
+            
+            if is_var_r:
+                idx = self.get_var_idx(val_r)
+                if idx is not None:
+                    self.code.append(f'    (global.set $_tmp (i32.{wasm_op} (global.get $_tmp) (global.get ${val_r})))')
+                else:
+                    self.code.append(f'    ;; FEL: okänd {val_r}')
+            else:
+                self.code.append(f'    (global.set $_tmp (i32.{wasm_op} (global.get $_tmp) (i32.const {val_r})))')
+        
+        elif op in ('CMP_GT', 'CMP_LT', 'CMP_EQ'):
+            left, right = stmt[1], stmt[2]
+            is_var_l, val_l = self.resolve_value(left)
+            is_var_r, val_r = self.resolve_value(right)
+            
+            self.alloc_var('_cmp_result')
+            
+            # Compare and set result (1 = true, 0 = false)
+            op_map = {'CMP_GT': 'gt_s', 'CMP_LT': 'lt_s', 'CMP_EQ': 'eq'}
+            wasm_op = op_map.get(op, 'eq')
+            
+            # Load left into tmp
+            if is_var_l:
+                self.code.append(f'    (global.set $_tmp (global.get ${val_l}))')
+            else:
+                self.code.append(f'    (global.set $_tmp (i32.const {val_l}))')
+            
+            # Compare
+            if is_var_r:
+                self.code.append(f'    (global.set $_cmp_result (select (i32.{wasm_op} (global.get $_tmp) (global.get ${val_r})) (i32.const 1) (i32.const 0)))')
+            else:
+                self.code.append(f'    (global.set $_cmp_result (select (i32.{wasm_op} (global.get $_tmp) (i32.const {val_r})) (i32.const 1) (i32.const 0)))')
         
         elif op == 'LIST_NEW':
             name = stmt[1]
             self.alloc_var(name)
             self.code.append(f'    (global.set ${name} (i32.const 0))')
         
+        elif op == 'LIST_INIT':
+            name = stmt[1]
+            items_str = stmt[2]
+            self.alloc_var(name)
+            if items_str:
+                items = [x.strip() for x in items_str.split(',')]
+                ptr = 32768
+                self.code.append(f'    (global.set ${name} (i32.const {ptr}))')
+        
         elif op == 'LIST_APPEND':
-            item = stmt[1]
-            target = stmt[2]
+            item, target = stmt[1], stmt[2]
             self.code.append(f'    ;; Lägg till {item} till {target}')
         
         elif op == 'ANTAL':
@@ -354,8 +476,7 @@ class Compiler:
             self.code.append(f'    ;; Antal element i {target}')
         
         elif op == 'ELEMENT_UR':
-            idx_expr = stmt[1]
-            target = stmt[2]
+            idx_expr, target = stmt[1], stmt[2]
             self.code.append(f'    ;; element {idx_expr} ur {target}')
         
         elif op == 'OM':
@@ -365,9 +486,11 @@ class Compiler:
             end_label = self.new_label()
             else_label = self.new_label() if else_body else end_label
             
-            # Simple condition: just "Om x så"
-            if cond.strip() in self.variables:
-                self.code.append(f'    (if (i32.eqz (global.get ${cond.strip()})) (then (br {else_label})))')
+            # Compile condition
+            self.compile_statement(cond)
+            
+            # Jump if false (result == 0)
+            self.code.append(f'    (if (i32.eqz (global.get $_cmp_result)) (then (br {else_label})))')
             
             for s in then_body:
                 self.compile_statement(s)
@@ -390,13 +513,34 @@ class Compiler:
             loop_start = self.new_label()
             loop_end = self.new_label()
             
-            self.code.append(f'    (global.set ${var} (i32.const {start}))')
-            self.code.append(f'  {loop_start}:')
-            self.code.append(f'    (if (i32.ge_s (global.get ${var}) (i32.const {end})) (then (br {loop_end})))')
+            # Initialize
+            try:
+                start_val = int(start)
+                self.code.append(f'    (global.set ${var} (i32.const {start_val}))')
+            except:
+                if self.get_var_idx(start) is not None:
+                    self.code.append(f'    (global.set ${var} (global.get ${start}))')
+                else:
+                    self.code.append(f'    (global.set ${var} (i32.const 0))')
             
+            # Loop start
+            self.code.append(f'  {loop_start}:')
+            
+            # Check condition: var >= end
+            try:
+                end_val = int(end)
+                self.code.append(f'    (if (i32.ge_s (global.get ${var}) (i32.const {end_val})) (then (br {loop_end})))')
+            except:
+                if self.get_var_idx(end) is not None:
+                    self.code.append(f'    (if (i32.ge_s (global.get ${var}) (global.get ${end})) (then (br {loop_end})))')
+                else:
+                    self.code.append(f'    (if (i32.ge_s (global.get ${var}) (i32.const 0)) (then (br {loop_end})))')
+            
+            # Loop body
             for s in body:
                 self.compile_statement(s)
             
+            # Increment
             self.code.append(f'    (global.set ${var} (i32.add (global.get ${var}) (i32.const 1)))')
             self.code.append(f'    (br {loop_start})')
             self.code.append(f'  {loop_end}:')
@@ -406,15 +550,14 @@ class Compiler:
             self.code.append(f'    (call $proc_exit (i32.const {code}))')
     
     def generate_wat(self, statements):
-        # Generate global declarations
-        globals_section = ""
-        for name, (vtype, idx) in sorted(self.variables.items(), key=lambda x: x[1][1]):
-            globals_section += f"  (global ${name} (mut {vtype}) (i32.const 0))\n"
+        # Generate globals
+        globals_section = "  (global $tmp (mut i32) (i32.const 0))\n"
+        globals_section += "  (global $_cmp_result (mut i32) (i32.const 0))\n"
+        for name in sorted(self.variables.keys()):
+            if not name.startswith('_'):
+                globals_section += f"  (global ${name} (mut i32) (i32.const 0))\n"
         
-        if not globals_section:
-            globals_section = "  (global $tmp (mut i32) (i32.const 0))\n"
-        
-        # Generate code
+        # Compile all statements
         for stmt in statements:
             self.compile_statement(stmt)
         
@@ -436,30 +579,29 @@ class Compiler:
     (func $proc_exit (param i32)))
 
 {globals_section}
-  (func ${'$'}print_i32 (param $v i32)
+  (func $print_i32 (param $v i32)
     (local $buf i32)
     (local $i i32)
+    (local $digit i32)
+    (local $n i32)
     (local.set $buf (i32.const 32768))
     (local.set $i (i32.const 0))
-    (if (i32.eqz (local.get $v)) (then
-      (i32.store8 (local.get $buf) (i32.const 48))
-      (call $fd_write (i32.const 1) (local.get $buf) (i32.const 1) (i32.const 0))
-      (return)
+    (local.set $n (local.get $v))
+    (if (i32.lt_s (local.get $n) (i32.const 0)) (then
+      (i32.store8 (local.get $buf) (local.get $i) (i32.const 45))
+      (local.set $i (i32.add (local.get $i) (i32.const 1)))
+      (local.set $n (i32.sub (i32.const 0) (local.get $n)))
     ))
     (block $done
       (loop $loop
+        (local.set $digit (i32.add (i32.const 48) (i32.rem_s (local.get $n) (i32.const 10))))
+        (i32.store8 (local.get $buf) (local.get $i) (local.get $digit))
         (local.set $i (i32.add (local.get $i) (i32.const 1)))
-        (br_if $done (i32.eqz (local.get $v)))
-        (local.set $v (i32.div_s (local.get $v) (i32.const 10)))
+        (local.set $n (i32.div_s (local.get $n) (i32.const 10)))
+        (br_if $done (i32.eqz (local.get $n)))
       )
     )
-    (loop $write
-      (local.set $v (i32.mul (local.get $v) (i32.const 10)))
-      (i32.store8 (local.get $buf) (local.get $i) (i32.add (i32.const 48) (i32.sub (local.get $v) (i32.mul (i32.div_s (local.get $v) (i32.const 10)) (i32.const 10)))))
-      (local.set $i (i32.sub (local.get $i) (i32.const 1)))
-      (br_if $write (i32.gt_s (local.get $i) (i32.const 0)))
-    )
-    (call $fd_write (i32.const 1) (i32.add (local.get $buf) (local.get $i)) (i32.const 1) (i32.const 0))
+    (call $fd_write (i32.const 1) (i32.sub (local.get $buf) (local.get $i)) (local.get $i) (i32.const 0))
   )
 
   (func (export "_start")

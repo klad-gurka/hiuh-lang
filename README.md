@@ -145,9 +145,11 @@ element <index> ur <lista>                   # Hämta element
 ### Strängmanipulation
 
 ```
-a sammanfogat med b                          # Konkatenera (infix notation!)
+a sammanfogat_med b                          # Konkatenera (infix notation!)
 tecken <index> ur <text>                    # Hämta tecken
 ```
+
+(Obs: Multiord-funktioner använder understreck: `Grej sammanfogat_med x y`)
 
 ### File-I/O
 

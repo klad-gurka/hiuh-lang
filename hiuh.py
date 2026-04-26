@@ -63,7 +63,8 @@ def tokenize(src):
         
         # GREJ (function definition): Grej Foo a b
         elif first == 'Grej':
-            # "Grej Foo a b" - name is first word after Grej, rest are params
+            # "Grej Foo a b" - first word is name, rest are params
+            # For multi-word names use underscore: Grej sammanfogat_med x y
             rest = ' '.join(words[1:])
             parts = rest.split()
             func_name = parts[0] if parts else ''
@@ -181,15 +182,14 @@ def tokenize(src):
                 tokens.append(('TECKEN_UR', f'{idx}:{target}', lineno))
             except: pass
         
-        # INLINE FUNKTION: a sammanfogat med b → CALL sammanfogat med(a, b)
+        # INLINE FUNKTION: a sammanfogat_med b → CALL sammanfogat_med(a, b)
         elif len(words) >= 3:
             # Check for infix patterns
-            if 'sammanfogat' in words and 'med' in words:
-                si = words.index('sammanfogat')
-                mi = words.index('med')
-                left = ' '.join(words[:si])
-                right = ' '.join(words[mi+1:])
-                tokens.append(('CALL', f'sammanfogat med:{left},{right}', lineno))
+            if 'sammanfogat_med' in stripped:
+                idx = stripped.index('sammanfogat_med')
+                left = ' '.join(words[:idx])
+                right = ' '.join(words[idx+1:])
+                tokens.append(('CALL', f'sammanfogat_med:{left},{right}', lineno))
             elif 'är' in words and 'större' not in words and 'mindre' not in words:
                 # a är b → CMP_EQ(a, b)
                 ei = words.index('är')
@@ -583,19 +583,53 @@ class Compiler:
             self.code.append(f'    ;; Grej {name}({",".join(params)}) definierad')
         
         elif op == 'CALL':
-            # Function call - for now, just a comment
+            # Function call: name:arg1,arg2
             sig = stmt[1]
             if ':' in sig:
                 name = sig.split(':')[0]
-                args = sig.split(':')[1].split(',') if ':' in sig else []
+                args_str = sig.split(':')[1]
+                args = args_str.split(',') if args_str else []
             else:
                 name = sig
                 args = []
-            self.code.append(f'    ;; Anropar {name}({",".join(args)})')
+            
+            # Handle infix operators specially
+            if '_' in name:
+                # e.g. "sammanfogat_med" - need to swap args
+                actual_name = name  # already has underscore
+                if len(args) >= 2:
+                    # infix: a sammanfogat med b → sammanfogat_met(b, a)
+                    args = [args[1], args[0]]
+                self.code.append(f'    (call ${actual_name} {" ".join(f"(global.get ${a})" if self.get_var_idx(a.strip()) is not None else f"(i32.const {a.strip()})" for a in args)})')
+            else:
+                # Normal function call
+                self.code.append(f'    (call ${name} {" ".join(f"(global.get ${a})" if self.get_var_idx(a.strip()) is not None else f"(i32.const {a.strip()})" for a in args)})')
         
         elif op == 'GE':
-            # Return value
-            self.code.append(f'    ;; Ge {stmt[1]}')
+            # Return value - store in special return global
+            val = stmt[1]
+            is_var, resolved = self.resolve_value(val)
+            if is_var and self.get_var_idx(resolved) is not None:
+                self.code.append(f'    (global.set $_result (global.get ${resolved}))')
+            elif not is_var:
+                self.code.append(f'    (global.set $_result (i32.const {resolved}))')
+            self.code.append(f'    (return)')
+        
+        elif op == 'SAMMANFOGAT':
+            left, right = stmt[1], stmt[2]
+            # For now, just return left
+            self.code.append(f'    ;; SAMMANFOGAT: {left} + {right}')
+        
+        elif op == 'TECKEN_UR':
+            idx_expr, target = stmt[1], stmt[2]
+            # Load character at index from string
+            self.alloc_var('_idx')
+            is_var, val = self.resolve_value(idx_expr)
+            if is_var and self.get_var_idx(val) is not None:
+                self.code.append(f'    (global.set $_idx (global.get ${val}))')
+            elif not is_var:
+                self.code.append(f'    (global.set $_idx (i32.const {val}))')
+            self.code.append(f'    (global.set $_result (i32.load8_u (global.get $_idx)))')
     
     def generate_wat(self, statements):
         globals_section = "  (global $tmp (mut i32) (i32.const 0))\n"

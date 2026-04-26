@@ -129,6 +129,38 @@ Grej SLUT
 | `eller` | logiskt ELLER (`\|\|`) |
 | `inte` | logiskt INTE (`!`) |
 
+### Listor
+
+```
+Sätt <namn> till lista                      # Skapa tom lista
+Sätt <namn> till lista av 1, 2, 3           # Skapa lista med värden
+Lägg till <värde> till <lista>              # Lägg till element
+Antal element i <lista>                      # Antal element
+element <index> ur <lista>                   # Hämta element
+```
+
+### Strängmanipulation
+
+```
+<text> sammanfogat med <text>               # Konkatenera
+tecken <index> ur <text>                    # Hämta tecken
+```
+
+### File-I/O
+
+```
+Öppna <fil> för läsning som <namn>         # Öppna fil
+Läs <namn>                                  # Läs fil
+SkrivTillFil <fil>, <text>                  # Skriv till fil
+```
+
+### Programavslutning
+
+```
+Jag måste gå nu                              # exit(0)
+Jag måste gå nu <kod>                       # exit(kod)
+```
+
 ### Datatyper (planerade för hiuhpp)
 
 | Typ | Beskrivning | Exempel |
@@ -158,7 +190,7 @@ Skriv Hej världen
 Sätt x till 10
 Sätt y till 20
 Sätt z till x plus y
-Skriv z
+Skriv värdet av z
 ```
 
 ### Villkor

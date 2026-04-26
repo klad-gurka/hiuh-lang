@@ -77,22 +77,42 @@ def tokenize(src):
                 pass
         
         elif first == 'Om':
-            # "Om x är y" → generate CMP then IF
+            # "Om x är mindre än y" → store comparison type with IF
             rest = words[1:]
-            if len(rest) >= 3 and rest[1] == 'är':
+            cmp_type = 'EQ'
+            if 'mindre' in words and 'än' in words:
+                cmp_type = 'LT'
+            elif 'större' in words and 'än' in words:
+                cmp_type = 'GT'
+            elif 'är' in words:
+                cmp_type = 'EQ'
+            if len(rest) >= 2:
                 var1 = rest[0]
-                var2 = rest[2]
-                tokens.append(('CMP', var1, var2))
-            tokens.append(('IF',))
+                var2 = rest[-1]
+                tokens.append(('IF', cmp_type, var1, var2))
+            else:
+                tokens.append(('IF',))
         
         elif first == 'Annars':
             tokens.append(('ELSE',))
+        
+        elif 'är' in words and 'mindre' in words and 'än' in words:
+            # "x är mindre än y" → CMP_LT
+            var1 = words[0]
+            var2 = words[-1]
+            tokens.append(('CMP_LT', var1, var2))
+        
+        elif 'är' in words and 'större' in words and 'än' in words:
+            # "x är större än y" → CMP_GT
+            var1 = words[0]
+            var2 = words[-1]
+            tokens.append(('CMP_GT', var1, var2))
         
         elif first == 'är':
             # "x är y" comparison
             var1 = words[0]
             var2 = words[2] if len(words) > 2 else '0'
-            tokens.append(('CMP', var1, var2))
+            tokens.append(('CMP_EQ', var1, var2))
         
         elif first == 'Lägg' and len(words) >= 5:
             if words[1] == 'till':
@@ -143,16 +163,57 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'IF':
+            # Check for upcoming ELSE - if so, generate proper if-else
+            has_else = False
+            for j in range(i+1, len(tokens)):
+                if tokens[j][0] == 'ELSE':
+                    has_else = True
+                    break
+                if tokens[j][0] == 'END':
+                    break
+            
+            # Generate comparison first if needed
+            if len(tok) >= 4:
+                cmp_type, var1, var2 = tok[1], tok[2], tok[3]
+                if cmp_type == 'LT':
+                    stmts.append(('CMP_LT', var1, var2))
+                elif cmp_type == 'GT':
+                    stmts.append(('CMP_GT', var1, var2))
+                elif cmp_type == 'EQ':
+                    stmts.append(('CMP', var1, var2))
+            
+            # Parse IF body until END or ELSE
             body = []
             i += 1
-            while i < len(tokens) and tokens[i][0] != 'END':
+            while i < len(tokens) and tokens[i][0] not in ('END', 'ELSE'):
                 body.append(tokens[i])
                 i += 1
-            if i < len(tokens) and tokens[i][0] == 'END':
-                i += 1
-            stmts.append(('IF', body))
+            
+            if has_else:
+                # If-else: add jump after body to skip else
+                stmts.append(('IF', body, True))  # True = has else
+                if i < len(tokens) and tokens[i][0] == 'ELSE':
+                    i += 1  # skip ELSE
+                    else_body = []
+                    while i < len(tokens) and tokens[i][0] != 'END':
+                        else_body.append(tokens[i])
+                        i += 1
+                    if i < len(tokens) and tokens[i][0] == 'END':
+                        i += 1
+                    stmts.append(('ELSE', else_body))
+            else:
+                # Plain IF
+                stmts.append(('IF', body))
+                if i < len(tokens) and tokens[i][0] == 'END':
+                    i += 1
         
         elif tok[0] == 'CMP':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'CMP_LT':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'CMP_GT':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'ELSE':
@@ -258,19 +319,26 @@ def compile_to_asm(stmts):
             code.append(f"{loop_end}:")
         
         elif op == 'IF':
-            # Simple: just skip body if CMP result is 0
+            # Check if this IF has an else clause (stmt[2] == True)
+            has_else = len(stmt) > 2 and stmt[2] == True
             body = stmt[1]
-            if_end = new_label()
+            if_else_end = new_label()
             code.append(f"    cmp $0, %al  # if")
-            code.append(f"    je {if_end}")
+            code.append(f"    je {if_else_end}")
             for s in body:
                 compile_stmt(s)
-            code.append(f"{if_end}:")
+            code.append(f"{if_else_end}:")
         
         elif op == 'EXIT':
             code.append(f"    mov ${stmt[1]}, %edi")
             code.append(f"    mov $60, %rax")
             code.append(f"    syscall")
+        
+        elif op == 'ELSE':
+            # ELSE body - execute unconditionally
+            body = stmt[1]
+            for s in body:
+                compile_stmt(s)
         
         elif op == 'APPEND':
             item, target = stmt[1], stmt[2]
@@ -288,9 +356,27 @@ def compile_to_asm(stmts):
             var1, var2 = stmt[1], stmt[2]
             r1 = var_reg.get(var1, '%r12')
             r2 = var_reg.get(var2, '%r12')
-            code.append(f"    mov {r1}, %rax  # cmp {var1} == {var2}")
-            code.append(f"    cmp {r2}, %rax")
+            code.append(f"    mov {r2}, %rax  # cmp {var1} == {var2}")
+            code.append(f"    cmp {r1}, %rax")
             code.append(f"    sete %al")
+        
+        elif op == 'CMP_LT':
+            # "x är mindre än y" → var1 < var2 → var2 > var1
+            var1, var2 = stmt[1], stmt[2]
+            r1 = var_reg.get(var1, '%r12')
+            r2 = var_reg.get(var2, '%r12')
+            code.append(f"    mov {r2}, %rax  # cmp_lt {var1} < {var2}")
+            code.append(f"    cmp {r1}, %rax")
+            code.append(f"    setg %al  # om {var2} > {var1}")
+        
+        elif op == 'CMP_GT':
+            # "x är större än y" → var1 > var2
+            var1, var2 = stmt[1], stmt[2]
+            r1 = var_reg.get(var1, '%r12')
+            r2 = var_reg.get(var2, '%r12')
+            code.append(f"    mov {r1}, %rax  # cmp_gt {var1} > {var2}")
+            code.append(f"    cmp {r2}, %rax")
+            code.append(f"    setg %al")
         
         elif op == 'READ':
             # Read from stdin into input_buf

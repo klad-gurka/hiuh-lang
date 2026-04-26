@@ -1,15 +1,10 @@
-# Tokenizer v1 - hittar ord i input
-# För varje tecken: om det är 32 (mellanslag), skriv ut ordet
-
+# Minimal tokenizer
 Läs
+. Läs in input
 
-Sätt x till 0
-Sätt ord till lista
-
-# Loopa igenom input
-För i från 0 till 256
+För i från 0 till 10
     tecken i ur källa
-    # Lägg tecken till ord... (behöver mer implementation)
+    . Tecknet är nu i r15
 Hejdå
 
 Skriv Klart

@@ -54,15 +54,34 @@ def tokenize(src):
             tokens.append(('READ',))
         
         elif first == 'tecken':
-            # "tecken i ur text" → get character at index
+            # "tecken <index> ur <source>" - get char at index from source
+            # Example: "tecken i ur källa" → char at index[i] from source[källa]
             try:
-                ii = words.index('i')
-                ui = words.index('ur')
-                idx = words[ii-1] if ii > 0 else '0'
-                var = ' '.join(words[ui+1:])
-                tokens.append(('CHAR_AT', idx, var))
+                ur_idx = words.index('ur')
+                if ur_idx > 1:
+                    idx_var = words[ur_idx - 1]  # word before 'ur'
+                    source = ' '.join(words[ur_idx+1:]) if ur_idx+1 < len(words) else ''
+                    tokens.append(('CHAR_AT', idx_var, source))
             except:
                 pass
+        
+        elif first == 'Om':
+            # "Om x är y" → generate CMP then IF
+            rest = words[1:]
+            if len(rest) >= 3 and rest[1] == 'är':
+                var1 = rest[0]
+                var2 = rest[2]
+                tokens.append(('CMP', var1, var2))
+            tokens.append(('IF',))
+        
+        elif first == 'Annars':
+            tokens.append(('ELSE',))
+        
+        elif first == 'är':
+            # "x är y" comparison
+            var1 = words[0]
+            var2 = words[2] if len(words) > 2 else '0'
+            tokens.append(('CMP', var1, var2))
         
         elif first == 'Lägg' and len(words) >= 5:
             if words[1] == 'till':
@@ -107,6 +126,22 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'APPEND':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'IF':
+            body = []
+            i += 1
+            while i < len(tokens) and tokens[i][0] != 'END':
+                body.append(tokens[i])
+                i += 1
+            if i < len(tokens) and tokens[i][0] == 'END':
+                i += 1
+            stmts.append(('IF', body))
+        
+        elif tok[0] == 'CMP':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'ELSE':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'END':
@@ -208,18 +243,35 @@ def compile_to_asm(stmts):
             code.append(f"    jmp {loop_start}")
             code.append(f"{loop_end}:")
         
+        elif op == 'IF':
+            # Simple: just skip body if CMP result is 0
+            body = stmt[1]
+            if_end = new_label()
+            code.append(f"    cmp $0, %al  # if")
+            code.append(f"    je {if_end}")
+            for s in body:
+                compile_stmt(s)
+            code.append(f"{if_end}:")
+        
         elif op == 'EXIT':
             code.append(f"    mov ${stmt[1]}, %edi")
             code.append(f"    mov $60, %rax")
             code.append(f"    syscall")
         
         elif op == 'APPEND':
-            # Simple: just push value to stack
             item, target = stmt[1], stmt[2]
             if item in var_reg:
                 code.append(f"    mov {var_reg[item]}, %r15  # append {item}")
                 code.append(f"    mov %r15, (%r14)")
                 code.append(f"    inc %r14")
+        
+        elif op == 'CMP':
+            var1, var2 = stmt[1], stmt[2]
+            r1 = var_reg.get(var1, '%r12')
+            r2 = var_reg.get(var2, '%r12')
+            code.append(f"    mov {r1}, %rax  # cmp {var1} == {var2}")
+            code.append(f"    cmp {r2}, %rax")
+            code.append(f"    sete %al")
         
         elif op == 'READ':
             # Read from stdin into input_buf
@@ -231,11 +283,17 @@ def compile_to_asm(stmts):
         
         elif op == 'CHAR_AT':
             idx, var = stmt[1], stmt[2]
-            # Get character at index from input_buf
-            code.append(f"    mov ${idx}, %rcx  # index")
+            # Get character at index from input_buf, store in r15 (not r12)
+            if idx in var_reg:
+                code.append(f"    mov {var_reg[idx]}, %rcx  # index")
+            else:
+                try:
+                    code.append(f"    mov ${int(idx)}, %rcx  # index")
+                except:
+                    code.append(f"    mov $0, %rcx  # index fallback")
             code.append(f"    lea input_buf(%rip), %rsi")
             code.append(f"    add %rcx, %rsi")
-            code.append(f"    mov (%rsi), %r12b  # character at index")
+            code.append(f"    mov (%rsi), %r15b  # character at index")
     
     has_exit = False
     for stmt in stmts:

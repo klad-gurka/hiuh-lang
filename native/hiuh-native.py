@@ -163,7 +163,7 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'IF':
-            # Check for upcoming ELSE - if so, generate proper if-else
+            # Check for upcoming ELSE
             has_else = False
             for j in range(i+1, len(tokens)):
                 if tokens[j][0] == 'ELSE':
@@ -172,17 +172,17 @@ def parse(tokens):
                 if tokens[j][0] == 'END':
                     break
             
-            # Generate comparison first if needed
+            # Generate comparison first
             if len(tok) >= 4:
                 cmp_type, var1, var2 = tok[1], tok[2], tok[3]
                 if cmp_type == 'LT':
                     stmts.append(('CMP_LT', var1, var2))
                 elif cmp_type == 'GT':
                     stmts.append(('CMP_GT', var1, var2))
-                elif cmp_type == 'EQ':
+                else:
                     stmts.append(('CMP', var1, var2))
             
-            # Parse IF body until END or ELSE
+            # Parse IF body
             body = []
             i += 1
             while i < len(tokens) and tokens[i][0] not in ('END', 'ELSE'):
@@ -190,10 +190,10 @@ def parse(tokens):
                 i += 1
             
             if has_else:
-                # If-else: add jump after body to skip else
-                stmts.append(('IF', body, True))  # True = has else
+                # IF with ELSE
+                stmts.append(('IF', body, True))
                 if i < len(tokens) and tokens[i][0] == 'ELSE':
-                    i += 1  # skip ELSE
+                    i += 1  # skip ELSE token
                     else_body = []
                     while i < len(tokens) and tokens[i][0] != 'END':
                         else_body.append(tokens[i])
@@ -322,12 +322,19 @@ def compile_to_asm(stmts):
             # Check if this IF has an else clause (stmt[2] == True)
             has_else = len(stmt) > 2 and stmt[2] == True
             body = stmt[1]
-            if_else_end = new_label()
+            if_end = new_label()
             code.append(f"    cmp $0, %al  # if")
-            code.append(f"    je {if_else_end}")
+            code.append(f"    je {if_end}")
             for s in body:
                 compile_stmt(s)
-            code.append(f"{if_else_end}:")
+            if has_else:
+                # Add unconditional jump to skip else body
+                else_end = new_label()
+                code.append(f"    jmp {else_end}")
+                code.append(f"{if_end}:")
+                # ELSE body will be compiled by ELSE handler after this
+            else:
+                code.append(f"{if_end}:")
         
         elif op == 'EXIT':
             code.append(f"    mov ${stmt[1]}, %edi")
@@ -335,10 +342,12 @@ def compile_to_asm(stmts):
             code.append(f"    syscall")
         
         elif op == 'ELSE':
-            # ELSE body - execute unconditionally
+            # ELSE body - execute unconditionally after IF
             body = stmt[1]
             for s in body:
                 compile_stmt(s)
+            # Add L2 end label (referenced by IF's jmp)
+            code.append(f"L2:")
         
         elif op == 'APPEND':
             item, target = stmt[1], stmt[2]

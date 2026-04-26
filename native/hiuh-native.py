@@ -49,6 +49,20 @@ def tokenize(src):
         elif first == 'JagMåsteGåNu':
             code = words[1] if len(words) > 1 and words[1].isdigit() else '0'
             tokens.append(('EXIT', code))
+        
+        elif first == 'Läs':
+            tokens.append(('READ',))
+        
+        elif first == 'tecken':
+            # "tecken i ur text" → get character at index
+            try:
+                ii = words.index('i')
+                ui = words.index('ur')
+                idx = words[ii-1] if ii > 0 else '0'
+                var = ' '.join(words[ui+1:])
+                tokens.append(('CHAR_AT', idx, var))
+            except:
+                pass
     return tokens
 
 def parse(tokens):
@@ -78,6 +92,12 @@ def parse(tokens):
                 i += 1
             stmts.append(('FOR', tok[1], tok[2], tok[3], body))
         elif tok[0] == 'EXIT':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'READ':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'CHAR_AT':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'END':
@@ -183,6 +203,22 @@ def compile_to_asm(stmts):
             code.append(f"    mov ${stmt[1]}, %edi")
             code.append(f"    mov $60, %rax")
             code.append(f"    syscall")
+        
+        elif op == 'READ':
+            # Read from stdin into input_buf
+            code.append(f"    mov $0, %eax  # read")
+            code.append(f"    mov $0, %edi  # stdin")
+            code.append(f"    lea input_buf(%rip), %rsi")
+            code.append(f"    mov $256, %edx  # max bytes")
+            code.append(f"    syscall")
+        
+        elif op == 'CHAR_AT':
+            idx, var = stmt[1], stmt[2]
+            # Get character at index from input_buf
+            code.append(f"    mov ${idx}, %rcx  # index")
+            code.append(f"    lea input_buf(%rip), %rsi")
+            code.append(f"    add %rcx, %rsi")
+            code.append(f"    mov (%rsi), %r12b  # character at index")
     
     has_exit = False
     for stmt in stmts:
@@ -200,6 +236,7 @@ def compile_to_asm(stmts):
         escaped = s.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
         data.append(f"msg_{i}: .ascii \"{escaped}\\n\\0\"")
     data.append("num_buf: .byte 0")
+    data.append("input_buf: .skip 256")
     
     out = []
     out.append(".text")

@@ -1,10 +1,11 @@
-Grej Tokenisera källa
-    Sätt tokens till lista
-    Sätt ord till lista
-    
-    Skriv Tokenizer startar
-    
-    Ge tokens
+# Minimal tokenizer i HIUH
+# Nästa steg: implementera TECKEN UR för att indexera strängar
 
-Anropa Tokenisera med källa
-Skriv Klart!
+Sätt källa till "Sätt"
+Sätt tokens till lista
+
+# För nu, hardcoda output för test
+# Real tokenizer behöver: tecken i ur text, jämförelser, sammanfogat
+
+Skriv Nu kör vi tokenizer
+Skriv källa

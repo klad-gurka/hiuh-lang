@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HIUH Native Compiler - x86-64 with stdin/stdout support
+HIUH Native Compiler - x86-64 med full WASI-paritet
 """
 
 import sys
@@ -13,13 +13,13 @@ def compile_hiuh_to_asm(src: str) -> str:
     
     lines = []
     buffers = []
+    has_exit = [False]
+    exit_code = ['0']
     
-    # Preamble
     lines.append(".text")
     lines.append(".globl _start")
     lines.append("_start:")
     
-    # Process each line
     for line in src.split('\n'):
         stripped = line.lstrip()
         if not stripped:
@@ -33,38 +33,72 @@ def compile_hiuh_to_asm(src: str) -> str:
         # SKRIV
         if first == 'Skriv' and len(words) > 1:
             msg = ' '.join(words[1:]) + '\n'
-            msg_bytes = msg.encode('utf-8')
-            buffers.append(msg_bytes)
-            
-            # print string
+            buffers.append(msg.encode('utf-8'))
+            idx = len(buffers) - 1
             lines.append(f"    mov $1, %rax        # write")
             lines.append(f"    mov $1, %rdi        # stdout")
-            lines.append(f"    lea msg_{len(buffers)-1}(%rip), %rsi")
-            lines.append(f"    mov ${len(msg_bytes)}, %rdx")
+            lines.append(f"    lea msg_{idx}(%rip), %rsi")
+            lines.append(f"    mov ${len(msg)}, %rdx")
             lines.append(f"    syscall")
         
-        # SÄTT x till input
+        # SÄTT x till ...
         elif first == 'Sätt' and len(words) >= 4:
+            var = words[1]
             rest = ' '.join(words[3:])
+            
             if 'input' in rest:
-                # read from stdin
                 lines.append(f"    mov $0, %rax        # read")
                 lines.append(f"    xor %rdi, %rdi        # stdin")
                 lines.append(f"    lea input_buf(%rip), %rsi")
                 lines.append(f"    mov $256, %rdx")
                 lines.append(f"    syscall")
+            
+            elif 'slumptal' in rest:
+                lines.append(f"    mov $2, %rax        # open /dev/urandom")
+                lines.append(f"    lea dev_urandom(%rip), %rdi")
+                lines.append(f"    xor %rsi, %rsi")
+                lines.append(f"    syscall")
+                lines.append(f"    mov %rax, %r12        # save fd")
+                lines.append(f"    mov $0, %rax        # read")
+                lines.append(f"    mov %r12, %rdi")
+                lines.append(f"    lea rand_buf(%rip), %rsi")
+                lines.append(f"    mov $8, %rdx")
+                lines.append(f"    syscall")
+                lines.append(f"    mov %r12, %rdi")
+                lines.append(f"    mov $3, %rax        # close")
+                lines.append(f"    syscall")
+                lines.append(f"    lea rand_buf(%rip), %rsi")
+                lines.append(f"    mov (%rsi), %rax")
+                lines.append(f"    mov $100, %rcx")
+                lines.append(f"    xor %rdx, %rdx")
+                lines.append(f"    div %rcx")
+                # %rdx contains 0-99 random
+        
+        # JAG MÅSTE GÅ NU - exit
+        elif first == 'JagMåsteGåNu':
+            has_exit[0] = True
+            if len(words) > 1 and words[1].isdigit():
+                exit_code[0] = words[1]
+            lines.append(f"    mov ${exit_code[0]}, %rdi        # exit code")
+            lines.append(f"    mov $60, %rax        # sys_exit")
+            lines.append(f"    syscall")
     
-    # exit(0)
-    lines.append("    mov $60, %rax       # exit")
-    lines.append("    xor %rdi, %rdi")
-    lines.append("    syscall")
+    # Implicit exit(0) if no explicit exit
+    if not has_exit[0]:
+        lines.append("    mov $60, %rax       # sys_exit")
+        lines.append("    xor %rdi, %rdi        # exit(0)")
+        lines.append("    syscall")
     
-    # Data section with strings
     lines.append(".data")
     lines.append("input_buf: .skip 256")
+    lines.append("dev_urandom: .asciz \"/dev/urandom\"")
     for i, msg in enumerate(buffers):
         esc = msg.decode('utf-8', errors='replace').replace('\n', '\\n').replace('\\', '\\\\').replace('"', '\\"')
         lines.append(f"msg_{i}: .ascii \"{esc}\"")
+    
+    lines.append(".bss")
+    lines.append(".align 8")
+    lines.append("rand_buf: .skip 8")
     
     return '\n'.join(lines)
 
@@ -73,22 +107,22 @@ def assemble_and_link(asm_code: str, output: str) -> bool:
         f.write(asm_code)
         asm_file = f.name
     
-    obj_file = asm_file + '.o'
+    obj = asm_file + '.o'
     
     try:
-        r = subprocess.run(['as', '-o', obj_file, asm_file], capture_output=True)
+        r = subprocess.run(['as', '-o', obj, asm_file], capture_output=True)
         if r.returncode != 0:
             print(f"as error: {r.stderr.decode()}")
             return False
         
-        r = subprocess.run(['ld', '-o', output, obj_file], capture_output=True)
+        r = subprocess.run(['ld', '-o', output, obj], capture_output=True)
         if r.returncode != 0:
             print(f"ld error: {r.stderr.decode()}")
             return False
         
         return True
     finally:
-        for f in [asm_file, obj_file]:
+        for f in [asm_file, obj]:
             if os.path.exists(f):
                 os.unlink(f)
 

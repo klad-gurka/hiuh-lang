@@ -61,11 +61,14 @@ def tokenize(src):
         elif first == 'Hejdå':
             tokens.append(('HEJDA', '', lineno))
         
-        # GREJ (function definition)
+        # GREJ (function definition): Grej Foo a b
         elif first == 'Grej':
-            # "Grej Foo(a, b)"
+            # "Grej Foo a b" - name is first word after Grej, rest are params
             rest = ' '.join(words[1:])
-            tokens.append(('GREJ', rest, lineno))
+            parts = rest.split()
+            func_name = parts[0] if parts else ''
+            params = parts[1:] if len(parts) > 1 else []
+            tokens.append(('GREJ', f'{func_name}:{",".join(params)}', lineno))
         
         # GE (return value)
         elif first == 'Ge':
@@ -104,11 +107,17 @@ def tokenize(src):
             rest = ' '.join(words[1:])
             tokens.append(('FILE_WRITE', rest, lineno))
         
-        # FUNKTIONSANROP: Foo(a, b)
-        elif '(' in stripped and ')' in stripped:
-            func_name = stripped[:stripped.index('(')].strip()
-            args_str = stripped[stripped.index('(')+1:stripped.index(')')]
-            args = [a.strip() for a in args_str.split(',')] if args_str.strip() else []
+        # FUNKTIONSANROP: Anropa Foo med 5
+        elif first == 'Anropa':
+            # "Anropa Foo med arg1 arg2"
+            rest = ' '.join(words[1:])
+            if ' med ' in rest:
+                parts = rest.split(' med ', 1)
+                func_name = parts[0].strip()
+                args = parts[1].strip().split() if len(parts) > 1 else []
+            else:
+                func_name = rest.split()[0] if rest else ''
+                args = rest.split()[1:] if len(rest.split()) > 1 else []
             tokens.append(('CALL', f'{func_name}:{",".join(args)}', lineno))
         
         # ARITMETIK

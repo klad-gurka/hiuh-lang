@@ -96,8 +96,10 @@ Hejdå
 ### Funktioner
 
 ```
-Grej <namn>(<parametrar>)
+Grej <namn> <param1> <param2>
     <satser>
+
+Anropa <namn> med <arg1> <arg2>
 ```
 
 (Hejdå är valfritt – block avslutas automatiskt)

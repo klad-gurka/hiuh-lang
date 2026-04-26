@@ -1,14 +1,15 @@
-# Minimal tokenizer - läs och hitta ord
-# För varje tecken: om det är 32 (mellanslag) eller 10 (newline), avsluta ordet
+# Tokenizer v1 - hittar ord i input
+# För varje tecken: om det är 32 (mellanslag), skriv ut ordet
 
 Läs
 
-# Nu finns input i input_buf
-# Loopa igenom och skriv ut tecken
-
 Sätt x till 0
-Sätt tecken till 0
+Sätt ord till lista
 
-# För test: skriv ut x (antal tecken)
-Skriv Test:
-Skriv värdet av x
+# Loopa igenom input
+För i från 0 till 256
+    tecken i ur källa
+    # Lägg tecken till ord... (behöver mer implementation)
+Hejdå
+
+Skriv Klart

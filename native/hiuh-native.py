@@ -63,6 +63,12 @@ def tokenize(src):
                 tokens.append(('CHAR_AT', idx, var))
             except:
                 pass
+        
+        elif first == 'Lägg' and len(words) >= 5:
+            if words[1] == 'till':
+                item = words[2]
+                target = words[4]
+                tokens.append(('APPEND', item, target))
     return tokens
 
 def parse(tokens):
@@ -98,6 +104,9 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'CHAR_AT':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'APPEND':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'END':
@@ -204,6 +213,14 @@ def compile_to_asm(stmts):
             code.append(f"    mov $60, %rax")
             code.append(f"    syscall")
         
+        elif op == 'APPEND':
+            # Simple: just push value to stack
+            item, target = stmt[1], stmt[2]
+            if item in var_reg:
+                code.append(f"    mov {var_reg[item]}, %r15  # append {item}")
+                code.append(f"    mov %r15, (%r14)")
+                code.append(f"    inc %r14")
+        
         elif op == 'READ':
             # Read from stdin into input_buf
             code.append(f"    mov $0, %eax  # read")
@@ -237,11 +254,16 @@ def compile_to_asm(stmts):
         data.append(f"msg_{i}: .ascii \"{escaped}\\n\\0\"")
     data.append("num_buf: .byte 0")
     data.append("input_buf: .skip 256")
+    data.append(".bss")
+    data.append(".align 8")
+    data.append("stack: .skip 4096")
     
     out = []
     out.append(".text")
     out.append(".globl _start")
     out.append("_start:")
+    # Initialize stack pointer
+    out.append("    lea stack(%rip), %r14  # init stack ptr")
     out.extend(code)
     out.append("")
     out.extend(data)

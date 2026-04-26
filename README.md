@@ -178,8 +178,8 @@ Jag måste gå nu <kod>                       # exit(kod)
 | Funktion | Beskrivning |
 |----------|-------------|
 | `Slumptal` | Returnerar ett slumpmässigt heltal 0-99 |
-| `input(<prompt>)` | Läser in från användaren |
-| `Längd(<lista>)` | Returnerar antalet element i en lista |
+| `Läs` | Läser text från användaren |
+| `Antal element i <lista>` | Returnerar antalet element i en lista |
 
 ## Exempelprogram
 
@@ -256,7 +256,7 @@ Ett centralt mål för `hiuhpp` är **statisk typkontroll**. Följande kontrolle
 
 4. **Fel antal parametrar till funktioner**
    ```
-   Sätt resultat till Slumptal(5)  # FEL: Slumptal tar inga parametrar
+   Sätt resultat till Slumptal 5  # FEL: Slumptal tar inga parametrar
    ```
 
 5. **Använda variabel före deklaration**

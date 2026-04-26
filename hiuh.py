@@ -181,15 +181,14 @@ def tokenize(src):
                 tokens.append(('TECKEN_UR', f'{idx}:{target}', lineno))
             except: pass
         
-        # SAMMANFOGAT MED
+        # SAMMANFOGAT MED - special function
         elif 'sammanfogat' in words and 'med' in words:
-            try:
-                si = words.index('sammanfogat')
-                mi = words.index('med')
-                left = ' '.join(words[:si])
-                right = ' '.join(words[mi+1:])
-                tokens.append(('SAMMANFOGAT', f'{left}:{right}', lineno))
-            except: pass
+            # "text sammanfogat med text" → Anropa sammanfogat med text text
+            si = words.index('sammanfogat')
+            mi = words.index('med')
+            left = ' '.join(words[:si])
+            right = ' '.join(words[mi+1:])
+            tokens.append(('CALL', f'sammanfogat med:{left},{right}', lineno))
         
         # ANTAL ELEMENT I
         elif first == 'Antal' and len(words) >= 4 and words[2] == 'element' and words[3] == 'i':

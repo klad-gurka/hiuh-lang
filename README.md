@@ -145,7 +145,7 @@ element <index> ur <lista>                   # Hämta element
 ### Strängmanipulation
 
 ```
-<text> sammanfogat med <text>               # Konkatenera
+<text> sammanfogat med <text>               # Konkatenera (anropar funktionen "sammanfogat med")
 tecken <index> ur <text>                    # Hämta tecken
 ```
 

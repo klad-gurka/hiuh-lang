@@ -269,6 +269,9 @@ def parse_block(tokens, start_i):
         if typ == 'HEJDA':
             i += 1
             break
+        # Auto-end block on top-level statements
+        if typ in ('GREJ', 'EOF'):
+            break
         if typ == 'SKRIV':
             body.append(('SKRIV', tokens[i][1]))
             i += 1
@@ -339,6 +342,9 @@ def parse_if(tokens, start_i):
             if nested_else:
                 else_body.extend(nested_else)
             continue
+        # Auto-end block without Hejdå
+        if typ in ('GREJ', 'EOF'):
+            break
         if typ == 'HEJDA':
             i += 1
             break
@@ -381,6 +387,12 @@ class Compiler:
     def new_label(self):
         self.label_counter += 1
         return f'L{self.label_counter}'
+    
+    def resolve_value(self, val):
+        try:
+            return False, int(val)
+        except:
+            return True, val
     
     def compile_statement(self, stmt):
         op = stmt[0]

@@ -1,9 +1,5 @@
-# HIUH Tokenizer - Delar upp text i ord och skriver ut varje ord
-# Läser text via stdin, skriver varje ord på egen rad
-
 Sätt antal till 0
 Sätt j till 0
-Sätt j_end till 0
 Sätt i_ord till 0
 Sätt klar till 0
 Läs
@@ -15,7 +11,6 @@ För i från 0 till 255
     Hejdå
     Om tecken är mindre än 33
         Sätt klar till i_ord
-        Sätt j_end till j
         Sätt i_ord till 0
     Hejdå
     Om tecken är större än 32
@@ -25,8 +20,61 @@ För i från 0 till 255
         Sätt klar till 0
     Hejdå
     Om klar är 1
-        Lagra i_ord vid j_end i ord_buf
-        Skriv text i ord_buf
+        Lagra i_ord vid j i ord_buf
+        Jämför ord_buf med Sätt
+        Om träff är 1
+            Skriv SET
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med För
+        Om träff är 1
+            Skriv FOR
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Om
+        Om träff är 1
+            Skriv IF
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Hejdå
+        Om träff är 1
+            Skriv END
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Annars
+        Om träff är 1
+            Skriv ELSE
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Läs
+        Om träff är 1
+            Skriv READ
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Skriv
+        Om träff är 1
+            Skriv SKRIV
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Lagra
+        Om träff är 1
+            Skriv LAGRA
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med Jämför
+        Om träff är 1
+            Skriv JAMFOR
+            Sätt klar till 2
+        Hejdå
+        Jämför ord_buf med JagMåsteGåNu
+        Om träff är 1
+            Skriv EXIT
+            Sätt klar till 2
+        Hejdå
+        Om klar är 1
+            Skriv text i ord_buf
+            Sätt klar till 2
+        Hejdå
         Sätt antal till antal pluss 1
         Sätt j till 0
         Sätt klar till 0

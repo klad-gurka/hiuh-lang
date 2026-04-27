@@ -217,6 +217,41 @@ def tokenize(src):
     return tokens, ord_lista
 
 def parse(tokens):
+    def parse_block(pos):
+        blk = []
+        i = pos
+        while i < len(tokens) and tokens[i][0] != 'END':
+            tok = tokens[i]
+            if tok[0] == 'IF':
+                if len(tok) >= 4:
+                    cmp_type, v1, v2 = tok[1], tok[2], tok[3]
+                    if cmp_type == 'LT':
+                        blk.append(('CMP_LT', v1, v2))
+                    elif cmp_type == 'GT':
+                        blk.append(('CMP_GT', v1, v2))
+                    else:
+                        blk.append(('CMP', v1, v2))
+                i += 1
+                if_body, i = parse_block(i)
+                # check for ELSE
+                if i < len(tokens) and tokens[i][0] == 'ELSE':
+                    i += 1
+                    else_body, i = parse_block(i)
+                    blk.append(('IF', if_body, '__HAS_ELSE__'))
+                    blk.append(('ELSE', else_body))
+                else:
+                    blk.append(('IF', if_body))
+            elif tok[0] == 'FOR':
+                i += 1
+                inner, i = parse_block(i)
+                blk.append(('FOR', tok[1], tok[2], tok[3], inner))
+            else:
+                blk.append(tok)
+                i += 1
+        if i < len(tokens) and tokens[i][0] == 'END':
+            i += 1
+        return blk, i
+
     stmts = []
     i = 0
     while i < len(tokens):
@@ -249,66 +284,8 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'FOR':
-            body = []
             i += 1
-            while i < len(tokens) and tokens[i][0] != 'END':
-                tok2 = tokens[i]
-                if tok2[0] == 'IF':
-                    # Handle IF with its ELSE/END
-                    has_else = False
-                    for j in range(i+1, len(tokens)):
-                        if tokens[j][0] == 'ELSE':
-                            has_else = True
-                            break
-                        if tokens[j][0] == 'END':
-                            break
-                    # Generate CMP statement first
-                    if len(tok2) >= 4:
-                        cmp_type, var1, var2 = tok2[1], tok2[2], tok2[3]
-                        if cmp_type == 'LT':
-                            body.append(('CMP_LT', var1, var2))
-                        elif cmp_type == 'GT':
-                            body.append(('CMP_GT', var1, var2))
-                        else:
-                            body.append(('CMP', var1, var2))
-                    # Parse IF body
-                    if_body = []
-                    i += 1
-                    while i < len(tokens) and tokens[i][0] not in ('END', 'ELSE'):
-                        if_body.append(tokens[i])
-                        i += 1
-                    if has_else:
-                        body.append(('IF', if_body, '__HAS_ELSE__'))
-                        if i < len(tokens) and tokens[i][0] == 'ELSE':
-                            i += 1  # skip ELSE token
-                            else_body = []
-                            while i < len(tokens) and tokens[i][0] != 'END':
-                                else_body.append(tokens[i])
-                                i += 1
-                            if i < len(tokens) and tokens[i][0] == 'END':
-                                i += 1
-                            body.append(('ELSE', else_body))
-                    else:
-                        body.append(('IF', if_body))
-                        if i < len(tokens) and tokens[i][0] == 'END':
-                            i += 1
-                else:
-                    if tok2[0] == 'FOR':
-                        # Recursively parse nested FOR
-                        inner_body = []
-                        i += 1
-                        while i < len(tokens) and tokens[i][0] != 'END':
-                            inner_body.append(tokens[i])
-                            i += 1
-                        if i < len(tokens) and tokens[i][0] == 'END':
-                            i += 1
-                        # The inner FOR still needs parsing, add raw for now
-                        body.append(('FOR', tok2[1], tok2[2], tok2[3], inner_body))
-                    else:
-                        body.append(tok2)
-                        i += 1
-            if i < len(tokens) and tokens[i][0] == 'END':
-                i += 1
+            body, i = parse_block(i)
             stmts.append(('FOR', tok[1], tok[2], tok[3], body))
         elif tok[0] == 'EXIT':
             stmts.append(tok)

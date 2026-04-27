@@ -1,6 +1,5 @@
-# HIUH Tokenizer - Delar upp text i ord och skriver ut varje ord
-# Läser text via stdin, skriver varje ord på egen rad
-
+# HIUH Tokenizer v31 - FIX: output word when word boundary detected
+# The key insight: output word at space boundary BEFORE storing next char
 Sätt antal till 0
 Sätt j till 0
 Sätt j_end till 0
@@ -9,27 +8,28 @@ Sätt klar till 0
 Läs
 För i från 0 till 255
     Sätt tecken till tecken i ur källa
+    # End of input
     Om tecken är 0
         Skriv värdet av antal
         JagMåsteGåNu 0
     Hejdå
+    # Whitespace - output word if we have one
     Om tecken är mindre än 33
-        Sätt klar till i_ord
+        Om klar är 1
+            Lagra i_ord vid j_end i ord_buf
+            Skriv text i ord_buf
+            Sätt antal till antal pluss 1
+            Sätt j till 0
+            Sätt klar till 0
+        Hejdå
         Sätt j_end till j
         Sätt i_ord till 0
     Hejdå
+    # Printable character
     Om tecken är större än 32
         Lagra tecken vid j i ord_buf
         Sätt j till j pluss 1
         Sätt i_ord till 1
-        Sätt klar till 0
-    Hejdå
-    Om klar är 1
-        Lagra i_ord vid j_end i ord_buf
-        Skriv text i ord_buf
-        Sätt antal till antal pluss 1
-        Sätt j till 0
-        Sätt klar till 0
     Hejdå
 Hejdå
 Skriv värdet av antal

@@ -68,11 +68,20 @@ def tokenize(src):
                 args = [a.strip() for a in parts[1].split(',')]
                 tokens.append(('FUNC_CALL', var, func_name, args))
             elif rest.startswith('tecken ') and (' ur ' in rest or ' i ' in rest):
-                # CHAR_AT: Sätt tecken till tecken i ur källa / tecken i ord_bu
+                # CHAR_AT: Sätt tecken till tecken i ur källa / tecken i ord_buf / tecken[0] i ord_buf
                 sep = ' ur ' if ' ur ' in rest else ' i '
                 parts = rest.split(sep)
                 if len(parts) >= 2:
-                    idx_part = parts[0].replace('tecken', '').strip()
+                    idx_part = parts[0].replace('tecken', '').strip()  # remove "tecken" prefix
+                    source = parts[1].strip()
+                    tokens.append(('SET_CHAR_AT', var, idx_part, source))
+                else:
+                    tokens.append(('SET', var, rest))
+            elif rest.startswith('tecken[') and '] i ' in rest:
+                # CHAR_AT with explicit index: Sätt c till tecken[0] i ord_buf
+                parts = rest.split('] i ')
+                if len(parts) >= 2:
+                    idx_part = parts[0].replace('tecken[', '').strip()  # get "0"
                     source = parts[1].strip()
                     tokens.append(('SET_CHAR_AT', var, idx_part, source))
                 else:
@@ -431,7 +440,7 @@ def parse(tokens):
                     break
                 if tokens[j][0] == 'END':
                     break
-            
+
             # Generate comparison first (from tok[1:4])
             cmp_info = None
             if len(tok) >= 4:
@@ -443,24 +452,46 @@ def parse(tokens):
                     stmts.append(('CMP_GT', var1, var2))
                 else:
                     stmts.append(('CMP', var1, var2))
-            
-            # Parse IF body
+
+            # Parse IF body with proper depth tracking
             body = []
             i += 1
-            while i < len(tokens) and tokens[i][0] not in ('END', 'ELSE'):
-                body.append(tokens[i])
+            depth = 1
+            while i < len(tokens) and depth > 0:
+                cur = tokens[i]
+                if cur[0] == 'IF':
+                    depth += 1
+                elif cur[0] == 'END':
+                    depth -= 1
+                    if depth > 0:
+                        body.append(cur)
+                elif cur[0] == 'ELSE':
+                    # At depth 1, ELSE terminates the if-body and starts else-body
+                    if depth == 1:
+                        break
+                    else:
+                        body.append(cur)
+                else:
+                    body.append(cur)
                 i += 1
-            
+
             if has_else:
                 # IF with ELSE
                 stmts.append(('IF', body, cmp_info, '__HAS_ELSE__'))
                 if i < len(tokens) and tokens[i][0] == 'ELSE':
                     i += 1  # skip ELSE token
                     else_body = []
-                    while i < len(tokens) and tokens[i][0] != 'END':
-                        else_body.append(tokens[i])
-                        i += 1
-                    if i < len(tokens) and tokens[i][0] == 'END':
+                    else_depth = 1
+                    while i < len(tokens) and else_depth > 0:
+                        cur = tokens[i]
+                        if cur[0] == 'IF':
+                            else_depth += 1
+                        elif cur[0] == 'END':
+                            else_depth -= 1
+                            if else_depth > 0:
+                                else_body.append(cur)
+                        else:
+                            else_body.append(cur)
                         i += 1
                     stmts.append(('ELSE', else_body))
             else:
@@ -926,7 +957,8 @@ def compile_to_asm(stmts, target='linux'):
 
         elif op == 'CHAR_AT':
             idx, var = stmt[1], stmt[2]
-            # Get character at index from input_buf, store in r15 (not r12)
+            source = stmt[3] if len(stmt) > 3 else 'input_buf'
+            # Get character at index from source buffer, store in r15 (not r12)
             if idx in var_reg:
                 code.append(f"    mov {var_reg[idx]}, %rcx  # index")
             else:
@@ -934,7 +966,7 @@ def compile_to_asm(stmts, target='linux'):
                     code.append(f"    mov ${int(idx)}, %rcx  # index")
                 except:
                     code.append(f"    mov $0, %rcx  # index fallback")
-            code.append(f"    lea input_buf(%rip), %rsi")
+            code.append(f"    lea {source}(%rip), %rsi")
             code.append(f"    add %rcx, %rsi")
             code.append(f"    mov (%rsi), %r15b  # character at index")
             # Track last char in a pseudo-variable

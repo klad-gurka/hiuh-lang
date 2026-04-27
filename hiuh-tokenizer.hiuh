@@ -1,5 +1,4 @@
-# HIUH Tokenizer v31 - FIX: output word when word boundary detected
-# The key insight: output word at space boundary BEFORE storing next char
+# HIUH Tokenizer v31 - FIX: output buffered word at end-of-input
 Sätt antal till 0
 Sätt j till 0
 Sätt j_end till 0
@@ -10,6 +9,11 @@ För i från 0 till 255
     Sätt tecken till tecken i ur källa
     # End of input
     Om tecken är 0
+        Om j är större än 0
+            Lagra noll vid j i ord_buf
+            Skriv text i ord_buf
+            Sätt antal till antal pluss 1
+        Hejdå
         Skriv värdet av antal
         JagMåsteGåNu 0
     Hejdå

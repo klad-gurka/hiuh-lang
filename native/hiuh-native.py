@@ -43,6 +43,11 @@ def tokenize(src):
                 tokens.append(('SKRIV_VAR', words[-1]))
             elif rest.startswith('text i '):
                 tokens.append(('SKRIV_BUF', rest[len('text i '):]))
+            elif len(words) >= 5 and words[2] == 'tecken' and words[3] == 'i':
+                # "Skriv j tecken i ord_buf" pattern: count var is words[1], buf is words[4]
+                count_var = words[1]
+                buf_name = words[4]
+                tokens.append(('SKRIV_BUF_LEN', count_var, buf_name))
             else:
                 tokens.append(('SKRIV', rest))
         elif first == '.':
@@ -76,6 +81,10 @@ def tokenize(src):
                     tokens.append(('SET_CHAR_AT', var, idx_part, source))
                 else:
                     tokens.append(('SET', var, rest))
+            elif rest.startswith('tecken i '):
+                # CHAR_AT variant: Sätt tecken till tecken i input_buf (uses 'i' not 'ur')
+                source = rest[len('tecken i '):].strip()
+                tokens.append(('SET_CHAR_AT', var, 'i', source))
             elif ' är ' in rest and ' pluss ' not in rest and ' med ' not in rest:
                 # SET_CMP_RESULT: Sätt x till y är z → cmp(y,z) then set x to result
                 parts = rest.split(' är ')
@@ -233,6 +242,9 @@ def parse(tokens):
         elif tok[0] == 'SKRIV_BUF':
             stmts.append(tok)
             i += 1
+        elif tok[0] == 'SKRIV_BUF_LEN':
+            stmts.append(tok)
+            i += 1
         elif tok[0] == 'PLUS':
             stmts.append(tok)
             i += 1
@@ -259,11 +271,22 @@ def parse(tokens):
                             body.append(('CMP_GT', var1, var2))
                         else:
                             body.append(('CMP', var1, var2))
-                    # Parse IF body
+                    # Parse IF body with depth tracking for nested IFs
                     if_body = []
                     i += 1
-                    while i < len(tokens) and tokens[i][0] not in ('END', 'ELSE'):
-                        if_body.append(tokens[i])
+                    if_depth = 1
+                    while i < len(tokens) and if_depth > 0:
+                        tok_inner = tokens[i]
+                        if tok_inner[0] == 'IF':
+                            if_depth += 1
+                        elif tok_inner[0] == 'END':
+                            if_depth -= 1
+                            if if_depth == 0:
+                                i += 1  # consume the END
+                                break
+                        elif tok_inner[0] == 'ELSE' and if_depth == 1:
+                            break
+                        if_body.append(tok_inner)
                         i += 1
                     if has_else:
                         body.append(('IF', if_body, '__HAS_ELSE__'))
@@ -849,6 +872,31 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $1, %edi")
                 code.append(f"    mov $1, %eax")
                 code.append(f"    syscall")
+
+        elif op == 'SKRIV_BUF_LEN':
+            count_var = stmt[1]
+            buf_name = stmt[2] if len(stmt) > 2 else 'ord_buf'
+            named_buffers.add(buf_name)
+            skriv_buf_used[0] = True  # Need _nl for newline
+            # Get count from variable
+            if count_var and count_var in var_reg:
+                code.append(f"    mov {var_reg[count_var]}, %rdx  # count from {count_var}")
+            elif count_var:
+                try:
+                    code.append(f"    mov ${int(count_var)}, %rdx  # count literal")
+                except:
+                    code.append(f"    mov $0, %rdx  # count fallback")
+            else:
+                code.append(f"    xor %rdx, %rdx")
+            code.append(f"    lea {buf_name}(%rip), %rsi")
+            code.append(f"    mov $1, %edi")
+            code.append(f"    mov $1, %eax")
+            code.append(f"    syscall")
+            code.append(f"    lea _nl(%rip), %rsi")
+            code.append(f"    mov $1, %rdx")
+            code.append(f"    mov $1, %edi")
+            code.append(f"    mov $1, %eax")
+            code.append(f"    syscall")
 
         elif op == 'CHAR_AT':
             idx, var = stmt[1], stmt[2]

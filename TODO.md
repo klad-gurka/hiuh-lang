@@ -22,9 +22,9 @@
 - [ ] **Funktionstyper**: `Sätt <namn> till grej med x, y` för att skapa funktioner (delvis fixat)
 - [x] Stöd för `x är y pluss z` i tokenizer (adb13ef)
 
-### Lower prioritet
-- [ ] Självkompilering: HIUH kompilerar HIUH
-- [ ] Fler register för FOR-loop variabler (spill till minne)
+## Kända buggar
+- Fibonacci loop ger 0 istället för 5 - troligen register-allokeringsproblem med 2 register
+- END-token i FOR-loopen borde inte tas med i body (den skippar inte alltid END korrekt)
 
 ## Test-kommandon
 ```bash

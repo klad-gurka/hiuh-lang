@@ -13,12 +13,11 @@
 - [x] IF-ELSE i loopar
 - [x] Nästlade loopar
 
-### HIUH tokenizer (hiuh-tokenizer.hiuh) - FIXAT
-- Status: FIXAD (commit 74fa61e)
-- Design: v74-algoritmen outputtar bara första ordet per körning
-- Design: För multi-word output, kör tokenizer en gång per ord i loopen
-- Kortlek: 150 HIUH-ord
-- Tidigare bug: "255 null-bytes eller tom" orsakad av nästlad IF + CHAR_AT source
+### HIUH tokenizer (hiuh-tokenizer.hiuh) - BRUTET
+- Status: BRUTET - behöver mer arbete
+- Problem: Binären outputtar bara `\x00` oavsett input (`printf "ab cd" | ./hiuh-tokenizer` ger tom output)
+- Även git HEAD-versionen är trasig (den är 9768 bytes vs commit:ade 9768 bytes samma md5, men output är tom)
+- Tidigare förväntat beteende: "ab\n001" för "ab cd" (första ordet + count)
 
 ## SJÄLVKOMPILERING - vägen dit
 

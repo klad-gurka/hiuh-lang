@@ -2,38 +2,18 @@
 # Läser text via stdin, delar vid mellanslag
 # Output: Antal ord
 
-# Initiera variabler
-Sätt i till 0
+# Initiera
 Sätt antal till 0
-Sätt tecken till 0
-Sätt är_space till 0
-Sätt i_smitt till 0
-Sätt noll till 0
 
 # Läs text från stdin
 Läs
 
 # Loopa igenom text tecken för tecken
-För i från 0 till 256
-    # Hämta aktuellt tecken
+För i från 0 till 255
     Sätt tecken till tecken i ur källa
-
-    # Är detta tecken ett space?
-    Sätt är_space till tecken är 32
-
-    # Spara föregående i_smitt i tmp
-    Sätt tmp till i_smitt
-
-    # Logik: räkna ord bara vid BÖRJAN av nytt ord
-    # Nytt ord = icke-space efter space
-    Om är_space är noll
-        Om tmp är noll
-            Sätt antal till antal pluss 1
-        Hejdå
+    Om tecken är mindre än 33
+        Sätt antal till antal pluss 1
     Hejdå
-
-    # SPARA är_space för nästa iteration!
-    Sätt i_smitt till är_space
 Hejdå
 
 # Skriv ut antal ord

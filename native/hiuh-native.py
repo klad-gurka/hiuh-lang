@@ -74,6 +74,16 @@ def tokenize(src):
                     tokens.append(('SET_CHAR_AT', var, idx_part, source))
                 else:
                     tokens.append(('SET', var, rest))
+            elif ' är ' in rest and ' pluss ' not in rest and ' med ' not in rest:
+                # SET_CMP_RESULT: Sätt x till y är z → cmp(y,z) then set x to result
+                parts = rest.split(' är ')
+                if len(parts) == 2:
+                    left = parts[0].strip()
+                    right = parts[1].strip()
+                    tokens.append(('CMP', left, right))
+                    tokens.append(('SET_CMP_RESULT', var))
+                else:
+                    tokens.append(('SET', var, rest))
             else:
                 tokens.append(('SET', var, rest))
         elif first == 'För':
@@ -205,6 +215,9 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'SET_CHAR_AT':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'SET_CMP_RESULT':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'PLUS':
@@ -550,6 +563,15 @@ def compile_to_asm(stmts, target='linux'):
             r = resolve(val)
             code.append(f"    mov {r}, {reg}  # {var} = {val} (was val={val})")
         
+        elif op == 'SET_CMP_RESULT':
+            # Store result of previous CMP into target variable
+            var = stmt[1]
+            reg = alloc_var(var)
+            # sete %al sets al to 1 if equal (ZF=1), 0 if not equal (ZF=0)
+            # movzx %al to full register, then store
+            code.append(f"    movzx %al, %rax  # extend sete result")
+            code.append(f"    mov %rax, {reg}  # store comparison result")
+        
         elif op == 'SET_CHAR_AT':
             var = stmt[1]
             idx = stmt[2]
@@ -671,15 +693,29 @@ def compile_to_asm(stmts, target='linux'):
         
         elif op == 'APPEND':
             item, dest = stmt[1], stmt[2]
-            if item in var_reg:
-                code.append(f"    mov {var_reg[item]}, %r15  # append {item}")
-                code.append(f"    mov %r15, (%r14)")
-                code.append(f"    inc %r14")
+            r = resolve(item)
+            code.append(f"    mov {r}, %r15  # append {item}")
+            code.append(f"    mov %r15, (%r14)")
+            code.append(f"    inc %r14")
         
         elif op == 'LIST_GET':
             idx, list_name = stmt[1], stmt[2]
-            code.append(f"    # hämta element {idx} från {list_name} → r15")
-            code.append(f"    mov $0, %r15  # TODO: implement LIST_GET")
+            # Get index into rax
+            if idx in var_reg:
+                code.append(f"    mov {var_reg[idx]}, %rax  # LIST_GET index")
+            else:
+                try:
+                    code.append(f"    mov ${int(idx)}, %rax  # LIST_GET index literal")
+                except:
+                    code.append(f"    mov $0, %rax  # LIST_GET index fallback")
+            # Calculate address = stack_base + index
+            code.append(f"    lea stack(%rip), %rsi  # LIST_GET base")
+            code.append(f"    add %rax, %rsi")
+            # Load byte into r13 (not r15, to avoid conflict with CHAR_AT)
+            code.append(f"    mov (%rsi), %r13b  # hämta element")
+            # Track as "tecken" variable
+            var_reg['tecken'] = '%r13'
+            var_reg['_tecken'] = '%r13'
         
         elif op == 'CMP':
             var1, var2 = stmt[1], stmt[2]

@@ -1,24 +1,12 @@
-# HIUH Tokenizer v20 - Delar upp text i ord
-# OBS: variabler måste vara unika - undvik "tecken" pga special-hantering i SET_CHAR_AT
+# HIUH Tokenizer v24 - Testa med noll variabel
 Sätt antal till 0
 Sätt j till 0
 Sätt noll till 0
 Läs
-För i från 0 till 255
-    Sätt c till tecken i ord_bu
-    Om c är mindre än 33
-        Om j är större än 0
-            Lagra noll vid j i ord_bu
-            Lagra noll vid j i ord_bu
-            Skriv text i ord_bu
-            Sätt antal till antal pluss 1
-            Sätt j till 0
-        Hejdå
-    Hejdå
-    Om c är större än 32
-        Lagra c vid j i ord_bu
-        Lagra c vid j i ord_bu
-        Sätt j till j pluss 1
-    Hejdå
+Om j är större än 0
+    Lagra noll vid j i ord_bu
+    Skriv text i ord_bu
+    Sätt antal till antal pluss 1
+    Sätt j till 0
 Hejdå
 Skriv värdet av antal

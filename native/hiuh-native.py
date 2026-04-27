@@ -46,6 +46,15 @@ def tokenize(src):
                 func_name = parts[0].strip()
                 args = [a.strip() for a in parts[1].split(',')]
                 tokens.append(('FUNC_CALL', var, func_name, args))
+            elif rest.startswith('tecken ') and ' ur ' in rest:
+                # CHAR_AT: Sätt tecken till tecken i ur källa
+                parts = rest.split(' ur ')
+                if len(parts) >= 2:
+                    idx_part = parts[0].replace('tecken', '').strip()
+                    source = parts[1].strip()
+                    tokens.append(('SET_CHAR_AT', var, idx_part, source))
+                else:
+                    tokens.append(('SET', var, rest))
             else:
                 tokens.append(('SET', var, rest))
         elif first == 'För':
@@ -106,7 +115,12 @@ def tokenize(src):
                 cmp_type = 'EQ'
             if len(rest) >= 2:
                 var1 = rest[0]
-                var2 = rest[-1]
+                # For "är mindre än" / "är större än", var2 is the word after 'än'
+                if 'än' in words:
+                    än_idx = words.index('än')
+                    var2 = words[än_idx + 1] if än_idx + 1 < len(words) else rest[-1]
+                else:
+                    var2 = rest[-1]
                 tokens.append(('IF', cmp_type, var1, var2))
             else:
                 tokens.append(('IF',))
@@ -169,6 +183,9 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'SET':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'SET_CHAR_AT':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'PLUS':
@@ -487,6 +504,15 @@ def compile_to_asm(stmts):
             r = resolve(val)
             code.append(f"    mov {r}, {reg}  # {var} = {val} (was val={val})")
         
+        elif op == 'SET_CHAR_AT':
+            var = stmt[1]
+            idx = stmt[2]
+            source = stmt[3]
+            reg = alloc_var(var)
+            # Generate CHAR_AT code, then move result to target
+            compile_stmt(('CHAR_AT', idx, source))
+            code.append(f"    mov %r15, {reg}  # {var} = tecken")
+        
         elif op == 'PLUS':
             var = stmt[1]
             left = stmt[2]
@@ -608,9 +634,15 @@ def compile_to_asm(stmts):
         elif op == 'CMP':
             var1, var2 = stmt[1], stmt[2]
             r1 = var_reg.get(var1, '%r12')
-            r2 = var_reg.get(var2, '%r12')
-            code.append(f"    mov {r2}, %rax  # cmp {var1} == {var2}")
-            code.append(f"    cmp {r1}, %rax")
+            # Handle numeric literals
+            try:
+                val2 = int(var2)
+                code.append(f"    mov {r1}, %rax  # cmp {var1} == {var2}")
+                code.append(f"    cmp ${val2}, %rax")
+            except ValueError:
+                r2 = var_reg.get(var2, '%r12')
+                code.append(f"    mov {r2}, %rax  # cmp {var1} == {var2}")
+                code.append(f"    cmp {r1}, %rax")
             code.append(f"    sete %al")
         
         elif op == 'CMP_LT':

@@ -554,7 +554,7 @@ def compile_to_asm(stmts, target='linux'):
     func_defs = {}  # Store function definitions
     next_reg = 0
     # r12-r15 for variables; r14=stack ptr, r15=char/temp (reserved)
-    reg_names = ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']  # 6 vars max
+    reg_names = ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11', '%rbp']  # 7 vars max
     # Track reserved registers
     reserved = {'%r14': 'stack pointer', '%r15': 'temp/char result'}
     labels = [0]
@@ -569,11 +569,11 @@ def compile_to_asm(stmts, target='linux'):
     def alloc_var(v):
         nonlocal next_reg
         if v not in var_reg:
-            reg = reg_names[next_reg % 6]
+            reg = reg_names[next_reg % len(reg_names)]
             # Never allocate reserved registers
             while reg in reserved:
                 next_reg += 1
-                reg = reg_names[next_reg % 6]
+                reg = reg_names[next_reg % len(reg_names)]
             var_reg[v] = reg
             next_reg += 1
         return var_reg[v]
@@ -1099,7 +1099,7 @@ def compile_to_asm(stmts, target='linux'):
                 byte_map = {
                     '%r12': '%r12b', '%r13': '%r13b', '%r8': '%r8b',
                     '%r9': '%r9b', '%r10': '%r10b', '%r11': '%r11b',
-                    '%r15': '%r15b', '%r14': '%r14b',
+                    '%r15': '%r15b', '%r14': '%r14b', '%rbp': '%bpl',
                 }
                 char_byte = byte_map.get(char_reg, '%r15b')
             idx_reg = resolve(idx_var)

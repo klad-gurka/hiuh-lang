@@ -31,12 +31,12 @@ Compiles to:      call strcpy (Windows) / inline byte loop (Linux)
 
 This is needed constantly — every Läs call requires a save.
 
-### 2. Medan (while loop) — NICE TO HAVE
+### 2. Sålänge (while loop) — NICE TO HAVE
 
 The main read loop uses För _ från 0 till 9999 + Bryt which works
 but wastes 9999 iterations and reads unintuatively. A while loop:
 
-    Medan las_ok är 1
+    Sålänge las_ok är 1
         Läs till las_ok
         ...
     Hejdå
@@ -151,6 +151,47 @@ Data section (emitted at end):
     fmt_int: .asciz "%lld\n"
     input_buf: .skip 256
     ... any string literals encountered
+
+---
+
+## 4. Real function calls — NEEDED
+
+Currently functions are inlined at the call site — no `call`/`ret`,
+no stack frame, no recursion. This needs to change before HIUH programs
+get large, and before the self-hosting parser can call helper functions.
+
+### Calling convention (Windows x64 ABI subset)
+
+    Arguments:   first 4 in %rcx, %rdx, %r8, %r9 (left to right)
+    Return value: %rax
+    Callee saves: %rbp, %rbx, %r12–%r15 (must restore before ret)
+    Caller saves: %rcx, %rdx, %r8–%r11 (may be clobbered)
+    Stack:        16-byte aligned before call; 32-byte shadow space
+
+### Syntax (proposed)
+
+    Anropa func_name med arg1, arg2   — call, discard result
+    Sätt x till Anropa func_name med arg1, arg2  — call, capture result
+
+    Funktion func_name med param1, param2
+        ...
+    ge result
+    Hejdå
+
+### What needs to change in the compiler
+
+    - Emit real prologue/epilogue (push callee-saved regs, sub rsp)
+    - FUNC_DEF → emit a real label + prologue instead of storing body
+    - FUNC_CALL → emit mov args into rcx/rdx/r8/r9, call label
+    - RETURN → mov result into rax, emit epilogue + ret
+    - Variable allocation per function (reset var_reg at each FUNC_DEF)
+
+### Why this unblocks everything
+
+    - Recursion becomes possible
+    - Programs can be split into real functions (not just inlined helpers)
+    - Calling external C functions (puts, fgets) already works this way —
+      HIUH functions just need to follow the same convention
 
 ---
 

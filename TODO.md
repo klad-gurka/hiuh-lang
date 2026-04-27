@@ -14,12 +14,15 @@
 - [x] IF-ELSE i FOR fungerar nu! (commit 5672cfe)
 - [x] CMP_LT genererar nu korrekt assembly (5672cfe)
 - [x] Register-konflikt: r14/r15 reserverade för stack/tecken (4da9973)
+- [x] **IF-ELSE i funktioner fungerar nu!** (commit ab98ccd)
+  - ELSE body kompilerades inte tidigare - nu fixat
+  - RETURN i IF/ELSE body fungerar
 
 ### Medium prioritet  
 - [x] Stöd för `x är y` i tokenizer → SET (58a596c)
 - [ ] Tokenizer: bygg ord genom att jämföra med mellanslag (32)
 - [ ] Lagra tokens i en lista
-- [ ] **Funktionstyper**: `Sätt <namn> till grej med x, y` för att skapa funktioner (delvis fixat)
+- [x] **Funktionstyper**: `Sätt <namn> till grej med x, y` för att skapa funktioner
 - [x] Stöd för `x är y pluss z` i tokenizer (adb13ef)
 
 ## Kända buggar
@@ -42,9 +45,21 @@ Hejdå
 Skriv värdet av a
 EOF
 python3 native/hiuh-native.py /tmp/fibo.hiuh /tmp/fibo && printf "" | /tmp/fibo | od -c
+# Testa funktion med IF-ELSE
+cat > /tmp/test-max.hiuh << 'EOF'
+Sätt max till grej med a, b
+    Om a är större än b
+        ge a
+    Annars
+        ge b
+Hejdå
+Sätt resultat till max med 3, 7
+Skriv värdet av resultat
+EOF
+python3 native/hiuh-native.py /tmp/test-max.hiuh /tmp/test-max && printf "" | /tmp/test-max | od -c
 ```
 
 ## Senaste commits
-- 5672cfe: Fix: FOR parser now handles nested IF-ELSE properly
-- 6b23a8c: Add TODO.md for self-compilation goal
-- 97fb922: WIP: tokenizer with char comparison
+- ab98ccd: Fix: IF-ELSE handling in parser and compiler
+- 3a90cdd: TODO: document known bugs with register allocation and END token
+- 58a596c: Fix: tokenizer now handles 'x är y' as SET instead of CMP_EQ

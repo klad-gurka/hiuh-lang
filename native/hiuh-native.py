@@ -67,21 +67,11 @@ def tokenize(src):
                 func_name = parts[0].strip()
                 args = [a.strip() for a in parts[1].split(',')]
                 tokens.append(('FUNC_CALL', var, func_name, args))
-            elif rest.startswith('tecken ') and (' ur ' in rest or ' i ' in rest):
-                # CHAR_AT: Sätt tecken till tecken i ur källa / tecken i ord_buf / tecken[0] i ord_buf
-                sep = ' ur ' if ' ur ' in rest else ' i '
-                parts = rest.split(sep)
+            elif rest.startswith('tecken ') and ' ur ' in rest:
+                # CHAR_AT: Sätt tecken till tecken i ur källa
+                parts = rest.split(' ur ')
                 if len(parts) >= 2:
-                    idx_part = parts[0].replace('tecken', '').strip()  # remove "tecken" prefix
-                    source = parts[1].strip()
-                    tokens.append(('SET_CHAR_AT', var, idx_part, source))
-                else:
-                    tokens.append(('SET', var, rest))
-            elif rest.startswith('tecken[') and '] i ' in rest:
-                # CHAR_AT with explicit index: Sätt c till tecken[0] i ord_buf
-                parts = rest.split('] i ')
-                if len(parts) >= 2:
-                    idx_part = parts[0].replace('tecken[', '').strip()  # get "0"
+                    idx_part = parts[0].replace('tecken', '').strip()
                     source = parts[1].strip()
                     tokens.append(('SET_CHAR_AT', var, idx_part, source))
                 else:
@@ -148,15 +138,6 @@ def tokenize(src):
             # Lagra X vid Y i Z → STORE_CHAR X Y Z
             if len(words) >= 6 and words[2] == 'vid' and words[4] == 'i':
                 tokens.append(('STORE_CHAR', words[1], words[3], words[5]))
-
-        elif first == 'Jämför':
-            # Jämför X med Y → CMP_BUF_LIT X Y  (result stored in 'träff')
-            if 'med' in words:
-                med_i = words.index('med')
-                buf = words[1] if med_i > 1 else ''
-                lit = words[med_i + 1] if med_i + 1 < len(words) else ''
-                if buf and lit:
-                    tokens.append(('CMP_BUF_LIT', buf, lit))
 
         elif first == 'Om':
             # "Om x är mindre än y" → store comparison type with IF
@@ -247,9 +228,6 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'STORE_CHAR':
-            stmts.append(tok)
-            i += 1
-        elif tok[0] == 'CMP_BUF_LIT':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'SKRIV_BUF':
@@ -440,7 +418,7 @@ def parse(tokens):
                     break
                 if tokens[j][0] == 'END':
                     break
-
+            
             # Generate comparison first (from tok[1:4])
             cmp_info = None
             if len(tok) >= 4:
@@ -452,46 +430,24 @@ def parse(tokens):
                     stmts.append(('CMP_GT', var1, var2))
                 else:
                     stmts.append(('CMP', var1, var2))
-
-            # Parse IF body with proper depth tracking
+            
+            # Parse IF body
             body = []
             i += 1
-            depth = 1
-            while i < len(tokens) and depth > 0:
-                cur = tokens[i]
-                if cur[0] == 'IF':
-                    depth += 1
-                elif cur[0] == 'END':
-                    depth -= 1
-                    if depth > 0:
-                        body.append(cur)
-                elif cur[0] == 'ELSE':
-                    # At depth 1, ELSE terminates the if-body and starts else-body
-                    if depth == 1:
-                        break
-                    else:
-                        body.append(cur)
-                else:
-                    body.append(cur)
+            while i < len(tokens) and tokens[i][0] not in ('END', 'ELSE'):
+                body.append(tokens[i])
                 i += 1
-
+            
             if has_else:
                 # IF with ELSE
                 stmts.append(('IF', body, cmp_info, '__HAS_ELSE__'))
                 if i < len(tokens) and tokens[i][0] == 'ELSE':
                     i += 1  # skip ELSE token
                     else_body = []
-                    else_depth = 1
-                    while i < len(tokens) and else_depth > 0:
-                        cur = tokens[i]
-                        if cur[0] == 'IF':
-                            else_depth += 1
-                        elif cur[0] == 'END':
-                            else_depth -= 1
-                            if else_depth > 0:
-                                else_body.append(cur)
-                        else:
-                            else_body.append(cur)
+                    while i < len(tokens) and tokens[i][0] != 'END':
+                        else_body.append(tokens[i])
+                        i += 1
+                    if i < len(tokens) and tokens[i][0] == 'END':
                         i += 1
                     stmts.append(('ELSE', else_body))
             else:
@@ -533,7 +489,6 @@ def compile_to_asm(stmts, target='linux'):
     labels = [0]
     named_buffers = set()
     skriv_buf_used = [False]
-    lit_strings = []
 
     def alloc_var(v):
         nonlocal next_reg
@@ -575,11 +530,6 @@ def compile_to_asm(stmts, target='linux'):
             strings.append(s)
             idx = len(strings) - 1
             if target == 'windows':
-                # TODO: call puts clobbers caller-saved regs (%r8-%r11) which hold
-                # variables when called inside a FOR loop. Need same push/subq $32/
-                # call/addq/pop pattern as SKRIV_BUF. Without it, the FOR loop counter
-                # (%r11 or whichever reg holds 'i') is corrupted after each Skriv inside
-                # a loop body, causing the loop to exit or jump incorrectly.
                 code.append(f"    lea msg_{idx}(%rip), %rcx")
                 code.append(f"    call puts")
             else:
@@ -641,8 +591,6 @@ def compile_to_asm(stmts, target='linux'):
             var = stmt[1]
             idx = stmt[2]
             source = stmt[3]
-            if idx == '':
-                idx = 'i'  # Default: use FOR loop index
             if var in ('tecken', '_tecken'):
                 # Keep result in %r15 (reserved for char) — don't consume a GP register
                 var_reg[var] = '%r15'
@@ -837,58 +785,6 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $256, %edx  # max bytes")
                 code.append(f"    syscall")
         
-        elif op == 'CMP_BUF_LIT':
-            buf_name, literal = stmt[1], stmt[2]
-            lit_strings.append(literal)
-            lit_idx = len(lit_strings) - 1
-            träff_reg = alloc_var('träff')
-            if target == 'windows':
-                cs = {'%r8', '%r9', '%r10', '%r11'}
-                to_save = sorted(r for r in var_reg.values() if r in cs and r != träff_reg)
-                align_pad = 8 if len(to_save) % 2 == 1 else 0
-                if align_pad:
-                    code.append(f"    subq $8, %rsp  # alignment pad")
-                for reg in to_save:
-                    code.append(f"    push {reg}")
-                code.append(f"    subq $32, %rsp  # shadow space for strcmp")
-                code.append(f"    lea {buf_name}(%rip), %rcx")
-                code.append(f"    lea lit_{lit_idx}(%rip), %rdx")
-                code.append(f"    call strcmp")
-                code.append(f"    test %eax, %eax")
-                code.append(f"    sete %al")
-                code.append(f"    addq $32, %rsp")
-                for reg in reversed(to_save):
-                    code.append(f"    pop {reg}")
-                if align_pad:
-                    code.append(f"    addq $8, %rsp")
-                code.append(f"    movzx %al, %rax")
-                code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
-            else:
-                # Inline strcmp: rsi=buf, rdi=lit → result in träff_reg
-                lbl_loop = new_label()
-                lbl_ne = new_label()
-                lbl_eq = new_label()
-                lbl_done = new_label()
-                code.append(f"    lea {buf_name}(%rip), %rsi")
-                code.append(f"    lea lit_{lit_idx}(%rip), %rdi")
-                code.append(f"{lbl_loop}:")
-                code.append(f"    movb (%rsi), %al")
-                code.append(f"    movb (%rdi), %cl")
-                code.append(f"    cmpb %cl, %al")
-                code.append(f"    jne {lbl_ne}")
-                code.append(f"    testb %al, %al")
-                code.append(f"    jz {lbl_eq}")
-                code.append(f"    inc %rsi")
-                code.append(f"    inc %rdi")
-                code.append(f"    jmp {lbl_loop}")
-                code.append(f"{lbl_eq}:")
-                code.append(f"    mov $1, %rax")
-                code.append(f"    jmp {lbl_done}")
-                code.append(f"{lbl_ne}:")
-                code.append(f"    xor %rax, %rax")
-                code.append(f"{lbl_done}:")
-                code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
-
         elif op == 'STORE_CHAR':
             char_var, idx_var, buf_name = stmt[1], stmt[2], stmt[3]
             named_buffers.add(buf_name)
@@ -908,7 +804,6 @@ def compile_to_asm(stmts, target='linux'):
             code.append(f"    mov {idx_reg}, %rcx")
             code.append(f"    add %rcx, %rsi")
             code.append(f"    mov {char_byte}, (%rsi)")
-            code.append(f"    movb $0, 1(%rsi)  # null-terminate")
 
         elif op == 'SKRIV_BUF':
             buf_name = stmt[1]
@@ -957,8 +852,7 @@ def compile_to_asm(stmts, target='linux'):
 
         elif op == 'CHAR_AT':
             idx, var = stmt[1], stmt[2]
-            source = stmt[3] if len(stmt) > 3 else 'input_buf'
-            # Get character at index from source buffer, store in r15 (not r12)
+            # Get character at index from input_buf, store in r15 (not r12)
             if idx in var_reg:
                 code.append(f"    mov {var_reg[idx]}, %rcx  # index")
             else:
@@ -966,7 +860,7 @@ def compile_to_asm(stmts, target='linux'):
                     code.append(f"    mov ${int(idx)}, %rcx  # index")
                 except:
                     code.append(f"    mov $0, %rcx  # index fallback")
-            code.append(f"    lea {source}(%rip), %rsi")
+            code.append(f"    lea input_buf(%rip), %rsi")
             code.append(f"    add %rcx, %rsi")
             code.append(f"    mov (%rsi), %r15b  # character at index")
             # Track last char in a pseudo-variable
@@ -1005,9 +899,6 @@ def compile_to_asm(stmts, target='linux'):
             data.append(f"msg_{i}: .asciz \"{escaped}\"")
         else:
             data.append(f"msg_{i}: .ascii \"{escaped}\\n\\0\"")
-    for i, s in enumerate(lit_strings):
-        escaped = s.replace('\\', '\\\\').replace('"', '\\"')
-        data.append(f'lit_{i}: .asciz "{escaped}"')
     data.append("num_buf: .byte 0")
     data.append("input_buf: .skip 256")
     for buf in sorted(named_buffers):
@@ -1076,7 +967,7 @@ def main():
         print(asm)
         return
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.s', delete=False, encoding='utf-8') as f:
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.s', delete=False) as f:
         f.write(asm)
         asm_file = f.name
 

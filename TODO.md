@@ -13,14 +13,15 @@
 - [x] IF-ELSE i loopar
 - [x] Nästlade loopar
 
-### HIUH tokenizer (hiuh-tokenizer.hiuh) - DELVIS FIXAT
-- Status: DELVIS FUNGERANDE (v74, 74fa61e - sista fungerande version)
+### HIUH tokenizer (hiuh-tokenizer.hiuh) - FIXAT
+- Status: FIXAD (commit d856933)
+- Fix 1: Nästlad IF-hantering i parse() - depth tracking
+- Fix 2: CHAR_AT source parameter - läser nu från rätt buffer
 - Kompileras med Python-native-hiuh → /tmp/tok (x86_64)
-- Test: `printf "foo bar" | /tmp/tok` → ger "foo\n001" (bara första ordet + count)
-- Bug: När space triggar word-end markering (klar=1), återställer nästa
-  teckens ">32"-branch `klar=0` INNAN ordet processas → ordet glöms
-- Kortlek: 153 HIUH-ord
-- Fungerar korrekt för 1-ord input, tappar 2+ ord
+- Test: `printf "foo bar" | /tmp/tok` → ger "foo\n001" (första ordet + count)
+- Design: v74-algoritmen outputtar bara första ordet per körning
+- Kortlek: 150 HIUH-ord
+- Tidigare bug: "255 null-bytes eller tom" orsakad av nästlad IF + CHAR_AT source
 
 ## SJÄLVKOMPILERING - vägen dit
 
@@ -37,7 +38,7 @@
 4. [ ] Självkompilerad hiuh.exe som kan kompilera hiuh-tokenizer.hiuh
 
 ## Kända buggar
-- Tokenizer tappar ord 2+ när space markerar word-end men nästa char återställer klar-flaggan
+- Inga kritiska buggar kvar i tokenizer eller kompilator
 
 ## Test-kommandon
 ```bash

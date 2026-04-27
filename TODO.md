@@ -18,8 +18,8 @@
 - [x] Fibonacci loop ger rätt svar! (56a82a9 - %4 → %6)
 
 ### Medium prioritet  
-- [ ] Tokenizer: bygg ord genom att jämföra med mellanslag (32)
-- [ ] Lagra tokens i en lista
+- [x] Tokenizer: bygg ord genom att jämföra med mellanslag (32) - TODO.md updated
+- [x] Lagra tokens i en lista - tokenizer returnerar nu (tokens, ord_lista)
 - [x] Funktionstyper: `Sätt <namn> till grej med x, y` för att skapa funktioner
 - [x] Stöd för `x är y` i tokenizer → SET (58a596c)
 - [x] Stöd för `x är y pluss z` i tokenizer (adb13ef)

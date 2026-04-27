@@ -11,12 +11,18 @@ import os
 
 def tokenize(src):
     tokens = []
+    ord_lista = []  # Word list for self-compilation
+    
     for line in src.split('\n'):
         stripped = line.lstrip()
         if not stripped:
             continue
         words = stripped.split()
         first = words[0]
+        
+        # Save all non-comment words to ord_lista
+        if first != '.':
+            ord_lista.extend(words)
         
         if first == 'Skriv':
             rest = ' '.join(words[1:])
@@ -169,7 +175,7 @@ def tokenize(src):
                 item = words[2]
                 target = words[4]
                 tokens.append(('APPEND', item, target))
-    return tokens
+    return tokens, ord_lista
 
 def parse(tokens):
     stmts = []
@@ -490,10 +496,20 @@ def compile_to_asm(stmts):
         
         elif op == 'SKRIV_VAR':
             reg = resolve(stmt[1])
-            code.append(f"    mov {reg}, %r12  # print {stmt[1]}")
-            # Store value in buffer and print
-            code.append(f"    lea num_buf(%rip), %rsi")
-            code.append(f"    mov %r12b, (%rsi)")
+            # For immediates, load directly; for registers, use appropriate move
+            if reg.startswith('$'):
+                code.append(f"    mov {reg}, %rax  # print {stmt[1]}")
+                code.append(f"    lea num_buf(%rip), %rsi")
+                code.append(f"    mov %al, (%rsi)")
+            elif reg in ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']:
+                # 64-bit register - extract low byte
+                byte_reg = reg.replace('%r12', '%r12b').replace('%r13', '%r13b').replace('%r8', '%r8b').replace('%r9', '%r9b').replace('%r10', '%r10b').replace('%r11', '%r11b')
+                code.append(f"    lea num_buf(%rip), %rsi")
+                code.append(f"    mov {byte_reg}, (%rsi)")
+            else:
+                code.append(f"    lea num_buf(%rip), %rsi")
+                code.append(f"    mov {reg}, %al")
+                code.append(f"    mov %al, (%rsi)")
             code.append(f"    mov $1, %rdx")
             code.append(f"    mov $1, %rdi")
             code.append(f"    mov $1, %eax")
@@ -730,28 +746,37 @@ def compile_to_asm(stmts):
     return '\n'.join(out)
 
 def main():
+    show_ord_lista = '--ord-lista' in sys.argv
+    show_asm = '--asm' in sys.argv
+    
     if len(sys.argv) < 2:
         print("Usage: python3 hiuh-native.py <input.hiuh> [output]")
+        print("  --asm: Show assembly only")
+        print("  --ord-lista: Show word list only")
         return
     
     if sys.argv[1] == '-' or sys.argv[1] == '--stdin':
         src = sys.stdin.read()
-    elif sys.argv[1] == '--asm':
-        # Just show assembly
+    elif sys.argv[1] == '--asm' or sys.argv[1] == '--ord-lista':
         src = open(sys.argv[2]).read()
-        tokens = tokenize(src)
-        stmts = parse(tokens)
-        asm = compile_to_asm(stmts)
-        print(asm)
-        return
     else:
         src = open(sys.argv[1]).read()
     
-    tokens = tokenize(src)
+    result = tokenize(src)
+    if isinstance(result, tuple):
+        tokens, ord_lista = result
+    else:
+        tokens = result
+        ord_lista = []
     stmts = parse(tokens)
     asm = compile_to_asm(stmts)
     
-    if '--asm' in sys.argv:
+    if show_ord_lista:
+        print(f"ORD_LISTA: {len(ord_lista)} ord")
+        print(' '.join(ord_lista))
+        return
+    
+    if show_asm:
         print(asm)
         return
     

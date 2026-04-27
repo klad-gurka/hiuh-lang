@@ -1,31 +1,22 @@
-# HIUH Tokenizer - Delar upp text i ord och skriver ut varje ord
-# Läser text via stdin, skriver varje ord på egen rad
-
+# HIUH Tokenizer v18 - Delar upp text i ord
+# Enklast möjliga: lagra alla tecken, skriv ut vid mellanslag
 Sätt antal till 0
 Sätt j till 0
-Sätt ord_len till 0
 Läs
 För i från 0 till 255
-    Sätt tecken till tecken i ur källa
-    Om tecken är 0
-        Om j är större än 0
-            Lagra j vid ord_len i ord_buf
-            Skriv text i ord_buf
-            Sätt antal till antal pluss 1
-            Sätt j till 0
-        Hejdå
-        JagMåsteGåNu 0
-    Hejdå
+    Sätt tecken till tecken i ord_bu
     Om tecken är mindre än 33
         Om j är större än 0
-            Lagra j vid ord_len i ord_buf
-            Skriv text i ord_buf
+            Lagra tecken vid j i ord_bu
+            Lagra tecken vid j i ord_bu
+            Skriv text i ord_bu
             Sätt antal till antal pluss 1
             Sätt j till 0
         Hejdå
     Hejdå
     Om tecken är större än 32
-        Lagra tecken vid j i ord_buf
+        Lagra tecken vid j i ord_bu
+        Lagra tecken vid j i ord_bu
         Sätt j till j pluss 1
     Hejdå
 Hejdå

@@ -874,6 +874,7 @@ def compile_to_asm(stmts, target='linux'):
             code.append(f"    mov {idx_reg}, %rcx")
             code.append(f"    add %rcx, %rsi")
             code.append(f"    mov {char_byte}, (%rsi)")
+            code.append(f"    movb $0, 1(%rsi)  # null-terminate")
 
         elif op == 'SKRIV_BUF':
             buf_name = stmt[1]

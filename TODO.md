@@ -14,12 +14,9 @@
 - [x] Nästlade loopar
 
 ### HIUH tokenizer (hiuh-tokenizer.hiuh) - FIXAT
-- Status: FIXAD (commit d856933)
-- Fix 1: Nästlad IF-hantering i parse() - depth tracking
-- Fix 2: CHAR_AT source parameter - läser nu från rätt buffer
-- Kompileras med Python-native-hiuh → /tmp/tok (x86_64)
-- Test: `printf "foo bar" | /tmp/tok` → ger "foo\n001" (första ordet + count)
+- Status: FIXAD (commit 74fa61e)
 - Design: v74-algoritmen outputtar bara första ordet per körning
+- Design: För multi-word output, kör tokenizer en gång per ord i loopen
 - Kortlek: 150 HIUH-ord
 - Tidigare bug: "255 null-bytes eller tom" orsakad av nästlad IF + CHAR_AT source
 

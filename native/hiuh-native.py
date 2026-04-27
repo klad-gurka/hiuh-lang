@@ -119,6 +119,15 @@ def tokenize(src):
             var2 = words[2] if len(words) > 2 else '0'
             tokens.append(('CMP_EQ', var1, var2))
         
+        elif 'är' in words and 'pluss' in words:
+            # "x är y pluss z" → PLUS x y z
+            var = first
+            parts = words[words.index('är')+1:]
+            pluss_idx = parts.index('pluss')
+            left = ' '.join(parts[:pluss_idx]).strip()
+            right = ' '.join(parts[pluss_idx+1:]).strip()
+            tokens.append(('PLUS', var, left, right))
+        
         elif first == 'Lägg' and len(words) >= 5:
             if words[1] == 'till':
                 item = words[2]
@@ -508,6 +517,14 @@ def main():
     
     if sys.argv[1] == '-' or sys.argv[1] == '--stdin':
         src = sys.stdin.read()
+    elif sys.argv[1] == '--asm':
+        # Just show assembly
+        src = open(sys.argv[2]).read()
+        tokens = tokenize(src)
+        stmts = parse(tokens)
+        asm = compile_to_asm(stmts)
+        print(asm)
+        return
     else:
         src = open(sys.argv[1]).read()
     

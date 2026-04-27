@@ -495,7 +495,7 @@ def compile_to_asm(stmts):
             code.append(f"    inc {reg}")
             code.append(f"    jmp {loop_start}")
             code.append(f"{loop_end}:")
-                
+        
         elif op == 'IF':
             # stmt = ('IF', body, else_body, '__HAS_ELSE__') or ('IF', body)
             # '__HAS_ELSE__' is now at the END of the tuple, not in the middle
@@ -626,12 +626,6 @@ def compile_to_asm(stmts):
             # Track last char in a pseudo-variable
             var_reg['_tecken'] = '%r15'
             var_reg['tecken'] = '%r15'  # also as "tecken" for compatibility
-        
-        elif op == 'RETURN':
-            # RETURN in IF/ELSE body - just store the value (don't exit function)
-            ret_val = stmt[1]
-            ret_reg = resolve(ret_val)
-            code.append(f"    mov {ret_reg}, %r11  # _result (return)")
     
     has_exit = False
     for stmt in stmts:

@@ -535,6 +535,24 @@ def compile_to_asm(stmts, target='linux'):
             return var_reg[v]
         return '%r12'  # Default
     
+    def win_call_save(exclude=None):
+        cs = {'%r8', '%r9', '%r10', '%r11'}
+        to_save = sorted(r for r in var_reg.values() if r in cs and r != exclude)
+        align_pad = 8 if len(to_save) % 2 == 1 else 0
+        if align_pad:
+            code.append(f"    subq $8, %rsp  # alignment pad")
+        for reg in to_save:
+            code.append(f"    push {reg}")
+        code.append(f"    subq $32, %rsp  # shadow space")
+        return to_save, align_pad
+
+    def win_call_restore(to_save, align_pad):
+        code.append(f"    addq $32, %rsp")
+        for reg in reversed(to_save):
+            code.append(f"    pop {reg}")
+        if align_pad:
+            code.append(f"    addq $8, %rsp  # restore alignment pad")
+
     def compile_stmt(stmt):
         op = stmt[0]
         
@@ -543,13 +561,10 @@ def compile_to_asm(stmts, target='linux'):
             strings.append(s)
             idx = len(strings) - 1
             if target == 'windows':
-                # TODO: call puts clobbers caller-saved regs (%r8-%r11) which hold
-                # variables when called inside a FOR loop. Need same push/subq $32/
-                # call/addq/pop pattern as SKRIV_BUF. Without it, the FOR loop counter
-                # (%r11 or whichever reg holds 'i') is corrupted after each Skriv inside
-                # a loop body, causing the loop to exit or jump incorrectly.
+                to_save, align_pad = win_call_save()
                 code.append(f"    lea msg_{idx}(%rip), %rcx")
                 code.append(f"    call puts")
+                win_call_restore(to_save, align_pad)
             else:
                 code.append(f"    lea msg_{idx}(%rip), %rsi")
                 code.append(f"    mov ${len(s) + 1}, %edx")
@@ -560,14 +575,15 @@ def compile_to_asm(stmts, target='linux'):
         elif op == 'SKRIV_VAR':
             reg = resolve(stmt[1])
             if target == 'windows':
-                if reg.startswith('$'):
-                    code.append(f"    mov {reg}, %rdx")
-                elif reg == '%r15':
-                    code.append(f"    movzx %r15b, %rdx")
+                if reg == '%r15':
+                    code.append(f"    movzx %r15b, %rax  # save print value")
                 else:
-                    code.append(f"    mov {reg}, %rdx")
+                    code.append(f"    mov {reg}, %rax  # save print value")
+                to_save, align_pad = win_call_save()
+                code.append(f"    mov %rax, %rdx")
                 code.append(f"    lea fmt_int(%rip), %rcx")
                 code.append(f"    call printf")
+                win_call_restore(to_save, align_pad)
             else:
                 if reg.startswith('$'):
                     code.append(f"    mov {reg}, %rax  # print {stmt[1]}")
@@ -809,24 +825,13 @@ def compile_to_asm(stmts, target='linux'):
             lit_idx = len(lit_strings) - 1
             träff_reg = alloc_var('träff')
             if target == 'windows':
-                cs = {'%r8', '%r9', '%r10', '%r11'}
-                to_save = sorted(r for r in var_reg.values() if r in cs and r != träff_reg)
-                align_pad = 8 if len(to_save) % 2 == 1 else 0
-                if align_pad:
-                    code.append(f"    subq $8, %rsp  # alignment pad")
-                for reg in to_save:
-                    code.append(f"    push {reg}")
-                code.append(f"    subq $32, %rsp  # shadow space for strcmp")
+                to_save, align_pad = win_call_save(exclude=träff_reg)
                 code.append(f"    lea {buf_name}(%rip), %rcx")
                 code.append(f"    lea lit_{lit_idx}(%rip), %rdx")
                 code.append(f"    call strcmp")
                 code.append(f"    test %eax, %eax")
                 code.append(f"    sete %al")
-                code.append(f"    addq $32, %rsp")
-                for reg in reversed(to_save):
-                    code.append(f"    pop {reg}")
-                if align_pad:
-                    code.append(f"    addq $8, %rsp")
+                win_call_restore(to_save, align_pad)
                 code.append(f"    movzx %al, %rax")
                 code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
             else:
@@ -879,26 +884,10 @@ def compile_to_asm(stmts, target='linux'):
             buf_name = stmt[1]
             named_buffers.add(buf_name)
             if target == 'windows':
-                # Save caller-saved variable registers before calling puts.
-                # Must also allocate 32-byte shadow space BELOW the saved registers,
-                # otherwise puts uses the saved-register slots as its home space.
-                # Alignment: base rsp is 0-mod-16; N pushes + 32-byte shadow must
-                # keep rsp 0-mod-16 at the call site. If N is odd, add 8 bytes extra.
-                cs = {'%r8', '%r9', '%r10', '%r11'}
-                to_save = sorted(r for r in var_reg.values() if r in cs)
-                align_pad = 8 if len(to_save) % 2 == 1 else 0
-                if align_pad:
-                    code.append(f"    subq $8, %rsp  # alignment pad")
-                for reg in to_save:
-                    code.append(f"    push {reg}")
-                code.append(f"    subq $32, %rsp  # shadow space for puts")
+                to_save, align_pad = win_call_save()
                 code.append(f"    lea {buf_name}(%rip), %rcx")
                 code.append(f"    call puts")
-                code.append(f"    addq $32, %rsp  # free shadow space")
-                for reg in reversed(to_save):
-                    code.append(f"    pop {reg}")
-                if align_pad:
-                    code.append(f"    addq $8, %rsp  # restore alignment pad")
+                win_call_restore(to_save, align_pad)
             else:
                 skriv_buf_used[0] = True
                 lbl_start = new_label()

@@ -41,6 +41,8 @@ def tokenize(src):
             rest = ' '.join(words[1:])
             if rest.startswith('värdet av '):
                 tokens.append(('SKRIV_VAR', words[-1]))
+            elif rest.startswith('text i '):
+                tokens.append(('SKRIV_BUF', rest[len('text i '):]))
             else:
                 tokens.append(('SKRIV', rest))
         elif first == '.':
@@ -132,6 +134,11 @@ def tokenize(src):
             except:
                 pass
         
+        elif first == 'Lagra':
+            # Lagra X vid Y i Z → STORE_CHAR X Y Z
+            if len(words) >= 6 and words[2] == 'vid' and words[4] == 'i':
+                tokens.append(('STORE_CHAR', words[1], words[3], words[5]))
+
         elif first == 'Om':
             # "Om x är mindre än y" → store comparison type with IF
             rest = words[1:]
@@ -218,6 +225,12 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'SET_CMP_RESULT':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'STORE_CHAR':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'SKRIV_BUF':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'PLUS':
@@ -474,7 +487,9 @@ def compile_to_asm(stmts, target='linux'):
     # Track reserved registers
     reserved = {'%r14': 'stack pointer', '%r15': 'temp/char result'}
     labels = [0]
-    
+    named_buffers = set()
+    skriv_buf_used = [False]
+
     def alloc_var(v):
         nonlocal next_reg
         if v not in var_reg:
@@ -576,10 +591,16 @@ def compile_to_asm(stmts, target='linux'):
             var = stmt[1]
             idx = stmt[2]
             source = stmt[3]
-            reg = alloc_var(var)
-            compile_stmt(('CHAR_AT', idx, source))
-            code.append(f"    movzx %r15b, %r15")
-            code.append(f"    mov %r15, {reg}  # {var} = tecken")
+            if var in ('tecken', '_tecken'):
+                # Keep result in %r15 (reserved for char) — don't consume a GP register
+                var_reg[var] = '%r15'
+                compile_stmt(('CHAR_AT', idx, source))
+                code.append(f"    movzx %r15b, %r15")
+            else:
+                reg = alloc_var(var)
+                compile_stmt(('CHAR_AT', idx, source))
+                code.append(f"    movzx %r15b, %r15")
+                code.append(f"    mov %r15, {reg}  # {var} = tecken")
         
         elif op == 'PLUS':
             var = stmt[1]
@@ -764,6 +785,71 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $256, %edx  # max bytes")
                 code.append(f"    syscall")
         
+        elif op == 'STORE_CHAR':
+            char_var, idx_var, buf_name = stmt[1], stmt[2], stmt[3]
+            named_buffers.add(buf_name)
+            char_reg = resolve(char_var)
+            if char_reg.startswith('$'):
+                code.append(f"    mov {char_reg}, %rax")
+                char_byte = '%al'
+            else:
+                byte_map = {
+                    '%r12': '%r12b', '%r13': '%r13b', '%r8': '%r8b',
+                    '%r9': '%r9b', '%r10': '%r10b', '%r11': '%r11b',
+                    '%r15': '%r15b', '%r14': '%r14b',
+                }
+                char_byte = byte_map.get(char_reg, '%r15b')
+            idx_reg = resolve(idx_var)
+            code.append(f"    lea {buf_name}(%rip), %rsi")
+            code.append(f"    mov {idx_reg}, %rcx")
+            code.append(f"    add %rcx, %rsi")
+            code.append(f"    mov {char_byte}, (%rsi)")
+
+        elif op == 'SKRIV_BUF':
+            buf_name = stmt[1]
+            named_buffers.add(buf_name)
+            if target == 'windows':
+                # Save caller-saved variable registers before calling puts.
+                # Must also allocate 32-byte shadow space BELOW the saved registers,
+                # otherwise puts uses the saved-register slots as its home space.
+                # Alignment: base rsp is 0-mod-16; N pushes + 32-byte shadow must
+                # keep rsp 0-mod-16 at the call site. If N is odd, add 8 bytes extra.
+                cs = {'%r8', '%r9', '%r10', '%r11'}
+                to_save = sorted(r for r in var_reg.values() if r in cs)
+                align_pad = 8 if len(to_save) % 2 == 1 else 0
+                if align_pad:
+                    code.append(f"    subq $8, %rsp  # alignment pad")
+                for reg in to_save:
+                    code.append(f"    push {reg}")
+                code.append(f"    subq $32, %rsp  # shadow space for puts")
+                code.append(f"    lea {buf_name}(%rip), %rcx")
+                code.append(f"    call puts")
+                code.append(f"    addq $32, %rsp  # free shadow space")
+                for reg in reversed(to_save):
+                    code.append(f"    pop {reg}")
+                if align_pad:
+                    code.append(f"    addq $8, %rsp  # restore alignment pad")
+            else:
+                skriv_buf_used[0] = True
+                lbl_start = new_label()
+                lbl_end = new_label()
+                code.append(f"    lea {buf_name}(%rip), %rsi")
+                code.append(f"    xor %rdx, %rdx")
+                code.append(f"{lbl_start}:")
+                code.append(f"    cmpb $0, (%rsi,%rdx)")
+                code.append(f"    je {lbl_end}")
+                code.append(f"    inc %rdx")
+                code.append(f"    jmp {lbl_start}")
+                code.append(f"{lbl_end}:")
+                code.append(f"    mov $1, %edi")
+                code.append(f"    mov $1, %eax")
+                code.append(f"    syscall")
+                code.append(f"    lea _nl(%rip), %rsi")
+                code.append(f"    mov $1, %rdx")
+                code.append(f"    mov $1, %edi")
+                code.append(f"    mov $1, %eax")
+                code.append(f"    syscall")
+
         elif op == 'CHAR_AT':
             idx, var = stmt[1], stmt[2]
             # Get character at index from input_buf, store in r15 (not r12)
@@ -815,6 +901,10 @@ def compile_to_asm(stmts, target='linux'):
             data.append(f"msg_{i}: .ascii \"{escaped}\\n\\0\"")
     data.append("num_buf: .byte 0")
     data.append("input_buf: .skip 256")
+    for buf in sorted(named_buffers):
+        data.append(f"{buf}: .skip 256")
+    if target == 'linux' and skriv_buf_used[0]:
+        data.append('_nl: .ascii "\\n"')
     data.append(".bss")
     data.append(".align 8")
     data.append("stack: .skip 4096")

@@ -67,9 +67,10 @@ def tokenize(src):
                 func_name = parts[0].strip()
                 args = [a.strip() for a in parts[1].split(',')]
                 tokens.append(('FUNC_CALL', var, func_name, args))
-            elif rest.startswith('tecken ') and ' ur ' in rest:
-                # CHAR_AT: Sätt tecken till tecken i ur källa
-                parts = rest.split(' ur ')
+            elif rest.startswith('tecken ') and (' ur ' in rest or ' i ' in rest):
+                # CHAR_AT: Sätt tecken till tecken i ur källa / tecken i ord_bu
+                sep = ' ur ' if ' ur ' in rest else ' i '
+                parts = rest.split(sep)
                 if len(parts) >= 2:
                     idx_part = parts[0].replace('tecken', '').strip()
                     source = parts[1].strip()
@@ -609,6 +610,8 @@ def compile_to_asm(stmts, target='linux'):
             var = stmt[1]
             idx = stmt[2]
             source = stmt[3]
+            if idx == '':
+                idx = 'i'  # Default: use FOR loop index
             if var in ('tecken', '_tecken'):
                 # Keep result in %r15 (reserved for char) — don't consume a GP register
                 var_reg[var] = '%r15'

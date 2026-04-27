@@ -1,22 +1,23 @@
-# HIUH Tokenizer v18 - Delar upp text i ord
-# Enklast möjliga: lagra alla tecken, skriv ut vid mellanslag
+# HIUH Tokenizer v20 - Delar upp text i ord
+# OBS: variabler måste vara unika - undvik "tecken" pga special-hantering i SET_CHAR_AT
 Sätt antal till 0
 Sätt j till 0
+Sätt noll till 0
 Läs
 För i från 0 till 255
-    Sätt tecken till tecken i ord_bu
-    Om tecken är mindre än 33
+    Sätt c till tecken i ord_bu
+    Om c är mindre än 33
         Om j är större än 0
-            Lagra tecken vid j i ord_bu
-            Lagra tecken vid j i ord_bu
+            Lagra noll vid j i ord_bu
+            Lagra noll vid j i ord_bu
             Skriv text i ord_bu
             Sätt antal till antal pluss 1
             Sätt j till 0
         Hejdå
     Hejdå
-    Om tecken är större än 32
-        Lagra tecken vid j i ord_bu
-        Lagra tecken vid j i ord_bu
+    Om c är större än 32
+        Lagra c vid j i ord_bu
+        Lagra c vid j i ord_bu
         Sätt j till j pluss 1
     Hejdå
 Hejdå

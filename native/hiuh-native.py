@@ -437,8 +437,8 @@ def compile_to_asm(stmts):
     var_reg = {}
     func_defs = {}  # Store function definitions
     next_reg = 0
-    # r12, r13 for variables; r14=stack ptr, r15=char/temp (reserved)
-    reg_names = ['%r12', '%r13', '%r14', '%r15']  # 4 vars max
+    # r12-r15 for variables; r14=stack ptr, r15=char/temp (reserved)
+    reg_names = ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']  # 6 vars max
     # Track reserved registers
     reserved = {'%r14': 'stack pointer', '%r15': 'temp/char result'}
     labels = [0]
@@ -446,11 +446,11 @@ def compile_to_asm(stmts):
     def alloc_var(v):
         nonlocal next_reg
         if v not in var_reg:
-            reg = reg_names[next_reg % 4]
+            reg = reg_names[next_reg % 6]
             # Never allocate reserved registers
             while reg in reserved:
                 next_reg += 1
-                reg = reg_names[next_reg % 4]
+                reg = reg_names[next_reg % 6]
             var_reg[v] = reg
             next_reg += 1
         return var_reg[v]

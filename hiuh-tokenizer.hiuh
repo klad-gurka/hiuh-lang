@@ -1,21 +1,9 @@
-# HIUH Tokenizer v25 - Fix: use ord_buf, add noll init
-Sätt antal till 0
+# Step 1: Init and read
 Sätt j till 0
-Sätt noll till 0
 Läs
-För i från 0 till 255
-    Sätt c till tecken i ord_buf
-    Om c är mindre än 33
-        Om j är större än 0
-            Lagra noll vid j i ord_buf
-            Skriv text i ord_buf
-            Sätt antal till antal pluss 1
-            Sätt j till 0
-        Hejdå
-    Hejdå
-    Om c är större än 32
-        Lagra c vid j i ord_buf
-        Sätt j till j pluss 1
-    Hejdå
+Sätt c till tecken i ord_buf
+Om c är större än 0
+    Lagra c vid j i ord_buf
+    Skriv text i ord_buf
 Hejdå
-Skriv värdet av antal
+Skriv värdet av c

@@ -1,7 +1,6 @@
-# Simple test - just print the count
-Läs
-Sätt antal till 0
-För i från 0 till 10
-    antal är antal pluss 1
+# Testa funktionstyper - enkelt
+Sätt dubbla till grej med n
+    ge n
 Hejdå
-Skriv värdet av antal
+Sätt a till dubbla med 5
+Skriv värdet av a

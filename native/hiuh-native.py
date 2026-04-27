@@ -35,6 +35,17 @@ def tokenize(src):
                 left = parts[0].strip()
                 right = parts[1].strip() if len(parts) > 1 else '0'
                 tokens.append(('PLUS', var, left, right))
+            elif rest.startswith('grej med '):
+                # Function definition: Sätt foo till grej med x, y
+                params_str = rest[len('grej med '):]
+                params = [p.strip() for p in params_str.split(',')]
+                tokens.append(('FUNC_DEF', var, params))
+            elif ' med ' in rest and not rest.startswith('grej '):
+                # Function call: Sätt a till min med 2, 3
+                parts = rest.split(' med ')
+                func_name = parts[0].strip()
+                args = [a.strip() for a in parts[1].split(',')]
+                tokens.append(('FUNC_CALL', var, func_name, args))
             else:
                 tokens.append(('SET', var, rest))
         elif first == 'För':
@@ -52,6 +63,10 @@ def tokenize(src):
         elif first == 'JagMåsteGåNu':
             code = words[1] if len(words) > 1 and words[1].isdigit() else '0'
             tokens.append(('EXIT', code))
+        elif first == 'ge':
+            # Return statement: ge x
+            val = words[1] if len(words) > 1 else '0'
+            tokens.append(('RETURN', val))
         
         elif first == 'Läs':
             tokens.append(('READ',))
@@ -217,6 +232,94 @@ def parse(tokens):
         elif tok[0] == 'LIST_GET':
             stmts.append(tok)
             i += 1
+        elif tok[0] == 'FUNC_DEF':
+            # Parse function body until END, handling nested IF-ELSE
+            body = []
+            i += 1
+            depth = 1
+            while i < len(tokens) and depth > 0:
+                tok2 = tokens[i]
+                if tok2[0] == 'IF':
+                    # Handle IF with body until ELSE or END
+                    has_else = False
+                    for j in range(i+1, len(tokens)):
+                        if tokens[j][0] == 'ELSE':
+                            has_else = True
+                            break
+                        if tokens[j][0] == 'END':
+                            break
+                    # Generate CMP statement
+                    if len(tok2) >= 4:
+                        cmp_type, var1, var2 = tok2[1], tok2[2], tok2[3]
+                        if cmp_type == 'LT':
+                            body.append(('CMP_LT', var1, var2))
+                        elif cmp_type == 'GT':
+                            body.append(('CMP_GT', var1, var2))
+                        else:
+                            body.append(('CMP', var1, var2))
+                    # Parse IF body with depth tracking
+                    if_body = []
+                    i += 1
+                    depth += 1
+                    while depth > 1:
+                        tok3 = tokens[i]
+                        if tok3[0] == 'IF':
+                            depth += 1
+                            if_body.append(tok3)
+                            i += 1
+                        elif tok3[0] == 'END':
+                            depth -= 1
+                            if depth > 1:
+                                if_body.append(tok3)
+                            i += 1
+                        elif tok3[0] == 'ELSE' and depth == 2:
+                            # End of IF body, start of ELSE body
+                            i += 1
+                            else_body = []
+                            while depth > 1:
+                                tok4 = tokens[i]
+                                if tok4[0] == 'IF':
+                                    depth += 1
+                                    else_body.append(tok4)
+                                    i += 1
+                                elif tok4[0] == 'END':
+                                    depth -= 1
+                                    if depth > 1:
+                                        else_body.append(tok4)
+                                    i += 1
+                                elif tok4[0] == 'RETURN' and depth == 2:
+                                    # End of function body
+                                    else_body.append(tok4)
+                                    i += 1
+                                    depth = 0  # Exit function
+                                    break
+                                else:
+                                    else_body.append(tok4)
+                                    i += 1
+                            body.append(('IF', if_body, '__HAS_ELSE__', else_body))
+                            break
+                        else:
+                            if_body.append(tok3)
+                            i += 1
+                    continue
+                elif tok2[0] == 'END':
+                    depth -= 1
+                    if depth > 0:
+                        body.append(tok2)
+                    i += 1
+                elif tok2[0] == 'RETURN' and depth == 1:
+                    # End of function body
+                    body.append(tok2)
+                    i += 1
+                    depth = 0
+                    break
+                else:
+                    body.append(tok2)
+                    i += 1
+            stmts.append(('FUNC', tok[1], tok[2], body))
+        elif tok[0] == 'FUNC_CALL':
+            stmts.append(tok)
+            i += 1
         elif tok[0] == 'IF':
             # Check for upcoming ELSE
             has_else = False
@@ -288,6 +391,7 @@ def compile_to_asm(stmts):
     strings = []
     
     var_reg = {}
+    func_defs = {}  # Store function definitions
     next_reg = 0
     reg_names = ['%r12', '%r13', '%r14', '%r15']
     labels = [0]
@@ -307,12 +411,15 @@ def compile_to_asm(stmts):
         # Special case: 'tecken' is always in r15 (last CHAR_AT result)
         if v == 'tecken' or v == '_tecken':
             return '%r15'
+        # Check if it's a number
         try:
             return f'${int(v)}'
         except:
-            if v in var_reg:
-                return var_reg[v]
-            return '%r12'
+            pass
+        # Look up variable in register allocation
+        if v in var_reg:
+            return var_reg[v]
+        return '%r12'  # Default
     
     def compile_stmt(stmt):
         op = stmt[0]
@@ -328,7 +435,7 @@ def compile_to_asm(stmts):
             code.append(f"    syscall")
         
         elif op == 'SKRIV_VAR':
-            reg = var_reg.get(stmt[1], '%r12')
+            reg = resolve(stmt[1])
             code.append(f"    mov {reg}, %r12  # print {stmt[1]}")
             # Store value in buffer and print
             code.append(f"    lea num_buf(%rip), %rsi")
@@ -343,7 +450,7 @@ def compile_to_asm(stmts):
             val = stmt[2]
             reg = alloc_var(var)
             r = resolve(val)
-            code.append(f"    mov {r}, {reg}  # {var} = {val}")
+            code.append(f"    mov {r}, {reg}  # {var} = {val} (was val={val})")
         
         elif op == 'PLUS':
             var = stmt[1]
@@ -404,6 +511,34 @@ def compile_to_asm(stmts):
             code.append(f"    mov ${stmt[1]}, %edi")
             code.append(f"    mov $60, %rax")
             code.append(f"    syscall")
+        
+        elif op == 'FUNC':
+            # Store function definition for later use
+            # stmt = (FUNC, name, params, body)
+            func_defs[stmt[1]] = stmt
+        
+        elif op == 'FUNC_CALL':
+            var, func_name, args = stmt[1], stmt[2], stmt[3]
+            # Simple: inline the function body with args bound to temps
+            if func_name in func_defs:
+                func = func_defs[func_name]
+                params = func[2]
+                body = func[3]
+                # Bind params to args
+                for p, a in zip(params, args):
+                    compile_stmt(('SET', p, a))
+                # Compile body (stop at RETURN)
+                for s in body:
+                    if s[0] == 'RETURN':
+                        # Store return value in special register
+                        ret_val = s[1]
+                        ret_reg = resolve(ret_val)
+                        code.append(f"    mov {ret_reg}, %r11  # _result")
+                        break
+                    compile_stmt(s)
+            # Store result in var
+            reg = alloc_var(var)
+            code.append(f"    mov %r11, {reg}  # {var} = _result")
         
         elif op == 'ELSE':
             # ELSE body - execute unconditionally after IF

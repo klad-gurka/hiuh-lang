@@ -1,0 +1,30 @@
+# Test: single word without loop logic
+Sätt j till 0
+Sätt i_ord till 0
+Sätt klar till 0
+Läs
+
+För i från 0 till 255
+    Sätt tecken till tecken i ur källa
+    Om tecken är 0
+        Skriv värdet av j
+        JagMåsteGåNu 0
+    Hejdå
+    Om tecken är mindre än 33
+        Sätt klar till 1
+        Sätt i_ord till 0
+    Hejdå
+    Om tecken är större än 32
+        Lagra tecken vid j i ord_buf
+        Sätt j till j pluss 1
+        Sätt i_ord till 1
+        Sätt klar till 0
+    Hejdå
+    Om klar är 1
+        Skriv värdet av i_ord
+        Skriv text i ord_buf
+        Sätt j till 0
+        Sätt klar till 0
+    Hejdå
+Hejdå
+Skriv värdet av j

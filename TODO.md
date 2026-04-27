@@ -18,12 +18,13 @@
 - [x] IF-ELSE i loopar
 - [x] Nästlade loopar
 
-### HIUH tokenizer (hiuh-tokenizer.hiuh) - INTE KLAR
-- [ ] **VIKTIGT:** hiuh-tokenizer.hiuh är bara en TECKENRÄKNARE, inte en riktig tokenizer!
-- [ ] För att bli självkompilerande behövs:
+### HIUH tokenizer (hiuh-tokenizer.hiuh) - DELVIS FIXAT
+- [x] **FIXAD:** Räknar nu ord korrekt (ej tecken!)
+- [x] Output: antal ord = spaces + 1
+- [ ] För att bli SJÄLVKOMPILERANDE behövs:
   1. **Strings** - lagra källkod
-  2. **Listor** - spara tokens
-  3. **Riktig tokenisering** - dela kod i tokens som Python-tokenizern
+  2. **Listor** - spara tokens  
+  3. **Riktig tokenisering** - returnera faktiska ord, inte bara räkna
 
 ## Nästa steg (prioriterad ordning)
 

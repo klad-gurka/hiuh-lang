@@ -1,6 +1,5 @@
 # HIUH Tokenizer - Räknar ord i text
-# Läser text via stdin, delar vid mellanslag
-# Output: Antal ord
+# Läser text via stdin, räknar ord
 
 Sätt antal till 0
 Sätt i_ord till 0

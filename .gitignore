@@ -1,1 +1,34 @@
-venv/*
+# Compiled binaries
+hiuh-parser
+hiuh-parser-*
+hiuh-tokenizer
+hiuh-tokenizer-*
+hiuh-native
+hiuh-native-*
+
+# Build artifacts
+*.o
+*.s
+*.asm
+*.out
+*.exe
+
+# Temp files
+-
+-o
+always
+simple
+minimal
+test*
+stdin
+tokenizer-tokens.txt
+tok.o
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS
+.DS_Store

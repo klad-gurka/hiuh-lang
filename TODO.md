@@ -31,17 +31,13 @@ tools/
 
 | Keyword | IR | X86 | WASM | Kommentar |
 |---------|----|-----|------|-----------|
+| **Indentering** | ❌ | ❌ | ❌ | Python-style (inga hejdå för block) |
 | `Sätt x till 5` | ✅ | ✅ | ❌ | SET med integer |
 | `Sätt x till a pluss 3` | ✅ | ✅ | ❌ | SET med uttryck |
 | `För x från 0 till 10` | ✅ | ✅ | ❌ | FOR-loop |
 | `Om x är 0` | ✅ | ✅ | ❌ | IF med == |
 | `Om x är mindre än 0` | ✅ | ✅ | ❌ | IF med < |
 | `Om x är större än 0` | ✅ | ✅ | ❌ | IF med > |
-| `Om x är inte 0` | ❌ | ❌ | ❌ | IF med != |
-| `Om x är större eller 0` | ❌ | ❌ | ❌ | IF med >= |
-| `Om x är mindre eller 0` | ❌ | ❌ | ❌ | IF med <= |
-| `Hejdå` | ✅ | ✅ | ❌ | END (blockavslut) |
-| `Annars` | ❌ | ❌ | ❌ | ELSE-branch |
 | `Bryt` | ✅ | ✅ | ❌ | BREAK |
 | `Medan` | ❌ | ❌ | ❌ | WHILE-loop |
 | `Skriv x` | ✅ | ✅ | ❌ | SKRIV (text) |

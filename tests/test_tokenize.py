@@ -1,44 +1,82 @@
 #!/usr/bin/env python3
-"""Tests for tokenize.py"""
+"""Tests for tokenize.py - indentation-aware tokenizer"""
 
 import sys
-import io
 sys.path.insert(0, 'src')
 
 from hiuh.tokenize import tokenize
 
 def test_simple_set():
-    src = "Sätt x till 5"
-    tokens = list(tokenize(src))
+    """sätt x till 5"""
+    lines = list(tokenize("sätt x till 5"))
+    indent, tokens = lines[0]
+    assert indent == 0
     assert tokens == ['SET', 'x', 'TILL', '5']
 
-def test_multiple_tokens():
-    src = "Sätt x till 5\nSkrivNyRad x"
-    tokens = list(tokenize(src))
-    assert 'SET' in tokens
-    assert 'x' in tokens
-    assert '5' in tokens
+def test_multiple_lines():
+    """Multiple lines with indentation"""
+    src = """sätt x till 5
+sätt y till 10"""
+    lines = list(tokenize(src))
+    assert len(lines) == 2
+    assert lines[0] == (0, ['SET', 'x', 'TILL', '5'])
+    assert lines[1] == (0, ['SET', 'y', 'TILL', '10'])
 
 def test_for_loop():
-    # Note: 'i' is keyword IN, should be variable name
-    src = "För x från 0 till 10"
-    tokens = list(tokenize(src))
-    assert tokens == ['FOR', 'x', 'FRAN', '0', 'TILL', '10']
+    """för x från 0 till 10"""
+    src = """för x från 0 till 10
+    skriv x"""
+    lines = list(tokenize(src))
+    assert len(lines) == 2
+    assert lines[0] == (0, ['FOR', 'x', 'FRAN', '0', 'TILL', '10'])
+    assert lines[1] == (1, ['SKRIV', 'x'])
 
 def test_if_statement():
-    src = "Om x är 0"
-    tokens = list(tokenize(src))
-    assert tokens == ['IF', 'x', 'AR', '0']
+    """om x är 0"""
+    src = """om x är 0
+    skriv x"""
+    lines = list(tokenize(src))
+    assert len(lines) == 2
+    assert lines[0] == (0, ['IF', 'x', 'AR', '0'])
+    assert lines[1] == (1, ['SKRIV', 'x'])
 
-def test_empty_lines():
-    src = "Sätt x till 5\n\n\nSätt y till 10"
-    tokens = list(tokenize(src))
-    assert tokens == ['SET', 'x', 'TILL', '5', 'SET', 'y', 'TILL', '10']
+def test_space_friendly_skriv_ny_rad():
+    """skriv ny rad x"""
+    lines = list(tokenize("skriv ny rad x"))
+    indent, tokens = lines[0]
+    assert tokens == ['SKRIV_NL', 'x']
+
+def test_space_friendly_jag_ga_nu():
+    """jag gå nu"""
+    lines = list(tokenize("jag gå nu"))
+    indent, tokens = lines[0]
+    assert tokens == ['EXIT']
+
+def test_hej_da():
+    """hej då"""
+    lines = list(tokenize("hej då"))
+    indent, tokens = lines[0]
+    assert tokens == ['EXIT']
+
+def test_indentation_levels():
+    """Nested indentation"""
+    src = """för i från 0 till 10
+    om i är 5
+        skriv i
+hej då"""
+    lines = list(tokenize(src))
+    assert lines[0] == (0, ['FOR', 'i', 'FRAN', '0', 'TILL', '10'])
+    assert lines[1] == (1, ['IF', 'i', 'AR', '5'])
+    assert lines[2] == (2, ['SKRIV', 'i'])
+    assert lines[3] == (0, ['EXIT'])  # hej då at indent 0 (program exit)
 
 if __name__ == '__main__':
     test_simple_set()
-    test_multiple_tokens()
+    test_multiple_lines()
     test_for_loop()
     test_if_statement()
-    test_empty_lines()
-    print("Alla tester OK!")
+    test_space_friendly_skriv_ny_rad()
+    test_space_friendly_jag_ga_nu()
+    test_hej_da()
+    test_indentation_levels()
+    print("Alla tokenizer-tester OK!")

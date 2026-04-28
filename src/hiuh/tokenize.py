@@ -25,13 +25,16 @@ KEYWORDS = {
 }
 
 def tokenize(src):
-    """Tokenize source string, yield tokens (case-insensitive)"""
+    """Tokenize source string, yield (indent_level, tokens) for each line"""
     prev_word = None
     for line in src.split('\n'):
-        line = line.strip()
-        if not line:
+        # Calculate indentation level
+        indent = len(line) - len(line.lstrip())
+        stripped = line.strip()
+        if not stripped:
             continue
-        words = line.split()
+        words = stripped.split()
+        tokens = []
         i = 0
         while i < len(words):
             word = words[i].lower()
@@ -39,38 +42,40 @@ def tokenize(src):
             # Handle "skriv ny rad" → SKRIV_NL (space-friendly)
             if word == 'skriv' and i + 2 < len(words):
                 if words[i+1].lower() == 'ny' and words[i+2].lower() == 'rad':
-                    yield 'SKRIV_NL'
+                    tokens.append('SKRIV_NL')
                     i += 3
                     continue
             
             # Handle "jag gå nu" → EXIT (space-friendly for JagMåsteGåNu)
             if word == 'jag' and i + 2 < len(words):
                 if words[i+1].lower() == 'gå' and words[i+2].lower() == 'nu':
-                    yield 'EXIT'
+                    tokens.append('EXIT')
                     i += 3
                     continue
             
-            # Handle "hej då" → EXIT (program exit, same as "jag gå nu")
+            # Handle "hej då" → EXIT (program exit)
             if word == 'hej' and i + 1 < len(words):
                 if words[i+1].lower() == 'då':
-                    yield 'EXIT'
+                    tokens.append('EXIT')
                     i += 2
                     continue
             
             # 'i' after variable-taking keywords is a variable name, not IN keyword
             if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra'):
-                yield word  # variable name
+                tokens.append(word)  # variable name
             elif word in KEYWORDS:
-                yield KEYWORDS[word]
+                tokens.append(KEYWORDS[word])
             else:
-                yield words[i]
+                tokens.append(words[i])
             prev_word = word
             i += 1
+        if tokens:
+            yield (indent // 4, tokens)  # 4 spaces = 1 indent level
 
 def tokenize_stream():
-    """Read from stdin, output one token per line"""
-    for tok in tokenize(sys.stdin.read()):
-        print(tok)
+    """Read from stdin, output indent level + tokens"""
+    for indent, tokens in tokenize(sys.stdin.read()):
+        print(f"{indent} {' '.join(tokens)}")
 
 if __name__ == '__main__':
     tokenize_stream()

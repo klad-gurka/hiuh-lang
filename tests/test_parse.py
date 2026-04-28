@@ -20,11 +20,11 @@ def test_set_plus():
     assert ir == [('SET', 'x', ('+', 'a', 3))], f"Got {ir}"
 
 def test_for_loop():
-    """För i från 0 till 10"""
+    """För x från 0 till 10"""
     src = "För x från 0 till 10\nSkrivNyRad x\nHejdå"
     tokens = list(tokenize(src))
     ir = parse_tokens(tokens)
-    assert len(ir) == 2
+    assert len(ir) == 1  # FOR loop with body inside
     assert ir[0][0] == 'FOR'
     assert ir[0][1] == 'x'
     assert ir[0][2] == 0
@@ -70,7 +70,7 @@ def test_read():
     """Läs"""
     tokens = list(tokenize("Läs"))
     ir = parse_tokens(tokens)
-    assert ir == [('READ', 'källa')]
+    assert ir == [('READ', 'input_buf')]
 
 def test_skriv():
     """Skriv x"""

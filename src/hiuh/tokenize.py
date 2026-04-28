@@ -18,15 +18,21 @@ KEYWORDS = {
 
 def tokenize(src):
     """Tokenize source string, yield tokens"""
+    prev_word = None  # Track original word before keyword conversion
     for line in src.split('\n'):
         line = line.strip()
         if not line:
             continue
         for word in line.split():
-            if word in KEYWORDS:
+            # Special case: 'i' as variable name after keywords that take variable names
+            # Use original word (before keyword lookup) for context
+            if word == 'i' and prev_word in ('För', 'Sätt', 'Om', 'Lagra', 'Skriv', 'SkrivNyRad'):
+                yield word  # variable name 'i', not keyword IN
+            elif word in KEYWORDS:
                 yield KEYWORDS[word]
             else:
                 yield word
+            prev_word = word
 
 def tokenize_stream():
     """Read from stdin, output one token per line"""

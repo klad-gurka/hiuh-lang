@@ -39,9 +39,11 @@ def parse_tokens(tokens):
             i = j
         elif tok == 'FOR':
             var = tokens[i+1]
-            # Skip FROM keyword
+            # tokens: FOR var FROM start TILL end ...
+            # Find FRAN (FROM) and TILL
             j = i + 2
-            if tokens[j] == 'FROM':
+            # Skip FRAN keyword
+            if tokens[j] == 'FRAN':
                 j += 1
             start = int(tokens[j])
             j += 1
@@ -50,13 +52,15 @@ def parse_tokens(tokens):
                 j += 1
             end = int(tokens[j])
             j += 1
-            body, i = parse_block(tokens[j:], end_token='END')
+            # Parse body until END
+            body, consumed = parse_block(tokens[j:], 'END')
             ir.append(('FOR', var, start, end, body))
+            i = j + consumed + 1  # +1 to skip END
         elif tok == 'IF':
             cmp, skip = parse_cmp(tokens[i+1:])
-            body, end_i = parse_block(tokens[i+1+skip:], end_token='END')
+            body, end_i = parse_block(tokens[i+1+skip:], 'END')
             ir.append(('IF', cmp, body))
-            i = i + 1 + skip + end_i + 1  # skip IF + cmp + body + END
+            i = i + 1 + skip + end_i + 1
         elif tok == 'BREAK':
             ir.append(('BREAK',))
             i += 1
@@ -65,22 +69,24 @@ def parse_tokens(tokens):
             ir.append(('EXIT', code))
             i += 2
         elif tok == 'READ':
-            ir.append(('READ', 'källa'))
+            ir.append(('READ', 'input_buf'))
             i += 1
         elif tok in ('SKRIV', 'SKRIV_NL'):
             expr = tokens[i+1] if i+1 < len(tokens) else ''
             ir.append(('SKRIV_NL' if tok == 'SKRIV_NL' else 'SKRIV', expr))
             i += 2
         elif tok == 'STORE':
-            # Lagra vid idx i buf -> STORE VID idx IN buf
-            # buf is last, idx is after VID, val is after IN
-            val = tokens[i+2]  # idx var
-            buf = tokens[i+4]  # destination buffer
-            ir.append(('STORE', buf, val, val))
+            # Lagra x vid i i buf -> STORE buf idx x
+            # Token sequence: STORE idx VID var IN buf
+            # Wait, HIUH is: "Lagra vid i i buf" -> "Lagra VID i I buf"
+            # So tokens after STORE: VID idx I buf
+            buf = tokens[i+4] if i+4 < len(tokens) else 'buf'
+            idx = tokens[i+2] if i+2 < len(tokens) else 'i'
+            ir.append(('STORE', buf, idx, idx))
             i += 5
         elif tok == 'CHAR':
-            # tecken X ur Y
-            if i+2 < len(tokens) and tokens[i+2] == 'UR':
+            # tecken i ur buf -> CHAR idx BUF
+            if i+3 < len(tokens) and tokens[i+2] == 'UR':
                 idx = tokens[i+1]
                 buf = tokens[i+3]
                 ir.append(('LOAD', buf, idx))
@@ -114,8 +120,8 @@ def parse_cmp(tokens):
     if len(tokens) >= 3:
         # är mindre än 5 OR mindre än 5
         if tokens[1] == 'LESS' or (tokens[1] == 'AR' and tokens[2] == 'LESS'):
-            # är mindre än: tokens = [x, AR, LESS, THAN, val] -> skip 4
-            # mindre än: tokens = [x, LESS, THAN, val] -> skip 3
+            # är mindre än: tokens = [x, AR, LESS, THAN, val] -> skip 5
+            # mindre än: tokens = [x, LESS, THAN, val] -> skip 4
             val = tokens[4] if tokens[1] == 'AR' else tokens[3]
             return (var, '<', val), 5 if tokens[1] == 'AR' else 4
         # är större än 5 OR större än 5
@@ -128,7 +134,7 @@ def parse_cmp(tokens):
     return (var, '!=', 0), 1
 
 def parse_block(tokens, end_token='END'):
-    """Parse a block until END"""
+    """Parse a block until END. Returns (block, bytes_consumed)"""
     block = []
     i = 0
     while i < len(tokens):
@@ -137,16 +143,33 @@ def parse_block(tokens, end_token='END'):
             return block, i
         elif tok == 'IF':
             cmp, skip = parse_cmp(tokens[i+1:])
-            body, end_i = parse_block(tokens[i+1+skip:], end_token='END')
+            body, end_i = parse_block(tokens[i+1+skip:], 'END')
             block.append(('IF', cmp, body))
             i = i + 1 + skip + end_i + 1
         elif tok == 'FOR':
             var = tokens[i+1]
-            start = int(tokens[i+2])
-            end = int(tokens[i+3])
-            body, end_i = parse_block(tokens[i+4:], end_token='END')
+            # Skip FRAN
+            j = i + 2
+            if tokens[j] == 'FRAN':
+                j += 1
+            start = int(tokens[j])
+            j += 1
+            # Skip TILL
+            if tokens[j] == 'TILL':
+                j += 1
+            end = int(tokens[j])
+            j += 1
+            body, end_i = parse_block(tokens[j:], 'END')
             block.append(('FOR', var, start, end, body))
-            i = i + 4 + end_i + 1
+            i = j + end_i + 1
+        elif tok == 'SKRIV':
+            expr = tokens[i+1] if i+1 < len(tokens) else ''
+            block.append(('SKRIV', expr))
+            i += 2
+        elif tok == 'SKRIV_NL':
+            expr = tokens[i+1] if i+1 < len(tokens) else ''
+            block.append(('SKRIV_NL', expr))
+            i += 2
         elif tok == 'BREAK':
             block.append(('BREAK',))
             i += 1

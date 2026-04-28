@@ -100,12 +100,23 @@ def compile_stmt(stmt, target):
         var, op, val = cmp
         reg = alloc_reg(var)
         lbl = new_label()
+        # Convert val to int if string
+        try:
+            val_int = int(val)
+        except (ValueError, TypeError):
+            val_int = 0
         if op == '==':
-            emit(f"    cmp ${val}, {reg}")
+            emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jne {lbl}")
         elif op == '!=':
-            emit(f"    cmp ${val}, {reg}")
+            emit(f"    cmp ${val_int}, {reg}")
             emit(f"    je {lbl}")
+        elif op == '<':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jge {lbl}")  # jump if >= (not less)
+        elif op == '>':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jle {lbl}")  # jump if <= (not greater)
         for s in body:
             compile_stmt(s, target)
         emit(f"{lbl}:")

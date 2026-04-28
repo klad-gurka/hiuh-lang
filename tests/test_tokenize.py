@@ -23,7 +23,7 @@ def test_for_loop():
     # Note: 'i' is keyword IN, should be variable name
     src = "För x från 0 till 10"
     tokens = list(tokenize(src))
-    assert tokens == ['FOR', 'x', 'FROM', '0', 'TILL', '10']
+    assert tokens == ['FOR', 'x', 'FRAN', '0', 'TILL', '10']
 
 def test_if_statement():
     src = "Om x är 0"

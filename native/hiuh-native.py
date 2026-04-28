@@ -37,19 +37,15 @@ def tokenize(src):
         if first != '.':
             ord_lista.extend(words)
         
-        if first == 'Skriv':
+        if first in ('Skriv', 'SkrivNyRad'):
             rest = ' '.join(words[1:])
+            nl = first == 'SkrivNyRad'
             if rest.startswith('värdet av '):
-                tokens.append(('SKRIV_VAR', words[-1]))
+                tokens.append(('SKRIV_VAR_NL' if nl else 'SKRIV_VAR', words[-1]))
             elif rest.startswith('text i '):
-                tokens.append(('SKRIV_BUF', rest[len('text i '):]))
-            elif len(words) >= 5 and words[2] == 'tecken' and words[3] == 'i':
-                # "Skriv j tecken i ord_buf" pattern: count var is words[1], buf is words[4]
-                count_var = words[1]
-                buf_name = words[4]
-                tokens.append(('SKRIV_BUF_LEN', count_var, buf_name))
+                tokens.append(('SKRIV_BUF_NL' if nl else 'SKRIV_BUF', rest[len('text i '):]))
             else:
-                tokens.append(('SKRIV', rest))
+                tokens.append(('SKRIV_NL' if nl else 'SKRIV', rest))
         elif first == '.':
             # Comment line - skip
             continue
@@ -61,17 +57,40 @@ def tokenize(src):
                 left = parts[0].strip()
                 right = parts[1].strip() if len(parts) > 1 else '0'
                 tokens.append(('PLUS', var, left, right))
-            elif rest.startswith('grej med '):
-                # Function definition: Sätt foo till grej med x, y
-                params_str = rest[len('grej med '):]
+            elif rest.lower().startswith('grej med '):
+                # Inline lambda: Sätt foo till Grej med x, y
+                params_str = rest[rest.lower().index('grej med ') + len('grej med '):]
                 params = [p.strip() for p in params_str.split(',')]
-                tokens.append(('FUNC_DEF', var, params))
-            elif ' med ' in rest and not rest.startswith('grej '):
-                # Function call: Sätt a till min med 2, 3
-                parts = rest.split(' med ')
+                tokens.append(('GREJ_DEF', var, params))
+            elif rest.startswith('Anropa ') and ' med ' in rest:
+                # Real function call with result: Sätt x till Anropa foo med a, b
+                rest2 = rest[len('Anropa '):]
+                parts = rest2.split(' med ', 1)
                 func_name = parts[0].strip()
                 args = [a.strip() for a in parts[1].split(',')]
-                tokens.append(('FUNC_CALL', var, func_name, args))
+                tokens.append(('ANROPA_RES', var, func_name, args))
+            elif rest.startswith('Jämför ') and ' med ' in rest:
+                # Sätt x till Jämför buf med lit
+                rw = rest.split()
+                med_i = rw.index('med')
+                buf = rw[1]
+                lit = rw[med_i + 1] if med_i + 1 < len(rw) else ''
+                if buf and lit:
+                    tokens.append(('CMP_BUF_LIT', var, buf, lit))
+            elif rest.startswith('JämförBuffer ') and ' med ' in rest:
+                # Sätt x till JämförBuffer buf1 med buf2
+                rw = rest.split()
+                med_i = rw.index('med')
+                buf1 = rw[1]
+                buf2 = rw[med_i + 1] if med_i + 1 < len(rw) else ''
+                if buf1 and buf2:
+                    tokens.append(('CMP_BUF_BUF', var, buf1, buf2))
+            elif ' med ' in rest and not rest.lower().startswith('grej ') and not rest.startswith('Anropa '):
+                # Inline function call: Sätt a till min med 2, 3
+                parts = rest.split(' med ', 1)
+                func_name = parts[0].strip()
+                args = [a.strip() for a in parts[1].split(',')]
+                tokens.append(('GREJ_CALL', var, func_name, args))
             elif rest.startswith('tecken ') and ' ur ' in rest:
                 # CHAR_AT: Sätt tecken till tecken i ur källa
                 parts = rest.split(' ur ')
@@ -81,18 +100,20 @@ def tokenize(src):
                     tokens.append(('SET_CHAR_AT', var, idx_part, source))
                 else:
                     tokens.append(('SET', var, rest))
-            elif rest.startswith('tecken i '):
-                # CHAR_AT variant: Sätt tecken till tecken i input_buf (uses 'i' not 'ur')
-                source = rest[len('tecken i '):].strip()
-                tokens.append(('SET_CHAR_AT', var, 'i', source))
             elif ' är ' in rest and ' pluss ' not in rest and ' med ' not in rest:
-                # SET_CMP_RESULT: Sätt x till y är z → cmp(y,z) then set x to result
-                parts = rest.split(' är ')
+                parts = rest.split(' är ', 1)
                 if len(parts) == 2:
                     left = parts[0].strip()
                     right = parts[1].strip()
-                    tokens.append(('CMP', left, right))
-                    tokens.append(('SET_CMP_RESULT', var))
+                    if right.startswith('mindre än '):
+                        tokens.append(('CMP_LT', left, right[len('mindre än '):].strip()))
+                        tokens.append(('SET_CMP_RESULT', var))
+                    elif right.startswith('större än '):
+                        tokens.append(('CMP_GT', left, right[len('större än '):].strip()))
+                        tokens.append(('SET_CMP_RESULT', var))
+                    else:
+                        tokens.append(('CMP', left, right))
+                        tokens.append(('SET_CMP_RESULT', var))
                 else:
                     tokens.append(('SET', var, rest))
             else:
@@ -117,8 +138,16 @@ def tokenize(src):
             val = words[1] if len(words) > 1 else '0'
             tokens.append(('RETURN', val))
         
+        elif first == 'Bryt':
+            tokens.append(('BREAK',))
+
         elif first == 'Läs':
-            tokens.append(('READ',))
+            if 'till' in words:
+                till_i = words.index('till')
+                var = words[till_i + 1] if till_i + 1 < len(words) else '_las_ok'
+                tokens.append(('READ_RES', var))
+            else:
+                tokens.append(('READ',))
         
         elif first == 'tecken':
             # "tecken <index> ur <source>" - get char at index from source
@@ -148,6 +177,72 @@ def tokenize(src):
             if len(words) >= 6 and words[2] == 'vid' and words[4] == 'i':
                 tokens.append(('STORE_CHAR', words[1], words[3], words[5]))
 
+        elif first == 'Jämför':
+            # Standalone Jämför X med Y — implicit träff target (legacy form)
+            if 'med' in words:
+                med_i = words.index('med')
+                buf = words[1] if med_i > 1 else ''
+                lit = words[med_i + 1] if med_i + 1 < len(words) else ''
+                if buf and lit:
+                    tokens.append(('CMP_BUF_LIT', 'träff', buf, lit))
+
+        elif first == 'JämförBuffer':
+            # Standalone JämförBuffer X med Y — implicit träff target (legacy form)
+            if 'med' in words:
+                med_i = words.index('med')
+                buf1 = words[1] if med_i > 1 else ''
+                buf2 = words[med_i + 1] if med_i + 1 < len(words) else ''
+                if buf1 and buf2:
+                    tokens.append(('CMP_BUF_BUF', 'träff', buf1, buf2))
+
+        elif first == 'Funktion':
+            # Real function definition: Funktion foo med x, y
+            name = words[1] if len(words) > 1 else ''
+            if 'med' in words:
+                med_i = words.index('med')
+                args_str = ' '.join(words[med_i+1:])
+                params = [p.strip() for p in args_str.split(',') if p.strip()]
+            else:
+                params = []
+            tokens.append(('FUNC_DEF', name, params))
+
+        elif first == 'Anropa':
+            # Real function call, discard result: Anropa foo med a, b
+            if len(words) > 1:
+                func_name = words[1]
+                if 'med' in words:
+                    med_i = words.index('med')
+                    args_str = ' '.join(words[med_i+1:])
+                    args = [a.strip() for a in args_str.split(',') if a.strip()]
+                else:
+                    args = []
+                tokens.append(('ANROPA', func_name, args))
+
+        elif first == 'Sålänge':
+            rest = words[1:]
+            if rest and 'är' in rest:
+                var1 = rest[0]
+                är_i = rest.index('är')
+                if 'mindre' in rest and 'än' in rest:
+                    cmp_type = 'LT'
+                    var2 = rest[rest.index('än') + 1]
+                elif 'större' in rest and 'än' in rest:
+                    cmp_type = 'GT'
+                    var2 = rest[rest.index('än') + 1]
+                else:
+                    cmp_type = 'EQ'
+                    var2 = rest[är_i + 1] if är_i + 1 < len(rest) else '0'
+                tokens.append(('WHILE', cmp_type, var1, var2))
+
+        elif first == 'KopieraBuffer':
+            # KopieraBuffer src till dest
+            if 'till' in words:
+                till_i = words.index('till')
+                src = words[1] if till_i > 1 else ''
+                dest = words[till_i + 1] if till_i + 1 < len(words) else ''
+                if src and dest:
+                    tokens.append(('COPY_BUF', dest, src))
+
         elif first == 'Om':
             # "Om x är mindre än y" → store comparison type with IF
             rest = words[1:]
@@ -174,53 +269,6 @@ def tokenize(src):
             # ELSE is handled by the IF parser - don't create token here
             # Just mark that we're in an else block for the next Skriv/etc
             tokens.append(('ELSE',))
-        
-        elif first.startswith('Sätt') and not first == 'Sätt':
-            # Sätt<something> (compound words like Sättantal, Sätttecken)
-            # Strip 'Sätt' prefix to get the actual variable name
-            var = first[4:]  # e.g. 'Sättantal' -> 'antal', 'Sätttecken' -> 'tecken'
-            rest = ' '.join(words[2:])  # value part after 'till'
-            if 'är' in words:
-                # "Sättx är y" → SET_CMP or PLUS (Sätt<var> är <expr>)
-                # This also catches 'Sätttecken är tecken i ...' patterns
-                if ' pluss ' in rest and ' är ' in rest:
-                    # "x är y pluss z" → PLUS
-                    var2 = words[words.index('är')+1] if 'är' in words else '0'
-                    pluss_idx = words.index('pluss')
-                    left = ' '.join(words[words.index('är')+1:words.index('pluss')]).strip()
-                    right = ' '.join(words[words.index('pluss')+1:]).strip()
-                    tokens.append(('PLUS', var, left, right))
-                else:
-                    # "x är y" → CMP + SET_CMP_RESULT
-                    var2 = words[words.index('är')+1] if 'är' in words else '0'
-                    tokens.append(('CMP', var, var2))
-                    tokens.append(('SET_CMP_RESULT', var))
-            elif rest.startswith('tecken '):
-                # "Sätttecken till tecken i input_buf" - char access
-                # rest = 'tecken i input_buf' or 'tecken ur input_buf'
-                if ' ur ' in rest:
-                    parts = rest.split(' ur ')
-                    idx_part = parts[0].replace('tecken', '').strip()
-                    source = parts[1].strip()
-                    tokens.append(('SET_CHAR_AT', var, idx_part, source))
-                elif rest.startswith('tecken i '):
-                    source = rest[len('tecken i '):].strip()
-                    tokens.append(('SET_CHAR_AT', var, 'i', source))
-                elif rest == 'tecken':
-                    tokens.append(('SET', var, rest))
-                else:
-                    tokens.append(('SET', var, rest))
-            elif ' pluss ' in rest:
-                # "Sättantal till antal pluss 1"
-                parts = rest.split(' pluss ')
-                left = parts[0].strip()  # e.g. 'till antal'
-                left_var = left.split()[1] if len(left.split()) > 1 else left  # remove 'till'
-                right = parts[1].strip() if len(parts) > 1 else '0'
-                tokens.append(('PLUS', var, left_var, right))
-            else:
-                # "Sättantal till 0" or "Sättj till 0" - simple assignment
-                val = words[2] if len(words) > 2 else '0'
-                tokens.append(('SET', var, val))
         
         elif 'är' in words and 'mindre' in words and 'än' in words:
             # "x är mindre än y" → CMP_LT
@@ -264,14 +312,53 @@ def tokenize(src):
     return tokens, ord_lista
 
 def parse(tokens):
+    def parse_block(pos):
+        blk = []
+        i = pos
+        while i < len(tokens) and tokens[i][0] != 'END':
+            tok = tokens[i]
+            if tok[0] == 'IF':
+                if len(tok) >= 4:
+                    cmp_type, v1, v2 = tok[1], tok[2], tok[3]
+                    if cmp_type == 'LT':
+                        blk.append(('CMP_LT', v1, v2))
+                    elif cmp_type == 'GT':
+                        blk.append(('CMP_GT', v1, v2))
+                    else:
+                        blk.append(('CMP', v1, v2))
+                i += 1
+                if_body, i = parse_block(i)
+                # check for ELSE
+                if i < len(tokens) and tokens[i][0] == 'ELSE':
+                    i += 1
+                    else_body, i = parse_block(i)
+                    blk.append(('IF', if_body, '__HAS_ELSE__'))
+                    blk.append(('ELSE', else_body))
+                else:
+                    blk.append(('IF', if_body))
+            elif tok[0] == 'FOR':
+                i += 1
+                inner, i = parse_block(i)
+                blk.append(('FOR', tok[1], tok[2], tok[3], inner))
+            elif tok[0] == 'WHILE':
+                i += 1
+                inner, i = parse_block(i)
+                blk.append(('WHILE', tok[1], tok[2], tok[3], inner))
+            else:
+                blk.append(tok)
+                i += 1
+        if i < len(tokens) and tokens[i][0] == 'END':
+            i += 1
+        return blk, i
+
     stmts = []
     i = 0
     while i < len(tokens):
         tok = tokens[i]
-        if tok[0] == 'SKRIV':
+        if tok[0] in ('SKRIV', 'SKRIV_NL'):
             stmts.append(tok)
             i += 1
-        elif tok[0] == 'SKRIV_VAR':
+        elif tok[0] in ('SKRIV_VAR', 'SKRIV_VAR_NL'):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'SET':
@@ -286,93 +373,26 @@ def parse(tokens):
         elif tok[0] == 'STORE_CHAR':
             stmts.append(tok)
             i += 1
-        elif tok[0] == 'SKRIV_BUF':
+        elif tok[0] in ('CMP_BUF_LIT', 'CMP_BUF_BUF'):
             stmts.append(tok)
             i += 1
-        elif tok[0] == 'SKRIV_BUF_LEN':
+        elif tok[0] in ('SKRIV_BUF', 'SKRIV_BUF_NL'):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'PLUS':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'FOR':
-            body = []
             i += 1
-            while i < len(tokens) and tokens[i][0] != 'END':
-                tok2 = tokens[i]
-                if tok2[0] == 'IF':
-                    # Handle IF with its ELSE/END
-                    has_else = False
-                    for j in range(i+1, len(tokens)):
-                        if tokens[j][0] == 'ELSE':
-                            has_else = True
-                            break
-                        if tokens[j][0] == 'END':
-                            break
-                    # Generate CMP statement first
-                    if len(tok2) >= 4:
-                        cmp_type, var1, var2 = tok2[1], tok2[2], tok2[3]
-                        if cmp_type == 'LT':
-                            body.append(('CMP_LT', var1, var2))
-                        elif cmp_type == 'GT':
-                            body.append(('CMP_GT', var1, var2))
-                        else:
-                            body.append(('CMP', var1, var2))
-                    # Parse IF body with depth tracking for nested IFs
-                    if_body = []
-                    i += 1
-                    if_depth = 1
-                    while i < len(tokens) and if_depth > 0:
-                        tok_inner = tokens[i]
-                        if tok_inner[0] == 'IF':
-                            if_depth += 1
-                        elif tok_inner[0] == 'END':
-                            if_depth -= 1
-                            if if_depth == 0:
-                                i += 1  # consume the END
-                                break
-                        elif tok_inner[0] == 'ELSE' and if_depth == 1:
-                            break
-                        if_body.append(tok_inner)
-                        i += 1
-                    if has_else:
-                        body.append(('IF', if_body, '__HAS_ELSE__'))
-                        if i < len(tokens) and tokens[i][0] == 'ELSE':
-                            i += 1  # skip ELSE token
-                            else_body = []
-                            while i < len(tokens) and tokens[i][0] != 'END':
-                                else_body.append(tokens[i])
-                                i += 1
-                            if i < len(tokens) and tokens[i][0] == 'END':
-                                i += 1
-                            body.append(('ELSE', else_body))
-                    else:
-                        body.append(('IF', if_body))
-                        # NOTE: IF's END was already consumed during body parsing
-                        # Do NOT consume another END here (it might be the FOR's END)
-                        # i += 1  # REMOVED - was incorrectly consuming next token
-                else:
-                    if tok2[0] == 'FOR':
-                        # Recursively parse nested FOR
-                        inner_body = []
-                        i += 1
-                        while i < len(tokens) and tokens[i][0] != 'END':
-                            inner_body.append(tokens[i])
-                            i += 1
-                        if i < len(tokens) and tokens[i][0] == 'END':
-                            i += 1
-                        # The inner FOR still needs parsing, add raw for now
-                        body.append(('FOR', tok2[1], tok2[2], tok2[3], inner_body))
-                    else:
-                        body.append(tok2)
-                        i += 1
-            if i < len(tokens) and tokens[i][0] == 'END':
-                i += 1
+            body, i = parse_block(i)
             stmts.append(('FOR', tok[1], tok[2], tok[3], body))
         elif tok[0] == 'EXIT':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'READ':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'BREAK':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'CHAR_AT':
@@ -384,8 +404,23 @@ def parse(tokens):
         elif tok[0] == 'LIST_GET':
             stmts.append(tok)
             i += 1
+        elif tok[0] == 'COPY_BUF':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'READ_RES':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'WHILE':
+            i += 1
+            body, i = parse_block(i)
+            stmts.append(('WHILE', tok[1], tok[2], tok[3], body))
         elif tok[0] == 'FUNC_DEF':
-            # Parse function body until END, handling nested IF-ELSE
+            # Real function: parse body with parse_block
+            i += 1
+            body, i = parse_block(i)
+            stmts.append(('REAL_FUNC', tok[1], tok[2], body))
+        elif tok[0] == 'GREJ_DEF':
+            # Inline lambda: parse function body until END, handling nested IF-ELSE
             body = []
             i += 1
             depth = 1
@@ -476,8 +511,8 @@ def parse(tokens):
                     else:
                         body.append(tok2)
                         i += 1
-            stmts.append(('FUNC', tok[1], tok[2], body))
-        elif tok[0] == 'FUNC_CALL':
+            stmts.append(('GREJ', tok[1], tok[2], body))
+        elif tok[0] in ('GREJ_CALL', 'ANROPA', 'ANROPA_RES'):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'IF':
@@ -551,26 +586,31 @@ def compile_to_asm(stmts, target='linux'):
     strings = []
     
     var_reg = {}
-    func_defs = {}  # Store function definitions
-    next_reg = 0
-    # r12-r15 for variables; r14=stack ptr, r15=char/temp (reserved)
-    reg_names = ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']  # 6 vars max
+    grej_defs = {}
+    next_reg = [0]
+    pending_real_funcs = []
+    in_real_func = [False]
+    func_returned = [False]
+    reg_names = ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11', '%rbp']  # 7 vars max
     # Track reserved registers
     reserved = {'%r14': 'stack pointer', '%r15': 'temp/char result'}
     labels = [0]
+    loop_labels = []  # stack of loop_end labels for Bryt (break)
     named_buffers = set()
     skriv_buf_used = [False]
+    fmt_s_used = [False]       # "%s" format string for no-newline printf
+    fmt_int_nonl_used = [False]  # "%lld" format string (no newline)
+    lit_strings = []
+    strings_nonl = []  # strings for SKRIV (no newline)
 
     def alloc_var(v):
-        nonlocal next_reg
         if v not in var_reg:
-            reg = reg_names[next_reg % 6]
-            # Never allocate reserved registers
+            reg = reg_names[next_reg[0] % len(reg_names)]
             while reg in reserved:
-                next_reg += 1
-                reg = reg_names[next_reg % 6]
+                next_reg[0] += 1
+                reg = reg_names[next_reg[0] % len(reg_names)]
             var_reg[v] = reg
-            next_reg += 1
+            next_reg[0] += 1
         return var_reg[v]
     
     def new_label():
@@ -593,34 +633,168 @@ def compile_to_asm(stmts, target='linux'):
             return var_reg[v]
         return '%r12'  # Default
     
+    def win_call_save(exclude=None):
+        cs = {'%r8', '%r9', '%r10', '%r11'}
+        to_save = sorted(r for r in var_reg.values() if r in cs and r != exclude)
+        align_pad = 8 if len(to_save) % 2 == 1 else 0
+        if align_pad:
+            code.append(f"    subq $8, %rsp  # alignment pad")
+        for reg in to_save:
+            code.append(f"    push {reg}")
+        code.append(f"    subq $32, %rsp  # shadow space")
+        return to_save, align_pad
+
+    def win_call_restore(to_save, align_pad):
+        code.append(f"    addq $32, %rsp")
+        for reg in reversed(to_save):
+            code.append(f"    pop {reg}")
+        if align_pad:
+            code.append(f"    addq $8, %rsp  # restore alignment pad")
+
+    def hiuh_call_save(exclude=None):
+        cs = {'%r8', '%r9', '%r10', '%r11'}
+        to_save = sorted(r for r in var_reg.values() if r in cs and r != exclude)
+        align_pad = 8 if len(to_save) % 2 == 1 else 0
+        if align_pad:
+            code.append(f"    subq $8, %rsp")
+        for reg in to_save:
+            code.append(f"    push {reg}")
+        if target == 'windows':
+            code.append(f"    subq $32, %rsp  # shadow space")
+        return to_save, align_pad
+
+    def hiuh_call_restore(to_save, align_pad):
+        if target == 'windows':
+            code.append(f"    addq $32, %rsp")
+        for reg in reversed(to_save):
+            code.append(f"    pop {reg}")
+        if align_pad:
+            code.append(f"    addq $8, %rsp")
+
+    def emit_func_epilogue():
+        if target == 'windows':
+            code.append(f"    addq $32, %rsp")
+        code.append(f"    pop %rbp")
+        code.append(f"    pop %r13")
+        code.append(f"    pop %r12")
+        code.append(f"    ret")
+
+    def compile_real_func(name, params, body):
+        saved_var_reg = dict(var_reg)
+        saved_next_reg = next_reg[0]
+        saved_loop_labels = list(loop_labels)
+        var_reg.clear()
+        next_reg[0] = 0
+        loop_labels.clear()
+        in_real_func[0] = True
+
+        code.append(f"{name}:")
+        code.append(f"    push %r12")
+        code.append(f"    push %r13")
+        code.append(f"    push %rbp")
+        if target == 'windows':
+            code.append(f"    subq $32, %rsp  # shadow space")
+
+        arg_regs = ['%rcx', '%rdx', '%r8', '%r9'] if target == 'windows' else ['%rdi', '%rsi', '%rdx', '%rcx']
+        for j, param in enumerate(params[:4]):
+            reg = alloc_var(param)
+            code.append(f"    mov {arg_regs[j]}, {reg}  # param {param}")
+
+        func_returned[0] = False
+        for s in body:
+            compile_stmt(s)
+
+        if not func_returned[0]:
+            code.append(f"    xor %eax, %eax")
+            emit_func_epilogue()
+        func_returned[0] = False
+
+        in_real_func[0] = False
+        var_reg.clear()
+        var_reg.update(saved_var_reg)
+        next_reg[0] = saved_next_reg
+        loop_labels.clear()
+        loop_labels.extend(saved_loop_labels)
+
     def compile_stmt(stmt):
         op = stmt[0]
         
-        if op == 'SKRIV':
+        if op == 'SKRIV_NL':
             s = stmt[1]
             strings.append(s)
             idx = len(strings) - 1
             if target == 'windows':
+                to_save, align_pad = win_call_save()
                 code.append(f"    lea msg_{idx}(%rip), %rcx")
                 code.append(f"    call puts")
+                win_call_restore(to_save, align_pad)
             else:
                 code.append(f"    lea msg_{idx}(%rip), %rsi")
                 code.append(f"    mov ${len(s) + 1}, %edx")
                 code.append(f"    mov $1, %edi")
                 code.append(f"    mov $1, %eax")
                 code.append(f"    syscall")
+
+        elif op == 'SKRIV':
+            s = stmt[1]
+            strings_nonl.append(s)
+            idx = len(strings_nonl) - 1
+            fmt_s_used[0] = True
+            if target == 'windows':
+                to_save, align_pad = win_call_save()
+                code.append(f"    lea fmt_s(%rip), %rcx")
+                code.append(f"    lea msg_nonl_{idx}(%rip), %rdx")
+                code.append(f"    call printf")
+                win_call_restore(to_save, align_pad)
+            else:
+                code.append(f"    lea msg_nonl_{idx}(%rip), %rsi")
+                code.append(f"    mov ${len(s)}, %edx")
+                code.append(f"    mov $1, %edi")
+                code.append(f"    mov $1, %eax")
+                code.append(f"    syscall")
         
-        elif op == 'SKRIV_VAR':
+        elif op == 'SKRIV_VAR_NL':
             reg = resolve(stmt[1])
             if target == 'windows':
-                if reg.startswith('$'):
-                    code.append(f"    mov {reg}, %rdx")
-                elif reg == '%r15':
-                    code.append(f"    movzx %r15b, %rdx")
+                if reg == '%r15':
+                    code.append(f"    movzx %r15b, %rax  # save print value")
                 else:
-                    code.append(f"    mov {reg}, %rdx")
+                    code.append(f"    mov {reg}, %rax  # save print value")
+                to_save, align_pad = win_call_save()
+                code.append(f"    mov %rax, %rdx")
                 code.append(f"    lea fmt_int(%rip), %rcx")
                 code.append(f"    call printf")
+                win_call_restore(to_save, align_pad)
+            else:
+                if reg.startswith('$'):
+                    code.append(f"    mov {reg}, %rax")
+                    code.append(f"    lea num_buf(%rip), %rsi")
+                    code.append(f"    mov %al, (%rsi)")
+                elif reg == '%r15':
+                    code.append(f"    lea num_buf(%rip), %rsi")
+                    code.append(f"    mov %r15b, (%rsi)")
+                else:
+                    code.append(f"    lea num_buf(%rip), %rsi")
+                    code.append(f"    mov {reg}, %al")
+                    code.append(f"    mov %al, (%rsi)")
+                code.append(f"    mov $1, %rdx")
+                code.append(f"    mov $1, %rdi")
+                code.append(f"    mov $1, %eax")
+                code.append(f"    syscall")
+
+        elif op == 'SKRIV_VAR':
+            reg = resolve(stmt[1])
+            fmt_int_nonl_used[0] = True
+            if target == 'windows':
+                if reg == '%r15':
+                    code.append(f"    movzx %r15b, %rax  # save print value")
+                else:
+                    code.append(f"    mov {reg}, %rax  # save print value")
+                to_save, align_pad = win_call_save()
+                code.append(f"    mov %rax, %rdx")
+                code.append(f"    lea fmt_int_nonl(%rip), %rcx")
+                code.append(f"    call printf")
+                win_call_restore(to_save, align_pad)
             else:
                 if reg.startswith('$'):
                     code.append(f"    mov {reg}, %rax  # print {stmt[1]}")
@@ -689,27 +863,46 @@ def compile_to_asm(stmts, target='linux'):
             start = stmt[2]
             end = stmt[3]
             body = stmt[4]
-            
-            reg = alloc_var(var)
-            loop_start = new_label()
-            loop_end = new_label()
-            
-            # Resolve start and end values
-            start_r = resolve(start)
-            end_r = resolve(end)
-            
-            code.append(f"    mov {start_r}, {reg}  # for {var}")
-            code.append(f"{loop_start}:")
-            code.append(f"    mov {end_r}, %rax")
-            code.append(f"    cmp %rax, {reg}")
-            code.append(f"    jge {loop_end}")
-            
-            for s in body:
-                compile_stmt(s)
-            
-            code.append(f"    inc {reg}")
-            code.append(f"    jmp {loop_start}")
-            code.append(f"{loop_end}:")
+
+            # '_' is an anonymous counter — use %rbx (callee-saved, stable
+            # across calls, not in the named variable pool)
+            if var == '_':
+                loop_start = new_label()
+                loop_end = new_label()
+                start_r = resolve(start)
+                end_r = resolve(end)
+                code.append(f"    push %rbx  # save caller's rbx")
+                code.append(f"    mov {start_r}, %rbx  # for _")
+                code.append(f"{loop_start}:")
+                code.append(f"    mov {end_r}, %rax")
+                code.append(f"    cmp %rax, %rbx")
+                code.append(f"    jge {loop_end}")
+                loop_labels.append(loop_end)
+                for s in body:
+                    compile_stmt(s)
+                loop_labels.pop()
+                code.append(f"    inc %rbx")
+                code.append(f"    jmp {loop_start}")
+                code.append(f"{loop_end}:")
+                code.append(f"    pop %rbx  # restore caller's rbx")
+            else:
+                reg = alloc_var(var)
+                loop_start = new_label()
+                loop_end = new_label()
+                start_r = resolve(start)
+                end_r = resolve(end)
+                code.append(f"    mov {start_r}, {reg}  # for {var}")
+                code.append(f"{loop_start}:")
+                code.append(f"    mov {end_r}, %rax")
+                code.append(f"    cmp %rax, {reg}")
+                code.append(f"    jge {loop_end}")
+                loop_labels.append(loop_end)
+                for s in body:
+                    compile_stmt(s)
+                loop_labels.pop()
+                code.append(f"    inc {reg}")
+                code.append(f"    jmp {loop_start}")
+                code.append(f"{loop_end}:")
                 
         elif op == 'IF':
             # stmt = ('IF', body, else_body, '__HAS_ELSE__') or ('IF', body)
@@ -737,6 +930,10 @@ def compile_to_asm(stmts, target='linux'):
             else:
                 code.append(f"{if_end}:")
         
+        elif op == 'BREAK':
+            if loop_labels:
+                code.append(f"    jmp {loop_labels[-1]}  # Bryt")
+
         elif op == 'EXIT':
             if target == 'windows':
                 code.append(f"    mov ${stmt[1]}, %ecx")
@@ -746,33 +943,48 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $60, %rax")
                 code.append(f"    syscall")
         
-        elif op == 'FUNC':
-            # Store function definition for later use
-            # stmt = (FUNC, name, params, body)
-            func_defs[stmt[1]] = stmt
-        
-        elif op == 'FUNC_CALL':
+        elif op == 'GREJ':
+            grej_defs[stmt[1]] = stmt
+
+        elif op == 'GREJ_CALL':
             var, func_name, args = stmt[1], stmt[2], stmt[3]
-            # Simple: inline the function body with args bound to temps
-            if func_name in func_defs:
-                func = func_defs[func_name]
-                params = func[2]
-                body = func[3]
-                # Bind params to args
+            if func_name in grej_defs:
+                grej = grej_defs[func_name]
+                params = grej[2]
+                body = grej[3]
                 for p, a in zip(params, args):
                     compile_stmt(('SET', p, a))
-                # Compile body (stop at RETURN)
                 for s in body:
                     if s[0] == 'RETURN':
-                        # Store return value in special register
-                        ret_val = s[1]
-                        ret_reg = resolve(ret_val)
+                        ret_reg = resolve(s[1])
                         code.append(f"    mov {ret_reg}, %r11  # _result")
                         break
                     compile_stmt(s)
-            # Store result in var
             reg = alloc_var(var)
             code.append(f"    mov %r11, {reg}  # {var} = _result")
+
+        elif op == 'REAL_FUNC':
+            pending_real_funcs.append(stmt)
+
+        elif op == 'ANROPA':
+            func_name, args = stmt[1], stmt[2]
+            to_save, align_pad = hiuh_call_save()
+            arg_regs = ['%rcx', '%rdx', '%r8', '%r9'] if target == 'windows' else ['%rdi', '%rsi', '%rdx', '%rcx']
+            for j, arg in enumerate(args[:4]):
+                code.append(f"    mov {resolve(arg)}, {arg_regs[j]}")
+            code.append(f"    call {func_name}")
+            hiuh_call_restore(to_save, align_pad)
+
+        elif op == 'ANROPA_RES':
+            var, func_name, args = stmt[1], stmt[2], stmt[3]
+            res_reg = alloc_var(var)
+            to_save, align_pad = hiuh_call_save(exclude=res_reg)
+            arg_regs = ['%rcx', '%rdx', '%r8', '%r9'] if target == 'windows' else ['%rdi', '%rsi', '%rdx', '%rcx']
+            for j, arg in enumerate(args[:4]):
+                code.append(f"    mov {resolve(arg)}, {arg_regs[j]}")
+            code.append(f"    call {func_name}")
+            hiuh_call_restore(to_save, align_pad)
+            code.append(f"    mov %rax, {res_reg}  # {var} = result")
         
         elif op == 'ELSE':
             # ELSE body - execute unconditionally after IF
@@ -841,8 +1053,60 @@ def compile_to_asm(stmts, target='linux'):
             code.append(f"    cmp {r2}, %rax")
             code.append(f"    setg %al")
         
+        elif op == 'READ_RES':
+            res_reg = alloc_var(stmt[1])
+            if target == 'windows':
+                code.append(f"    lea input_buf(%rip), %rax")
+                code.append(f"    movb $0, (%rax)  # pre-zero")
+                code.append(f"    mov $0, %ecx")
+                code.append(f"    call __acrt_iob_func  # get stdin FILE*")
+                code.append(f"    mov %rax, %r8")
+                code.append(f"    lea input_buf(%rip), %rcx")
+                code.append(f"    mov $256, %edx")
+                code.append(f"    call fgets")
+                code.append(f"    test %rax, %rax")
+                code.append(f"    setne %al")
+                code.append(f"    movzx %al, %rax")
+                code.append(f"    mov %rax, {res_reg}  # {stmt[1]} = 1 if ok, 0 if EOF")
+            else:
+                code.append(f"    lea input_buf(%rip), %rax")
+                code.append(f"    movb $0, (%rax)  # pre-zero")
+                code.append(f"    mov $0, %eax  # read")
+                code.append(f"    mov $0, %edi  # stdin")
+                code.append(f"    lea input_buf(%rip), %rsi")
+                code.append(f"    mov $256, %edx  # max bytes")
+                code.append(f"    syscall")
+                code.append(f"    test %rax, %rax")
+                code.append(f"    setg %al")
+                code.append(f"    movzx %al, %rax")
+                code.append(f"    mov %rax, {res_reg}  # {stmt[1]} = 1 if ok, 0 if EOF")
+
+        elif op == 'WHILE':
+            cmp_type, var1, var2, body = stmt[1], stmt[2], stmt[3], stmt[4]
+            loop_start = new_label()
+            loop_end = new_label()
+            r1 = resolve(var1)
+            r2 = resolve(var2)
+            code.append(f"{loop_start}:  # Sålänge")
+            code.append(f"    mov {r1}, %rax")
+            code.append(f"    cmp {r2}, %rax")
+            if cmp_type == 'EQ':
+                code.append(f"    jne {loop_end}")
+            elif cmp_type == 'LT':
+                code.append(f"    jge {loop_end}")
+            elif cmp_type == 'GT':
+                code.append(f"    jle {loop_end}")
+            loop_labels.append(loop_end)
+            for s in body:
+                compile_stmt(s)
+            loop_labels.pop()
+            code.append(f"    jmp {loop_start}")
+            code.append(f"{loop_end}:")
+
         elif op == 'READ':
             if target == 'windows':
+                code.append(f"    lea input_buf(%rip), %rax")
+                code.append(f"    movb $0, (%rax)  # pre-zero: 0 on EOF after fgets")
                 code.append(f"    mov $0, %ecx")
                 code.append(f"    call __acrt_iob_func  # get stdin FILE*")
                 code.append(f"    mov %rax, %r8")
@@ -850,12 +1114,95 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $256, %edx")
                 code.append(f"    call fgets")
             else:
+                code.append(f"    lea input_buf(%rip), %rax")
+                code.append(f"    movb $0, (%rax)  # pre-zero: 0 on EOF after read")
                 code.append(f"    mov $0, %eax  # read")
                 code.append(f"    mov $0, %edi  # stdin")
                 code.append(f"    lea input_buf(%rip), %rsi")
                 code.append(f"    mov $256, %edx  # max bytes")
                 code.append(f"    syscall")
         
+        elif op == 'CMP_BUF_LIT':
+            target_var, buf_name, literal = stmt[1], stmt[2], stmt[3]
+            lit_strings.append(literal)
+            lit_idx = len(lit_strings) - 1
+            träff_reg = alloc_var(target_var)
+            if target == 'windows':
+                to_save, align_pad = win_call_save(exclude=träff_reg)
+                code.append(f"    lea {buf_name}(%rip), %rcx")
+                code.append(f"    lea lit_{lit_idx}(%rip), %rdx")
+                code.append(f"    call strcmp")
+                code.append(f"    test %eax, %eax")
+                code.append(f"    sete %al")
+                win_call_restore(to_save, align_pad)
+                code.append(f"    movzx %al, %rax")
+                code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
+            else:
+                # Inline strcmp: rsi=buf, rdi=lit → result in träff_reg
+                lbl_loop = new_label()
+                lbl_ne = new_label()
+                lbl_eq = new_label()
+                lbl_done = new_label()
+                code.append(f"    lea {buf_name}(%rip), %rsi")
+                code.append(f"    lea lit_{lit_idx}(%rip), %rdi")
+                code.append(f"{lbl_loop}:")
+                code.append(f"    movb (%rsi), %al")
+                code.append(f"    movb (%rdi), %cl")
+                code.append(f"    cmpb %cl, %al")
+                code.append(f"    jne {lbl_ne}")
+                code.append(f"    testb %al, %al")
+                code.append(f"    jz {lbl_eq}")
+                code.append(f"    inc %rsi")
+                code.append(f"    inc %rdi")
+                code.append(f"    jmp {lbl_loop}")
+                code.append(f"{lbl_eq}:")
+                code.append(f"    mov $1, %rax")
+                code.append(f"    jmp {lbl_done}")
+                code.append(f"{lbl_ne}:")
+                code.append(f"    xor %rax, %rax")
+                code.append(f"{lbl_done}:")
+                code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
+
+        elif op == 'CMP_BUF_BUF':
+            target_var, buf1, buf2 = stmt[1], stmt[2], stmt[3]
+            named_buffers.add(buf1)
+            named_buffers.add(buf2)
+            träff_reg = alloc_var(target_var)
+            if target == 'windows':
+                to_save, align_pad = win_call_save(exclude=träff_reg)
+                code.append(f"    lea {buf1}(%rip), %rcx")
+                code.append(f"    lea {buf2}(%rip), %rdx")
+                code.append(f"    call strcmp")
+                code.append(f"    test %eax, %eax")
+                code.append(f"    sete %al")
+                win_call_restore(to_save, align_pad)
+                code.append(f"    movzx %al, %rax")
+                code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
+            else:
+                lbl_loop = new_label()
+                lbl_ne = new_label()
+                lbl_eq = new_label()
+                lbl_done = new_label()
+                code.append(f"    lea {buf1}(%rip), %rsi")
+                code.append(f"    lea {buf2}(%rip), %rdi")
+                code.append(f"{lbl_loop}:")
+                code.append(f"    movb (%rsi), %al")
+                code.append(f"    movb (%rdi), %cl")
+                code.append(f"    cmpb %cl, %al")
+                code.append(f"    jne {lbl_ne}")
+                code.append(f"    testb %al, %al")
+                code.append(f"    jz {lbl_eq}")
+                code.append(f"    inc %rsi")
+                code.append(f"    inc %rdi")
+                code.append(f"    jmp {lbl_loop}")
+                code.append(f"{lbl_eq}:")
+                code.append(f"    mov $1, %rax")
+                code.append(f"    jmp {lbl_done}")
+                code.append(f"{lbl_ne}:")
+                code.append(f"    xor %rax, %rax")
+                code.append(f"{lbl_done}:")
+                code.append(f"    mov %rax, {träff_reg}  # träff = strcmp result")
+
         elif op == 'STORE_CHAR':
             char_var, idx_var, buf_name = stmt[1], stmt[2], stmt[3]
             named_buffers.add(buf_name)
@@ -867,7 +1214,7 @@ def compile_to_asm(stmts, target='linux'):
                 byte_map = {
                     '%r12': '%r12b', '%r13': '%r13b', '%r8': '%r8b',
                     '%r9': '%r9b', '%r10': '%r10b', '%r11': '%r11b',
-                    '%r15': '%r15b', '%r14': '%r14b',
+                    '%r15': '%r15b', '%r14': '%r14b', '%rbp': '%bpl',
                 }
                 char_byte = byte_map.get(char_reg, '%r15b')
             idx_reg = resolve(idx_var)
@@ -876,30 +1223,41 @@ def compile_to_asm(stmts, target='linux'):
             code.append(f"    add %rcx, %rsi")
             code.append(f"    mov {char_byte}, (%rsi)")
 
-        elif op == 'SKRIV_BUF':
+        elif op == 'COPY_BUF':
+            dest, src = stmt[1], stmt[2]
+            if dest != 'input_buf':
+                named_buffers.add(dest)
+            if src != 'input_buf':
+                named_buffers.add(src)
+            if target == 'windows':
+                to_save, align_pad = win_call_save()
+                code.append(f"    lea {dest}(%rip), %rcx")
+                code.append(f"    lea {src}(%rip), %rdx")
+                code.append(f"    call strcpy")
+                win_call_restore(to_save, align_pad)
+            else:
+                lbl_loop = new_label()
+                lbl_done = new_label()
+                code.append(f"    lea {dest}(%rip), %rdi")
+                code.append(f"    lea {src}(%rip), %rsi")
+                code.append(f"{lbl_loop}:")
+                code.append(f"    movb (%rsi), %al")
+                code.append(f"    movb %al, (%rdi)")
+                code.append(f"    testb %al, %al")
+                code.append(f"    jz {lbl_done}")
+                code.append(f"    inc %rsi")
+                code.append(f"    inc %rdi")
+                code.append(f"    jmp {lbl_loop}")
+                code.append(f"{lbl_done}:")
+
+        elif op == 'SKRIV_BUF_NL':
             buf_name = stmt[1]
             named_buffers.add(buf_name)
             if target == 'windows':
-                # Save caller-saved variable registers before calling puts.
-                # Must also allocate 32-byte shadow space BELOW the saved registers,
-                # otherwise puts uses the saved-register slots as its home space.
-                # Alignment: base rsp is 0-mod-16; N pushes + 32-byte shadow must
-                # keep rsp 0-mod-16 at the call site. If N is odd, add 8 bytes extra.
-                cs = {'%r8', '%r9', '%r10', '%r11'}
-                to_save = sorted(r for r in var_reg.values() if r in cs)
-                align_pad = 8 if len(to_save) % 2 == 1 else 0
-                if align_pad:
-                    code.append(f"    subq $8, %rsp  # alignment pad")
-                for reg in to_save:
-                    code.append(f"    push {reg}")
-                code.append(f"    subq $32, %rsp  # shadow space for puts")
+                to_save, align_pad = win_call_save()
                 code.append(f"    lea {buf_name}(%rip), %rcx")
                 code.append(f"    call puts")
-                code.append(f"    addq $32, %rsp  # free shadow space")
-                for reg in reversed(to_save):
-                    code.append(f"    pop {reg}")
-                if align_pad:
-                    code.append(f"    addq $8, %rsp  # restore alignment pad")
+                win_call_restore(to_save, align_pad)
             else:
                 skriv_buf_used[0] = True
                 lbl_start = new_label()
@@ -921,30 +1279,30 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $1, %eax")
                 code.append(f"    syscall")
 
-        elif op == 'SKRIV_BUF_LEN':
-            count_var = stmt[1]
-            buf_name = stmt[2] if len(stmt) > 2 else 'ord_buf'
+        elif op == 'SKRIV_BUF':
+            buf_name = stmt[1]
             named_buffers.add(buf_name)
-            skriv_buf_used[0] = True  # Need _nl for newline
-            # Get count from variable
-            if count_var and count_var in var_reg:
-                code.append(f"    mov {var_reg[count_var]}, %rdx  # count from {count_var}")
-            elif count_var:
-                try:
-                    code.append(f"    mov ${int(count_var)}, %rdx  # count literal")
-                except:
-                    code.append(f"    mov $0, %rdx  # count fallback")
+            fmt_s_used[0] = True
+            if target == 'windows':
+                to_save, align_pad = win_call_save()
+                code.append(f"    lea fmt_s(%rip), %rcx")
+                code.append(f"    lea {buf_name}(%rip), %rdx")
+                code.append(f"    call printf")
+                win_call_restore(to_save, align_pad)
             else:
+                lbl_start = new_label()
+                lbl_end = new_label()
+                code.append(f"    lea {buf_name}(%rip), %rsi")
                 code.append(f"    xor %rdx, %rdx")
-            code.append(f"    lea {buf_name}(%rip), %rsi")
-            code.append(f"    mov $1, %edi")
-            code.append(f"    mov $1, %eax")
-            code.append(f"    syscall")
-            code.append(f"    lea _nl(%rip), %rsi")
-            code.append(f"    mov $1, %rdx")
-            code.append(f"    mov $1, %edi")
-            code.append(f"    mov $1, %eax")
-            code.append(f"    syscall")
+                code.append(f"{lbl_start}:")
+                code.append(f"    cmpb $0, (%rsi,%rdx)")
+                code.append(f"    je {lbl_end}")
+                code.append(f"    inc %rdx")
+                code.append(f"    jmp {lbl_start}")
+                code.append(f"{lbl_end}:")
+                code.append(f"    mov $1, %edi")
+                code.append(f"    mov $1, %eax")
+                code.append(f"    syscall")
 
         elif op == 'CHAR_AT':
             idx, var = stmt[1], stmt[2]
@@ -964,41 +1322,51 @@ def compile_to_asm(stmts, target='linux'):
             var_reg['tecken'] = '%r15'  # also as "tecken" for compatibility
         
         elif op == 'RETURN':
-            # RETURN in IF/ELSE body - just store the value (don't exit function)
-            ret_val = stmt[1]
-            ret_reg = resolve(ret_val)
-            code.append(f"    mov {ret_reg}, %r11  # _result (return)")
+            ret_reg = resolve(stmt[1])
+            if in_real_func[0]:
+                code.append(f"    mov {ret_reg}, %rax  # return value")
+                emit_func_epilogue()
+                func_returned[0] = True
+            else:
+                code.append(f"    mov {ret_reg}, %r11  # _result (grej)")
     
     has_exit = False
     for stmt in stmts:
         compile_stmt(stmt)
         if stmt[0] == 'EXIT':
             has_exit = True
-    
+
     if not has_exit:
-        if target == 'windows':
-            code.append(f"    xorl %eax, %eax")
-            code.append(f"    addq $32, %rsp")
-            code.append(f"    popq %rbp")
-            code.append(f"    ret")
-        else:
-            code.append(f"    mov $0, %edi")
-            code.append(f"    mov $60, %rax")
-            code.append(f"    syscall")
+        code.append(f"    xor %eax, %eax")
+        emit_func_epilogue()
+
+    for stmt in pending_real_funcs:
+        compile_real_func(stmt[1], stmt[2], stmt[3])
 
     data.append(".data")
     if target == 'windows':
         data.append('fmt_int: .asciz "%lld\\n"')
+        if fmt_int_nonl_used[0]:
+            data.append('fmt_int_nonl: .asciz "%lld"')
+        if fmt_s_used[0]:
+            data.append('fmt_s: .asciz "%s"')
     for i, s in enumerate(strings):
         escaped = s.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
         if target == 'windows':
             data.append(f"msg_{i}: .asciz \"{escaped}\"")
         else:
             data.append(f"msg_{i}: .ascii \"{escaped}\\n\\0\"")
+    for i, s in enumerate(strings_nonl):
+        escaped = s.replace('\\', '\\\\').replace('\n', '\\n').replace('"', '\\"')
+        data.append(f"msg_nonl_{i}: .asciz \"{escaped}\"")
+    for i, s in enumerate(lit_strings):
+        escaped = s.replace('\\', '\\\\').replace('"', '\\"')
+        data.append(f'lit_{i}: .asciz "{escaped}"')
     data.append("num_buf: .byte 0")
     data.append("input_buf: .skip 256")
     for buf in sorted(named_buffers):
-        data.append(f"{buf}: .skip 256")
+        if buf != 'input_buf':
+            data.append(f"{buf}: .skip 256")
     if target == 'linux' and skriv_buf_used[0]:
         data.append('_nl: .ascii "\\n"')
     data.append(".bss")
@@ -1010,15 +1378,25 @@ def compile_to_asm(stmts, target='linux'):
     if target == 'windows':
         out.append(".globl main")
         out.append("main:")
-        out.append("    pushq %rbp")
-        out.append("    movq %rsp, %rbp")
-        out.append("    subq $32, %rsp  # 32-byte shadow space (keeps 16-byte alignment)")
+        out.append("    push %r12")
+        out.append("    push %r13")
+        out.append("    push %rbp")
+        out.append("    subq $32, %rsp  # shadow space")
         out.append("    mov $65001, %ecx")
         out.append("    call SetConsoleOutputCP")
+        out.append("    lea stack(%rip), %r14  # init stack ptr")
     else:
         out.append(".globl _start")
         out.append("_start:")
-    out.append("    lea stack(%rip), %r14  # init stack ptr")
+        out.append("    call main")
+        out.append("    xor %edi, %edi")
+        out.append("    mov $60, %rax")
+        out.append("    syscall")
+        out.append("main:")
+        out.append("    push %r12")
+        out.append("    push %r13")
+        out.append("    push %rbp")
+        out.append("    lea stack(%rip), %r14  # init stack ptr")
     out.extend(code)
     out.append("")
     out.extend(data)
@@ -1063,7 +1441,7 @@ def main():
         print(asm)
         return
 
-    with tempfile.NamedTemporaryFile(mode='w', suffix='.s', delete=False) as f:
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.s', delete=False, encoding='utf-8') as f:
         f.write(asm)
         asm_file = f.name
 

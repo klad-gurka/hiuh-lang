@@ -144,10 +144,52 @@ def test_alloc_reg_same_var():
     r2 = alloc_reg('x')
     assert r1 == r2
 
+
+def test_set_minus():
+    """SET x ('-', 'a', 3) → mov a; sub $3"""
+    from hiuh.backend import x86
+    x86.REG_MAP.clear()
+    x86.STRINGS.clear()
+    x86.LABEL_CNT = 0
+    x86.NEXT_REG = 0
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        compile_ir([('SET', 'x', ('-', 'a', 3))])
+    asm = output.getvalue()
+    assert 'sub $3' in asm, f"Got: {asm}"
+
+def test_set_times():
+    """SET x ('*', 'a', 2) → mov a; imul"""
+    from hiuh.backend import x86
+    x86.REG_MAP.clear()
+    x86.STRINGS.clear()
+    x86.LABEL_CNT = 0
+    x86.NEXT_REG = 0
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        compile_ir([('SET', 'x', ('*', 'a', 2))])
+    asm = output.getvalue()
+    assert 'imul' in asm, f"Got: {asm}"
+
+def test_set_div():
+    """SET x ('/', 'a', 4) → mov a; idiv"""
+    from hiuh.backend import x86
+    x86.REG_MAP.clear()
+    x86.STRINGS.clear()
+    x86.LABEL_CNT = 0
+    x86.NEXT_REG = 0
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        compile_ir([('SET', 'x', ('/', 'a', 4))])
+    asm = output.getvalue()
+    assert 'idiv' in asm, f"Got: {asm}"
 if __name__ == '__main__':
     test_set_integer()
     test_set_multiple_vars()
     test_set_plus()
+    test_set_minus()
+    test_set_times()
+    test_set_div()
     test_for_loop()
     test_for_with_body()
     test_if_eq()

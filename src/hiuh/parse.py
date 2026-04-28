@@ -104,11 +104,16 @@ def parse_value(tokens):
     if not tokens:
         return 0
     tok = tokens[0]
+    # Check for binary expressions: a PLUS/MINUS/TIMES/DIV b
+    if len(tokens) >= 3 and tokens[1] in ('PLUS', 'MINUS', 'TIMES', 'DIV'):
+        op_sym = {'PLUS': '+', 'MINUS': '-', 'TIMES': '*', 'DIV': '/'}[tokens[1]]
+        second = tokens[2]
+        second_val = int(second) if second.isdigit() else second
+        first_val = int(tok) if tok.isdigit() else tok
+        return (op_sym, first_val, second_val)
+    # Plain number or identifier
     if tok.isdigit():
         return int(tok)
-    # Check for a plus b expression
-    if len(tokens) >= 3 and tokens[1] == 'PLUS':
-        return ('+', tok, int(tokens[2]))
     return tok
 
 def parse_for(lines, base_indent):

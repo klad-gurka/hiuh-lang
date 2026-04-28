@@ -46,9 +46,9 @@ tools/
 | `Läs` | ✅ | ❌ | ❌ | READ (IR klart, x86 ej) |
 | `Lagra vid i i buf` | ✅ | ❌ | ❌ | STORE |
 | `tecken i ur buf` | ✅ | ❌ | ❌ | LOAD |
-| `Sätt x till a minus b` | ❌ | ❌ | ❌ | MINUS |
-| `Sätt x till a gånger b` | ❌ | ❌ | ❌ | TIMES |
-| `Sätt x till a delat b` | ❌ | ❌ | ❌ | DIV |
+| `Sätt x till a minus b` | ✅ | ✅ | ❌ | SET with '-' |
+| `Sätt x till a gånger b` | ✅ | ✅ | ❌ | SET with '*' |
+| `Sätt x till a delat b` | ✅ | ✅ | ❌ | SET with '/' |
 | `Jag gå nu` | ✅ | ✅ | ❌ | EXIT |
 | `Grej namn` | ❌ | ❌ | ❌ | FUNC_DEF |
 | `Anropa namn med` | ❌ | ❌ | ❌ | CALL |

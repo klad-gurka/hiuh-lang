@@ -80,6 +80,25 @@ def compile_stmt(stmt, target):
             reg_a = alloc_reg(a)
             emit(f"    mov {reg_a}, {reg}")
             emit(f"    add ${b}, {reg}")
+        elif isinstance(val, tuple) and val[0] == '-':
+            _, a, b = val
+            reg_a = alloc_reg(a)
+            emit(f"    mov {reg_a}, {reg}")
+            emit(f"    sub ${b}, {reg}")
+        elif isinstance(val, tuple) and val[0] == '*':
+            _, a, b = val
+            reg_a = alloc_reg(a)
+            emit(f"    mov {reg_a}, %rax")
+            emit(f"    imul ${b}, %rax")
+            emit(f"    mov %rax, {reg}")
+        elif isinstance(val, tuple) and val[0] == '/':
+            _, a, b = val
+            reg_a = alloc_reg(a)
+            emit(f"    mov {reg_a}, %rax")
+            emit(f"    xor %edx, %edx")
+            emit(f"    mov ${b}, %rcx")
+            emit(f"    idiv %rcx")
+            emit(f"    mov %rax, {reg}")
         else:
             reg_v = alloc_reg(val)
             emit(f"    mov {reg_v}, {reg}")

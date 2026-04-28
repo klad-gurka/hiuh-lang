@@ -19,6 +19,30 @@ def test_set_plus():
     ir = parse_tokens(lines)
     assert ir == [('SET', 'x', ('+', 'a', 3))], f"Got {ir}"
 
+def test_set_minus():
+    """sätt x till a minus 3 → SET with expression"""
+    lines = list(tokenize("sätt x till a minus 3"))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'x', ('-', 'a', 3))], f"Got {ir}"
+
+def test_set_times():
+    """sätt x till a gånger 3 → SET with expression"""
+    lines = list(tokenize("sätt x till a gånger 3"))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'x', ('*', 'a', 3))], f"Got {ir}"
+
+def test_set_div():
+    """sätt x till a delat 3 → SET with expression"""
+    lines = list(tokenize("sätt x till a delat 3"))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'x', ('/', 'a', 3))], f"Got {ir}"
+
+def test_set_number_plus():
+    """sätt x till 5 pluss 3 → SET with number + number"""
+    lines = list(tokenize("sätt x till 5 pluss 3"))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'x', ('+', 5, 3))], f"Got {ir}"
+
 def test_for_loop():
     """för x från 0 till 10"""
     src = """för x från 0 till 10
@@ -109,6 +133,10 @@ för i från 0 till 5
 if __name__ == '__main__':
     test_set_integer()
     test_set_plus()
+    test_set_minus()
+    test_set_times()
+    test_set_div()
+    test_set_number_plus()
     test_for_loop()
     test_if_statement()
     test_if_less()

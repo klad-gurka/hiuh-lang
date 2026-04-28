@@ -31,7 +31,7 @@ def parse_tokens(tokens):
             # Skip TILL keyword, get value after it
             val_tokens = []
             j = i + 2
-            while j < len(tokens) and tokens[j] not in ('FOR', 'IF', 'END', 'OM', 'HEJDÅ'):
+            while j < len(tokens) and tokens[j] not in ('FOR', 'IF', 'END', 'SET', 'OM', 'HEJDÅ'):
                 val_tokens.append(tokens[j])
                 j += 1
             val = parse_value(val_tokens)
@@ -39,16 +39,24 @@ def parse_tokens(tokens):
             i = j
         elif tok == 'FOR':
             var = tokens[i+1]
-            start = int(tokens[i+2])
-            end = int(tokens[i+3])
-            body, i = parse_block(tokens[i+4:], end_token='END')
+            # Skip FROM keyword
+            j = i + 2
+            if tokens[j] == 'FROM':
+                j += 1
+            start = int(tokens[j])
+            j += 1
+            # Skip TILL keyword
+            if tokens[j] == 'TILL':
+                j += 1
+            end = int(tokens[j])
+            j += 1
+            body, i = parse_block(tokens[j:], end_token='END')
             ir.append(('FOR', var, start, end, body))
-            i += 4  # skip FOR var start end
         elif tok == 'IF':
-            cmp, i2 = parse_cmp(tokens[i+1:])
-            body, i = parse_block(tokens[i2:], end_token='END')
+            cmp, skip = parse_cmp(tokens[i+1:])
+            body, end_i = parse_block(tokens[i+1+skip:], end_token='END')
             ir.append(('IF', cmp, body))
-            i = i2 + 1  # skip past block + END
+            i = i + 1 + skip + end_i + 1  # skip IF + cmp + body + END
         elif tok == 'BREAK':
             ir.append(('BREAK',))
             i += 1
@@ -64,11 +72,12 @@ def parse_tokens(tokens):
             ir.append(('SKRIV_NL' if tok == 'SKRIV_NL' else 'SKRIV', expr))
             i += 2
         elif tok == 'STORE':
-            buf = tokens[i+1]
-            idx = tokens[i+2]
-            val = tokens[i+3]
-            ir.append(('STORE', buf, idx, val))
-            i += 4
+            # Lagra vid idx i buf -> STORE VID idx IN buf
+            # buf is last, idx is after VID, val is after IN
+            val = tokens[i+2]  # idx var
+            buf = tokens[i+4]  # destination buffer
+            ir.append(('STORE', buf, val, val))
+            i += 5
         elif tok == 'CHAR':
             # tecken X ur Y
             if i+2 < len(tokens) and tokens[i+2] == 'UR':
@@ -94,21 +103,28 @@ def parse_value(tokens):
     tok = tokens[0]
     if tok.isdigit():
         return int(tok)
-    # Check for PLUS expression
-    if tok == 'PLUS' and len(tokens) >= 3:
-        return ('+', tokens[1], int(tokens[2]))
+    # Check for a pluss b expression
+    if len(tokens) >= 3 and tokens[1] == 'PLUS':
+        return ('+', tok, int(tokens[2]))
     return tok
 
 def parse_cmp(tokens):
-    """Parse comparison: VAR OP VALUE"""
+    """Parse comparison: VAR [är] [mindre/större än] VALUE"""
     var = tokens[0]
     if len(tokens) >= 3:
-        if tokens[1] == 'AR':
+        # är mindre än 5 OR mindre än 5
+        if tokens[1] == 'LESS' or (tokens[1] == 'AR' and tokens[2] == 'LESS'):
+            # är mindre än: tokens = [x, AR, LESS, THAN, val] -> skip 4
+            # mindre än: tokens = [x, LESS, THAN, val] -> skip 3
+            val = tokens[4] if tokens[1] == 'AR' else tokens[3]
+            return (var, '<', val), 5 if tokens[1] == 'AR' else 4
+        # är större än 5 OR större än 5
+        elif tokens[1] == 'GREATER' or (tokens[1] == 'AR' and tokens[2] == 'GREATER'):
+            val = tokens[4] if tokens[1] == 'AR' else tokens[3]
+            return (var, '>', val), 5 if tokens[1] == 'AR' else 4
+        # är X (equality)
+        elif tokens[1] == 'AR':
             return (var, '==', tokens[2]), 3
-        elif tokens[1] == 'LESS':
-            return (var, '<', tokens[2]), 3
-        elif tokens[1] == 'GREATER':
-            return (var, '>', tokens[2]), 3
     return (var, '!=', 0), 1
 
 def parse_block(tokens, end_token='END'):

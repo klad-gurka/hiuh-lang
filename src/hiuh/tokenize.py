@@ -5,11 +5,11 @@ import sys
 
 # Keywords
 KEYWORDS = {
-    'Sätt': 'SET', 'För': 'FOR', 'Om': 'IF', 'Hejdå': 'END',
+    'Sätt': 'SET', 'För': 'FOR', 'Från': 'FROM', 'Om': 'IF', 'Hejdå': 'END',
     'Annars': 'ELSE', 'Läs': 'READ', 'SkrivNyRad': 'SKRIV_NL',
     'Skriv': 'SKRIV', 'Lagra': 'STORE', 'Jämför': 'CMP',
     'JämförBuffer': 'CMP_BUF', 'JagMåsteGåNu': 'EXIT',
-    'Bryt': 'BREAK', 'till': 'TILL', 'från': 'FROM',
+    'Bryt': 'BREAK', 'till': 'TILL', 'från': 'FRAN',
     'är': 'AR', 'pluss': 'PLUS', 'ur': 'UR', 'vid': 'VID',
     'med': 'MED', 'tecken': 'CHAR', 'än': 'THAN',
     'mindre': 'LESS', 'större': 'GREATER', 'värdet': 'VAL',

@@ -19,45 +19,54 @@ tests/
 
 ## IR-nod dokumentation
 
-| IR nod                               | Språk-konstruktion       | IR-exempel                                | X86 | WASM |
-|--------------------------------------|--------------------------|-------------------------------------------|-----|------|
-| `('SET', name, val)`                 | `sätt x till 5`          | `('SET', 'x', 5)`                         | ✅   | ❌    |
-| `('SET', name, ('+', a, b))`         | `sätt x till a pluss b`  | `('SET', 'x', ('+', 'a', 3))`             | ✅   | ❌    |
-| `('SET', name, ('-', a, b))`         | `sätt x till a minus b`  | `('SET', 'x', ('-', 'a', 'b'))`           | ❌   | ❌    |
-| `('SET', name, ('*', a, b))`         | `sätt x till a gånger b` | `('SET', 'x', ('*', 'a', 'b'))`           | ❌   | ❌    |
-| `('SET', name, ('/', a, b))`         | `sätt x till a delat b`  | `('SET', 'x', ('/', 'a', 'b'))`           | ❌   | ❌    |
-| `('FOR', var, start, end, body)`     | `för x från 0 till 10`   | `('FOR', 'x', 0, 10, [body])`             | ✅   | ❌    |
-| `('IF', (var, op, val), body)`       | `om x är 0`              | `('IF', ('x', '==', '0'), [body])`        | ✅   | ❌    |
-| `('BREAK',)`                         | `bryt`                   | `('BREAK',)`                              | ✅   | ❌    |
-| `('EXIT', code)`                     | `hej då` / `jag gå nu`   | `('EXIT', 0)`                             | ✅   | ❌    |
-| `('SKRIV', expr)`                    | `skriv hello`            | `('SKRIV', 'hello')`                      | ✅   | ❌    |
-| `('SKRIV_NL', expr)`                 | `skriv ny rad`           | `('SKRIV_NL',)`                           | ✅   | ❌    |
-| `('SKRIV_VAR', name)`                | `skriv värdet av x`      | `('SKRIV_VAR', 'x')`                      | ❌   | ❌    |
-| `('READ', buf)`                      | `läs`                    | `('READ', 'input_buf')`                   | ❌   | ❌    |
-| `('STORE', buf, idx, val)`           | `lagra vid i i buf`      | `('STORE', 'buf', 'i', 'x')`              | ❌   | ❌    |
-| `('LOAD', buf, idx)`                 | `tecken i ur buf`        | `('LOAD', 'buf', 'i')`                    | ❌   | ❌    |
-| `('FUNC_DEF', name, params, body)`   | `grej namn param`        | `('FUNC_DEF', 'add', ['a', 'b'], [body])` | ❌   | ❌    |
-| `('CALL', name, args)`               | `anropa namn med x`      | `('CALL', 'add', ['x', 'y'])`             | ❌   | ❌    |
-| `('RETURN', val)`                    | `ge x`                   | `('RETURN', 'x')`                         | ❌   | ❌    |
-| `('WHILE', (var, op, val), body)`    | `medan x är 0`           | `('WHILE', ('x', '==', '0'), [body])`     | ❌   | ❌    |
-| `('LIST_CREATE', name)`              | `sätt x till lista`      | `('LIST_CREATE', 'x')`                    | ❌   | ❌    |
-| `('LIST_APPEND', list, val)`         | `lägg till x till lista` | `('LIST_APPEND', 'lst', 'x')`             | ❌   | ❌    |
-| `('LIST_GET', list, idx)`            | `element i ur lista`     | `('LIST_GET', 'lst', 'i')`                | ❌   | ❌    |
-| `('LIST_LEN', list)`                 | `antal element i lista`  | `('LIST_LEN', 'lst')`                     | ❌   | ❌    |
-| `('CONCAT', a, b)`                   | `a sammanfogat med b`    | `('CONCAT', 'a', 'b')`                    | ❌   | ❌    |
-| `('FILE_OPEN', filename, mode, buf)` | `öppna fil för läsning`  | `('FILE_OPEN', 'data.txt', 'r', 'buf')`   | ❌   | ❌    |
-| `('FILE_WRITE', filename, data)`     | `skriv till fil`         | `('FILE_WRITE', 'out.txt', 'hello')`      | ❌   | ❌    |
+### Satser (Statements)
 
-## Jämförelseoperatorer (används i IF/WHILE)
+| IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
+|--------|-------------------|------------|-----|------|
+| `('SET', name, expr)` | `sätt x till 5` | `('SET', 'x', 5)` | ✅ | ❌ |
+| `('FOR', var, start, end, body)` | `för x från 0 till 10` | `('FOR', 'x', 0, 10, [body])` | ✅ | ❌ |
+| `('IF', cmp, body)` | `om x är 0` | `('IF', ('x', '==', '0'), [body])` | ✅ | ❌ |
+| `('BREAK',)` | `bryt` | `('BREAK',)` | ✅ | ❌ |
+| `('EXIT',)` | `hej då` / `jag gå nu` | `('EXIT',)` | ✅ | ❌ |
+| `('SKRIV', text)` | `skriv hello` | `('SKRIV', 'hello')` | ✅ | ❌ |
+| `('SKRIV_NL',)` | `skriv ny rad` | `('SKRIV_NL',)` | ✅ | ❌ |
+| `('SKRIV_VAR', name)` | `skriv värdet av x` | `('SKRIV_VAR', 'x')` | ❌ | ❌ |
+| `('READ',)` | `läs` | `('READ',)` | ❌ | ❌ |
+| `('STORE', buf, idx, val)` | `lagra vid i i buf` | `('STORE', 'buf', 'i', 'x')` | ❌ | ❌ |
+| `('LOAD', buf, idx)` | `tecken i ur buf` | `('LOAD', 'buf', 'i')` | ❌ | ❌ |
+| `('FUNC_DEF', name, params, body)` | `grej namn param` | `('FUNC_DEF', 'add', ['a', 'b'], [body])` | ❌ | ❌ |
+| `('CALL', name, args)` | `anropa namn med x` | `('CALL', 'add', ['x', 'y'])` | ❌ | ❌ |
+| `('RETURN', expr)` | `ge x` | `('RETURN', 'x')` | ❌ | ❌ |
+| `('WHILE', cmp, body)` | `medan x är 0` | `('WHILE', ('x', '==', '0'), [body])` | ❌ | ❌ |
+| `('LIST_CREATE', name)` | `sätt x till lista` | `('LIST_CREATE', 'x')` | ❌ | ❌ |
+| `('LIST_APPEND', list, val)` | `lägg till x till lista` | `('LIST_APPEND', 'lst', 'x')` | ❌ | ❌ |
+| `('LIST_GET', list, idx)` | `element i ur lista` | `('LIST_GET', 'lst', 'i')` | ❌ | ❌ |
+| `('LIST_LEN', list)` | `antal element i lista` | `('LIST_LEN', 'lst')` | ❌ | ❌ |
+| `('CONCAT', a, b)` | `a sammanfogat med b` | `('CONCAT', 'a', 'b')` | ❌ | ❌ |
+| `('FILE_OPEN', filename, mode, buf)` | `öppna fil för läsning` | `('FILE_OPEN', 'data.txt', 'r', 'buf')` | ❌ | ❌ |
+| `('FILE_WRITE', filename, data)` | `skriv till fil` | `('FILE_WRITE', 'out.txt', 'hello')` | ❌ | ❌ |
 
-| Operator | Språk             | IR | X86 | WASM |
-|----------|-------------------|----|-----|------|
-| `==`     | `är`              | ✅  | ✅   | ❌    |
-| `!=`     | `är inte`         | ✅  | ✅   | ❌    |
-| `<`      | `är mindre än`    | ✅  | ✅   | ❌    |
-| `>`      | `är större än`    | ✅  | ✅   | ❌    |
-| `<=`     | `är mindre eller` | ✅  | ✅   | ❌    |
-| `>=`     | `är större eller` | ✅  | ✅   | ❌    |
+### Uttryck (Expressions)
+
+| IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
+|--------|-------------------|------------|-----|------|
+| `('LIT', n)` | `5` (literalt tal) | `('LIT', 5)` | ✅ | ❌ |
+| `('VAR', name)` | `x` (variabel-referens) | `('VAR', 'x')` | ✅ | ❌ |
+| `('ADD', a, b)` | `a pluss b` | `('ADD', 'a', 'b')` | ✅ | ❌ |
+| `('SUB', a, b)` | `a minus b` | `('SUB', 'a', 'b')` | ❌ | ❌ |
+| `('MUL', a, b)` | `a gånger b` | `('MUL', 'a', 'b')` | ❌ | ❌ |
+| `('DIV', a, b)` | `a delat b` | `('DIV', 'a', 'b')` | ❌ | ❌ |
+
+### Jämförelse (Comparisons)
+
+| IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
+|--------|-------------------|------------|-----|------|
+| `('EQ', a, b)` | `är` | `('EQ', 'x', '0')` | ✅ | ❌ |
+| `('NE', a, b)` | `är inte` | `('NE', 'x', '0')` | ❌ | ❌ |
+| `('LT', a, b)` | `är mindre än` | `('LT', 'x', '5')` | ✅ | ❌ |
+| `('GT', a, b)` | `är större än` | `('GT', 'x', '0')` | ✅ | ❌ |
+| `('LE', a, b)` | `är mindre eller` | `('LE', 'x', '5')` | ❌ | ❌ |
+| `('GE', a, b)` | `är större eller` | `('GE', 'x', '0')` | ❌ | ❌ |
 
 ## Indentering
 
@@ -67,13 +76,13 @@ tests/
 ## Nästa steg
 
 ### Hög prioritet
-1. [ ] **minus, gånger, delat** - aritmetik
-2. [ ] **Läs input** - READ x86 syscall
-3. [x] **!=, >=, <=** - jämförelseoperatorer
-4. [ ] **skriv värdet av x** - variabel-output
+1. [ ] **Implementera alla uttryck** - SUB, MUL, DIV
+2. [ ] **Implementera alla jämförelser** - NE, LE, GE
+3. [ ] **Läs input** - READ x86 syscall
+4. [ ] **skriv värdet av x** - SKRIV_VAR
 
 ### Medel prioritet
-5. [ ] **WHILE-loop** - medan x är 0
+5. [ ] **WHILE-loop**
 6. [ ] **Funktioner** - grej/anropa/ge
 7. [ ] **Listor** - lägg till, element ur, antal
 

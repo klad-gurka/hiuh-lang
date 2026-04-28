@@ -175,6 +175,53 @@ def tokenize(src):
             # Just mark that we're in an else block for the next Skriv/etc
             tokens.append(('ELSE',))
         
+        elif first.startswith('Sätt') and not first == 'Sätt':
+            # Sätt<something> (compound words like Sättantal, Sätttecken)
+            # Strip 'Sätt' prefix to get the actual variable name
+            var = first[4:]  # e.g. 'Sättantal' -> 'antal', 'Sätttecken' -> 'tecken'
+            rest = ' '.join(words[2:])  # value part after 'till'
+            if 'är' in words:
+                # "Sättx är y" → SET_CMP or PLUS (Sätt<var> är <expr>)
+                # This also catches 'Sätttecken är tecken i ...' patterns
+                if ' pluss ' in rest and ' är ' in rest:
+                    # "x är y pluss z" → PLUS
+                    var2 = words[words.index('är')+1] if 'är' in words else '0'
+                    pluss_idx = words.index('pluss')
+                    left = ' '.join(words[words.index('är')+1:words.index('pluss')]).strip()
+                    right = ' '.join(words[words.index('pluss')+1:]).strip()
+                    tokens.append(('PLUS', var, left, right))
+                else:
+                    # "x är y" → CMP + SET_CMP_RESULT
+                    var2 = words[words.index('är')+1] if 'är' in words else '0'
+                    tokens.append(('CMP', var, var2))
+                    tokens.append(('SET_CMP_RESULT', var))
+            elif rest.startswith('tecken '):
+                # "Sätttecken till tecken i input_buf" - char access
+                # rest = 'tecken i input_buf' or 'tecken ur input_buf'
+                if ' ur ' in rest:
+                    parts = rest.split(' ur ')
+                    idx_part = parts[0].replace('tecken', '').strip()
+                    source = parts[1].strip()
+                    tokens.append(('SET_CHAR_AT', var, idx_part, source))
+                elif rest.startswith('tecken i '):
+                    source = rest[len('tecken i '):].strip()
+                    tokens.append(('SET_CHAR_AT', var, 'i', source))
+                elif rest == 'tecken':
+                    tokens.append(('SET', var, rest))
+                else:
+                    tokens.append(('SET', var, rest))
+            elif ' pluss ' in rest:
+                # "Sättantal till antal pluss 1"
+                parts = rest.split(' pluss ')
+                left = parts[0].strip()  # e.g. 'till antal'
+                left_var = left.split()[1] if len(left.split()) > 1 else left  # remove 'till'
+                right = parts[1].strip() if len(parts) > 1 else '0'
+                tokens.append(('PLUS', var, left_var, right))
+            else:
+                # "Sättantal till 0" or "Sättj till 0" - simple assignment
+                val = words[2] if len(words) > 2 else '0'
+                tokens.append(('SET', var, val))
+        
         elif 'är' in words and 'mindre' in words and 'än' in words:
             # "x är mindre än y" → CMP_LT
             var1 = words[0]
@@ -301,8 +348,9 @@ def parse(tokens):
                             body.append(('ELSE', else_body))
                     else:
                         body.append(('IF', if_body))
-                        if i < len(tokens) and tokens[i][0] == 'END':
-                            i += 1
+                        # NOTE: IF's END was already consumed during body parsing
+                        # Do NOT consume another END here (it might be the FOR's END)
+                        # i += 1  # REMOVED - was incorrectly consuming next token
                 else:
                     if tok2[0] == 'FOR':
                         # Recursively parse nested FOR

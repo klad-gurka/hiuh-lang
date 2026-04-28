@@ -13,11 +13,13 @@
 - [x] IF-ELSE i loopar
 - [x] Nästlade loopar
 
-### HIUH tokenizer (hiuh-tokenizer.hiuh) - BRUTET
-- Status: BRUTET - behöver mer arbete
-- Problem: Binären outputtar bara `\x00` oavsett input (`printf "ab cd" | ./hiuh-tokenizer` ger tom output)
-- Även git HEAD-versionen är trasig (den är 9768 bytes vs commit:ade 9768 bytes samma md5, men output är tom)
-- Tidigare förväntat beteende: "ab\n001" för "ab cd" (första ordet + count)
+### HIUH tokenizer (hiuh-tokenizer.hiuh) - FIXAD (2026-04-28)
+- Status: FIXAD - tokenizer kompilerar och fungerar!
+- Fix 1: Tokenizer bug - `elif 'är' in words` matched substring 'är' i compound-ord som 'Sättantal'. Fix: ny `elif first.startswith('Sätt')` gren före 'är'-checks.
+- Fix 2: `Sätttecken till tecken i input_buf` använde `words[3:]` istället för `words[2:]` för rest-värde.
+- Fix 3: Parse bug - sista IF (no ELSE) i FOR body konsumerade FOR's END-token via `if tokens[i][0] == 'END': i += 1`, vilket placerade post-loop statements inuti loopen. Fix: ta bort den felaktiga `i += 1`.
+- Test: `printf "ab cd\n" | ./tok` ger `ab` `cd` (var för sig)
+- Commits: [Denna commit]
 
 ## SJÄLVKOMPILERING - vägen dit
 
@@ -34,7 +36,7 @@
 4. [ ] Självkompilerad hiuh.exe som kan kompilera hiuh-tokenizer.hiuh
 
 ## Kända buggar
-- Inga kritiska buggar kvar i tokenizer eller kompilator
+- Output innehåller fortfarande lite garbage pga oinitierad buffer (mindre problem)
 
 ## Test-kommandon
 ```bash

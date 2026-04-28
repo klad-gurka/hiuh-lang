@@ -16,18 +16,22 @@ KEYWORDS = {
     'av': 'OF', 'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
 }
 
-def tokenize_stream():
-    """Read from stdin, output one token per line"""
-    for line in sys.stdin:
+def tokenize(src):
+    """Tokenize source string, yield tokens"""
+    for line in src.split('\n'):
         line = line.strip()
         if not line:
             continue
         for word in line.split():
             if word in KEYWORDS:
-                print(KEYWORDS[word])
+                yield KEYWORDS[word]
             else:
-                # Number or identifier
-                print(word)
+                yield word
+
+def tokenize_stream():
+    """Read from stdin, output one token per line"""
+    for tok in tokenize(sys.stdin.read()):
+        print(tok)
 
 if __name__ == '__main__':
     tokenize_stream()

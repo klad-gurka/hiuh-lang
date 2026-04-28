@@ -50,6 +50,13 @@ def tokenize(src):
                     i += 3
                     continue
             
+            # Handle "hej då" → EXIT (program exit, same as "jag gå nu")
+            if word == 'hej' and i + 1 < len(words):
+                if words[i+1].lower() == 'då':
+                    yield 'EXIT'
+                    i += 2
+                    continue
+            
             # 'i' after variable-taking keywords is a variable name, not IN keyword
             if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra'):
                 yield word  # variable name

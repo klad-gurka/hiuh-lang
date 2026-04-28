@@ -1,3 +1,7 @@
+# Ignore intellij idea project files
+.idea/
+*.iml
+
 # Compiled binaries
 hiuh-parser
 hiuh-parser-*

@@ -3,26 +3,30 @@
 
 import sys
 
-# Keywords
+# Keywords (lowercase for case-insensitive matching)
 KEYWORDS = {
-    'Sätt': 'SET', 'För': 'FOR', 'Om': 'IF', 'Hejdå': 'END',
-    'Annars': 'ELSE', 'Läs': 'READ', 
-    'SkrivNyRad': 'SKRIV_NL', 'Skriv': 'SKRIV', 
-    'Lagra': 'STORE', 'Jämför': 'CMP',
-    'JämförBuffer': 'CMP_BUF', 'JagMåsteGåNu': 'EXIT',
-    'Bryt': 'BREAK', 'till': 'TILL', 'från': 'FRAN',
-    'är': 'AR', 'pluss': 'PLUS', 'ur': 'UR', 'vid': 'VID',
-    'med': 'MED', 'tecken': 'CHAR', 'än': 'THAN',
-    'mindre': 'LESS', 'större': 'GREATER', 'värdet': 'VAL',
-    'av': 'OF', 'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
-    # Space-friendly aliases (for mobile typing)
-    'NyRad': 'SKRIV_NL',  # "Skriv NyRad" instead of "SkrivNyRad"
-    'Gå': 'EXIT',  # "Jag Gå Nu" instead of "JagMåsteGåNu"
-    'Nu': 'EXIT',
+    # Core keywords
+    'sätt': 'SET', 'för': 'FOR', 'om': 'IF', 'hejdå': 'END',
+    'annars': 'ELSE', 'läs': 'READ', 'skriv': 'SKRIV', 'skrivnyrad': 'SKRIV_NL',
+    'lagra': 'STORE', 'jämför': 'CMP',
+    'jämförbuffer': 'CMP_BUF', 'jagmåstegånu': 'EXIT',
+    'bryt': 'BREAK', 'till': 'TILL', 'från': 'FRAN',
+    'är': 'AR', 'pluss': 'PLUS', 'minus': 'MINUS',
+    'gånger': 'TIMES', 'delat': 'DIV',
+    'ur': 'UR', 'vid': 'VID', 'med': 'MED',
+    'tecken': 'CHAR', 'än': 'THAN', 'mindre': 'LESS',
+    'större': 'GREATER', 'värdet': 'VAL', 'av': 'OF',
+    'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
+    # Space-friendly compound keywords
+    'ny': 'SKRIV_NL',  # "skriv ny rad" = SKRIV + SKRIV_NL
+    'rad': 'SKRIV_NL',
+    'gå': 'EXIT',  # "jag gå nu" = EXIT
+    'nu': 'EXIT',
 }
 
 def tokenize(src):
-    """Tokenize source string, yield tokens"""
+    """Tokenize source string, yield tokens (case-insensitive)"""
+    prev_word = None
     for line in src.split('\n'):
         line = line.strip()
         if not line:
@@ -30,22 +34,30 @@ def tokenize(src):
         words = line.split()
         i = 0
         while i < len(words):
-            word = words[i]
-            # Handle "Jag Gå Nu" → EXIT (space-friendly for JagMåsteGåNu)
-            if word == 'Jag' and i + 2 < len(words) and KEYWORDS.get(words[i+1]) == 'EXIT' and KEYWORDS.get(words[i+2]) == 'EXIT':
-                yield 'EXIT'
-                i += 3
-                continue
-            if word in KEYWORDS:
-                token = KEYWORDS[word]
-                # Handle "Skriv NyRad" → SKRIV_NL (space-friendly)
-                if token == 'SKRIV' and i + 1 < len(words) and KEYWORDS.get(words[i+1]) == 'SKRIV_NL':
+            word = words[i].lower()
+            
+            # Handle "skriv ny rad" → SKRIV_NL (space-friendly)
+            if word == 'skriv' and i + 2 < len(words):
+                if words[i+1].lower() == 'ny' and words[i+2].lower() == 'rad':
                     yield 'SKRIV_NL'
-                    i += 2
+                    i += 3
                     continue
-                yield token
+            
+            # Handle "jag gå nu" → EXIT (space-friendly for JagMåsteGåNu)
+            if word == 'jag' and i + 2 < len(words):
+                if words[i+1].lower() == 'gå' and words[i+2].lower() == 'nu':
+                    yield 'EXIT'
+                    i += 3
+                    continue
+            
+            # 'i' after variable-taking keywords is a variable name, not IN keyword
+            if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra'):
+                yield word  # variable name
+            elif word in KEYWORDS:
+                yield KEYWORDS[word]
             else:
-                yield word
+                yield words[i]
+            prev_word = word
             i += 1
 
 def tokenize_stream():

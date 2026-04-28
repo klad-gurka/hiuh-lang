@@ -1,4 +1,8 @@
-# Test only with word output
+# HIUH Tokenizer v3 - Fixed word-end detection
+# Key insight: output BEFORE starting to store next word
+# When whitespace detected AND was in word: set f=1, DON'T reset i_ord yet
+# On NEXT iteration: if f=1, output first (before storing), then reset f
+# Only store when f=0 (not right after output)
 Sättantal till 0
 Sättj till 0
 Sätti_ord till 0
@@ -6,27 +10,34 @@ Sättf till 0
 Läs
 För i från 0 till 255
     Sätttecken till tecken i input_buf
+    # Detect word-end: whitespace/null while in word
+    # Set flag but DON'T output yet - do that on NEXT iteration
     Om tecken är 0
         Om i_ord är 1
             Sättf till 1
         Hejdå
     Hejdå
     Om tecken är mindre än 33
-        Om i_ord är 1  
+        Om i_ord är 1
             Sättf till 1
         Hejdå
     Hejdå
-    Om tecken är större än 32
-        Lagra tecken vid j i ord_buf
-        Sättj till j pluss 1
-        Sätti_ord till 1
-    Hejdå
+    # Output if we detected word-end on PREVIOUS iteration
+    # This runs BEFORE we can store the next character
     Om f är 1
         Skriv j tecken i ord_buf
         Sättantal till antal pluss 1
         Sättj till 0
-        Sätti_ord till 0
         Sättf till 0
+        Sätti_ord till 0
+    Hejdå
+    # Only store printable chars (and only if we didn't just output)
+    Om f är 0
+        Om tecken är större än 32
+            Lagra tecken vid j i ord_buf
+            Sättj till j pluss 1
+            Sätti_ord till 1
+        Hejdå
     Hejdå
 Hejdå
 Skriv värdet av antal

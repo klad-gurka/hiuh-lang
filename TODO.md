@@ -18,6 +18,7 @@
 - Fix 1: Tokenizer bug - `elif 'är' in words` matched substring 'är' i compound-ord som 'Sättantal'. Fix: ny `elif first.startswith('Sätt')` gren före 'är'-checks.
 - Fix 2: `Sätttecken till tecken i input_buf` använde `words[3:]` istället för `words[2:]` för rest-värde.
 - Fix 3: Parse bug - sista IF (no ELSE) i FOR body konsumerade FOR's END-token via `if tokens[i][0] == 'END': i += 1`, vilket placerade post-loop statements inuti loopen. Fix: ta bort den felaktiga `i += 1`.
+- Fix 4: Flag-based nested IF approach för att komma runt kompilatorns bristfälliga nästning.
 - Test: `printf "ab cd\n" | ./tok` ger `ab` `cd` (var för sig)
 - Commits: [Denna commit]
 

@@ -1,0 +1,14 @@
+[project]
+name = "hiuh"
+version = "0.1.0"
+description = "Svensk programmering på mobilvänligt språk"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

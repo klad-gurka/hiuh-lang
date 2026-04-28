@@ -44,6 +44,10 @@ def tokenize(src):
                 tokens.append(('SKRIV_VAR_NL' if nl else 'SKRIV_VAR', words[-1]))
             elif rest.startswith('text i '):
                 tokens.append(('SKRIV_BUF_NL' if nl else 'SKRIV_BUF', rest[len('text i '):]))
+            elif rest.startswith('symbol '):
+                # Skriv symbol N — output the NUMBER N as text (for building asm)
+                byte_val = int(rest.split()[1])
+                tokens.append(('SKRIV_BYTE', byte_val))
             else:
                 tokens.append(('SKRIV_NL' if nl else 'SKRIV', rest))
         elif first == '.':
@@ -148,6 +152,12 @@ def tokenize(src):
                 tokens.append(('READ_RES', var))
             else:
                 tokens.append(('READ',))
+        
+        elif first == 'FIOLÄS':
+            # "FIOLÄS sökväg" → open file, read into buffer, close
+            if len(words) >= 2:
+                filename = words[1]
+                tokens.append(('FILE_READ', filename))
         
         elif first == 'tecken':
             # "tecken <index> ur <source>" - get char at index from source
@@ -361,6 +371,9 @@ def parse(tokens):
         elif tok[0] in ('SKRIV_VAR', 'SKRIV_VAR_NL'):
             stmts.append(tok)
             i += 1
+        elif tok[0] == 'SKRIV_BYTE':
+            stmts.append(tok)
+            i += 1
         elif tok[0] == 'SET':
             stmts.append(tok)
             i += 1
@@ -390,6 +403,9 @@ def parse(tokens):
             stmts.append(tok)
             i += 1
         elif tok[0] == 'READ':
+            stmts.append(tok)
+            i += 1
+        elif tok[0] == 'FILE_READ':
             stmts.append(tok)
             i += 1
         elif tok[0] == 'BREAK':
@@ -582,6 +598,7 @@ def parse(tokens):
 
 def compile_to_asm(stmts, target='linux'):
     code = []
+    raw_data = []  # SKRIV_BYTE raw bytes emitted to data section
     data = []
     strings = []
     
@@ -752,6 +769,10 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $1, %edi")
                 code.append(f"    mov $1, %eax")
                 code.append(f"    syscall")
+        
+        elif op == 'SKRIV_BYTE':
+            # Skriv symbol N — output .byte N in data section
+            raw_data.append(f"    .byte {stmt[1]}")
         
         elif op == 'SKRIV_VAR_NL':
             reg = resolve(stmt[1])
@@ -1122,6 +1143,27 @@ def compile_to_asm(stmts, target='linux'):
                 code.append(f"    mov $256, %edx  # max bytes")
                 code.append(f"    syscall")
         
+        elif op == 'FILE_READ':
+            filename = stmt[1]
+            strings.append(filename)
+            idx = len(strings) - 1
+            # open file: open(path, O_RDONLY=0)
+            code.append(f"    lea msg_{idx}(%rip), %rdi  # filename: {filename}")
+            code.append(f"    mov $2, %eax  # open")
+            code.append(f"    mov $0, %rsi  # O_RDONLY")
+            code.append(f"    syscall")
+            code.append(f"    mov %rax, %r15  # fd")
+            # read(fd, input_buf, 256)
+            code.append(f"    mov %r15, %rdi  # fd")
+            code.append(f"    lea input_buf(%rip), %rsi")
+            code.append(f"    mov $256, %edx  # bytes to read")
+            code.append(f"    mov $0, %eax  # read")
+            code.append(f"    syscall")
+            # close(fd)
+            code.append(f"    mov %r15d, %edi  # fd to close")
+            code.append(f"    mov $3, %eax  # close")
+            code.append(f"    syscall")
+        
         elif op == 'CMP_BUF_LIT':
             target_var, buf_name, literal = stmt[1], stmt[2], stmt[3]
             lit_strings.append(literal)
@@ -1363,12 +1405,15 @@ def compile_to_asm(stmts, target='linux'):
         escaped = s.replace('\\', '\\\\').replace('"', '\\"')
         data.append(f'lit_{i}: .asciz "{escaped}"')
     data.append("num_buf: .byte 0")
+    data.append("byte_buf: .byte 0")
     data.append("input_buf: .skip 256")
     for buf in sorted(named_buffers):
         if buf != 'input_buf':
             data.append(f"{buf}: .skip 256")
     if target == 'linux' and skriv_buf_used[0]:
         data.append('_nl: .ascii "\\n"')
+    if raw_data:
+        data.extend(raw_data)
     data.append(".bss")
     data.append(".align 8")
     data.append("stack: .skip 4096")

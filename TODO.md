@@ -31,7 +31,7 @@ tests/
 | `('BREAK',)`                         | `bryt`                   | `('BREAK',)`                              | ✅   | ❌    |
 | `('EXIT', code)`                     | `hej då` / `jag gå nu`   | `('EXIT', 0)`                             | ✅   | ❌    |
 | `('SKRIV', expr)`                    | `skriv hello`            | `('SKRIV', 'hello')`                      | ✅   | ❌    |
-| `('SKRIV_NL', expr)`                 | `skriv ny rad x`         | `('SKRIV_NL', 'x')`                       | ✅   | ❌    |
+| `('SKRIV_NL', expr)`                 | `skriv ny rad`           | `('SKRIV_NL',)`                           | ✅   | ❌    |
 | `('SKRIV_VAR', name)`                | `skriv värdet av x`      | `('SKRIV_VAR', 'x')`                      | ❌   | ❌    |
 | `('READ', buf)`                      | `läs`                    | `('READ', 'input_buf')`                   | ❌   | ❌    |
 | `('STORE', buf, idx, val)`           | `lagra vid i i buf`      | `('STORE', 'buf', 'i', 'x')`              | ❌   | ❌    |

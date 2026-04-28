@@ -15,8 +15,6 @@ tests/
   test_tokenize.py
   test_parse.py
   test_backend_x86.py
-tools/
-  hiuh-native.py    ← kompilator (Python)
 ```
 
 ## IR-nod dokumentation

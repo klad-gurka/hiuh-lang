@@ -9,7 +9,7 @@
 HIUH-kompilatorn delas i två delar:
 
 **Frontend:**
-- Tokenizer (hiuh-tokenizer.hiuh) ✅ KLAR
+- Tokenizer (hiuh-tokenizer.hiuh) ✅ KLAR - self-tokenizes correctly
 - Parser → producerar IR
 - IR = plattformsoberoende representation
 
@@ -47,25 +47,19 @@ källkod.hiuh
 ```
 
 ### Nuvarande status (2026-04-28)
-- Tokenizer: KLAR (hiuh-tokenizer.hiuh, fungerar)
+- Tokenizer: KLAR (hiuh-tokenizer.hiuh, fungerar, self-tokenizes correctly)
+- Parser: hiuh-parser.hiuh SKRIVEN men BRUTEN - parsern tar token-input men outputter 0 rader
+  - Bug: "tilli" istället för "till i" i källkoden → "till" och "i" blir separata tokens → state-machine trasig
 - Frontend i Python: fungerar (hiuh-native.py)
 - Backend x86-Linux: fungerar
 - Självkompilering: PÅBÖRJAD
 
 ### Nästa steg
-1. [ ] Definiera IR-formatet ordentligt (hur ser IR ut som text?)
-2. [ ] Bygg HIUH-parser som producerar IR (hiuh-parser.hiuh)
-3. [ ] Backend x86-Linux i HIUH (kan använda befintliga keywords)
-4. [ ] Självkompilera: HIUH-parser + HIUH-backend → kompilerar sig själv
-
-### IR som text
-IR behöver vara läsbart som text (för självkompilering):
-```
-SET x till 5
-FÖR i FRÅN 0 TILL 10
-  SKRIV_NYRAD i
-FOR_SLUT
-```
+1. [ ] Fixa "tilli" buggen i hiuh-parser.hiuh (rad ~49-50: "Sätt i till i pluss 1" → tokenizer ger "tilli")
+2. [ ] Fixa parser state-machine så den hanterar tok_buf utan mellanslag
+3. [ ] Testa parser med tokenizer-output (förväntat: 658 rader → IR-rader)
+4. [ ] Bygg HIUH-backend som tar IR → x86 asm
+5. [ ] Självkompilera: HIUH-parser + HIUH-backend → kompilerar sig själv
 
 ### Tokens som parsern behöver
 Från tokenizer:
@@ -76,3 +70,5 @@ Från tokenizer:
 - SKRIV_NYRAD, x
 - osv.
 
+### Kända buggar
+- **tilli bug**: hiuh-parser.hiuh har "Sätt i till i pluss 1" där "till i" blir "tilli" via compound-word hack i tokenizer. Men tokenizer känner INTE igen "tilli" som keyword, så det blir två separata ord. State-maskinen i parsern blir förvirrad.

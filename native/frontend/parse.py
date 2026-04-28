@@ -1,0 +1,149 @@
+#!/usr/bin/env python3
+"""
+HIUH Parser - converts tokens to IR (Intermediate Representation)
+
+IR is a list of statements:
+  ('SET', name, value)           # Sätt x till 5
+  ('SET', name, ('+', a, b))   # Sätt x till a pluss b
+  ('FOR', var, start, end, body) # För i från 0 till 10
+  ('IF', cmp, body)             # Om x är 0
+  ('IF', cmp, then_body, else_body)
+  ('BREAK',)                    # Bryt
+  ('EXIT', code)                # JagMåsteGåNu 0
+  ('READ', buf)                 # Läs
+  ('SKRIV', expr)              # Skriv x
+  ('SKRIV_NL', expr)           # SkrivNyRad x
+  ('STORE', buf, idx, val)     # Lagra vid i i buf
+  ('LOAD', buf, idx)           # tecken i ur buf
+  ('RETURN', val)               # ge x
+"""
+
+import sys
+
+def parse_tokens(tokens):
+    """Parse token list to IR"""
+    ir = []
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok == 'SET':
+            name = tokens[i+1]
+            # Skip TILL keyword, get value after it
+            val_tokens = []
+            j = i + 2
+            while j < len(tokens) and tokens[j] not in ('FOR', 'IF', 'END', 'OM', 'HEJDÅ'):
+                val_tokens.append(tokens[j])
+                j += 1
+            val = parse_value(val_tokens)
+            ir.append(('SET', name, val))
+            i = j
+        elif tok == 'FOR':
+            var = tokens[i+1]
+            start = int(tokens[i+2])
+            end = int(tokens[i+3])
+            body, i = parse_block(tokens[i+4:], end_token='END')
+            ir.append(('FOR', var, start, end, body))
+            i += 4  # skip FOR var start end
+        elif tok == 'IF':
+            cmp, i2 = parse_cmp(tokens[i+1:])
+            body, i = parse_block(tokens[i2:], end_token='END')
+            ir.append(('IF', cmp, body))
+            i = i2 + 1  # skip past block + END
+        elif tok == 'BREAK':
+            ir.append(('BREAK',))
+            i += 1
+        elif tok == 'EXIT':
+            code = int(tokens[i+1]) if i+1 < len(tokens) and tokens[i+1].isdigit() else 0
+            ir.append(('EXIT', code))
+            i += 2
+        elif tok == 'READ':
+            ir.append(('READ', 'källa'))
+            i += 1
+        elif tok in ('SKRIV', 'SKRIV_NL'):
+            expr = tokens[i+1] if i+1 < len(tokens) else ''
+            ir.append(('SKRIV_NL' if tok == 'SKRIV_NL' else 'SKRIV', expr))
+            i += 2
+        elif tok == 'STORE':
+            buf = tokens[i+1]
+            idx = tokens[i+2]
+            val = tokens[i+3]
+            ir.append(('STORE', buf, idx, val))
+            i += 4
+        elif tok == 'CHAR':
+            # tecken X ur Y
+            if i+2 < len(tokens) and tokens[i+2] == 'UR':
+                idx = tokens[i+1]
+                buf = tokens[i+3]
+                ir.append(('LOAD', buf, idx))
+                i += 4
+            else:
+                i += 1
+        else:
+            i += 1
+    return ir
+
+def parse_value(tokens):
+    """Parse a value: number, identifier, or expression"""
+    if not tokens:
+        return 0
+    # Skip TILL keyword
+    if tokens[0] == 'TILL':
+        tokens = tokens[1:]
+    if not tokens:
+        return 0
+    tok = tokens[0]
+    if tok.isdigit():
+        return int(tok)
+    # Check for PLUS expression
+    if tok == 'PLUS' and len(tokens) >= 3:
+        return ('+', tokens[1], int(tokens[2]))
+    return tok
+
+def parse_cmp(tokens):
+    """Parse comparison: VAR OP VALUE"""
+    var = tokens[0]
+    if len(tokens) >= 3:
+        if tokens[1] == 'AR':
+            return (var, '==', tokens[2]), 3
+        elif tokens[1] == 'LESS':
+            return (var, '<', tokens[2]), 3
+        elif tokens[1] == 'GREATER':
+            return (var, '>', tokens[2]), 3
+    return (var, '!=', 0), 1
+
+def parse_block(tokens, end_token='END'):
+    """Parse a block until END"""
+    block = []
+    i = 0
+    while i < len(tokens):
+        tok = tokens[i]
+        if tok == end_token:
+            return block, i
+        elif tok == 'IF':
+            cmp, skip = parse_cmp(tokens[i+1:])
+            body, end_i = parse_block(tokens[i+1+skip:], end_token='END')
+            block.append(('IF', cmp, body))
+            i = i + 1 + skip + end_i + 1
+        elif tok == 'FOR':
+            var = tokens[i+1]
+            start = int(tokens[i+2])
+            end = int(tokens[i+3])
+            body, end_i = parse_block(tokens[i+4:], end_token='END')
+            block.append(('FOR', var, start, end, body))
+            i = i + 4 + end_i + 1
+        elif tok == 'BREAK':
+            block.append(('BREAK',))
+            i += 1
+        else:
+            i += 1
+    return block, i
+
+def parse_stream():
+    """Read tokens from stdin, output IR as text"""
+    tokens = [line.strip() for line in sys.stdin if line.strip()]
+    ir = parse_tokens(tokens)
+    for stmt in ir:
+        print(stmt)
+
+if __name__ == '__main__':
+    parse_stream()

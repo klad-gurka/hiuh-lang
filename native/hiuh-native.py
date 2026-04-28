@@ -796,7 +796,7 @@ def compile_to_asm(stmts, target='linux'):
                     code.append(f"    mov %r15b, (%rsi)")
                 else:
                     code.append(f"    lea num_buf(%rip), %rsi")
-                    code.append(f"    mov {reg}, %al")
+                    code.append(f"    mov {reg}, %rax")
                     code.append(f"    mov %al, (%rsi)")
                 code.append(f"    mov $1, %rdx")
                 code.append(f"    mov $1, %rdi")
@@ -830,7 +830,7 @@ def compile_to_asm(stmts, target='linux'):
                     code.append(f"    mov {byte_reg}, (%rsi)")
                 else:
                     code.append(f"    lea num_buf(%rip), %rsi")
-                    code.append(f"    mov {reg}, %al")
+                    code.append(f"    mov {reg}, %rax")
                     code.append(f"    mov %al, (%rsi)")
                 code.append(f"    mov $1, %rdx")
                 code.append(f"    mov $1, %rdi")

@@ -9,7 +9,7 @@ _start:
     syscall
     mov $0, %r12  # for i
 L1:
-    mov $2, %rax
+    mov $255, %rax
     cmp %rax, %r12
     jge L2
     mov %r12, %rax  # cmp tecken == 0
@@ -17,22 +17,34 @@ L1:
     sete %al
     cmp $0, %al  # if
     je L3
+    cmp $0, %al  # if
+    je L4
+L4:
 L3:
+    mov %r15, %rax  # cmp_lt tecken < 33
+    cmp $33, %rax
+    setl %al
+    cmp $0, %al  # if
+    je L5
+    cmp $0, %al  # if
+    je L6
+L6:
+L5:
     mov %r15, %rax  # cmp_gt tecken > 32
     cmp $32, %rax
     setg %al
     cmp $0, %al  # if
-    je L4
+    je L7
     lea ord_buf(%rip), %rsi
     mov %r12, %rcx
     add %rcx, %rsi
     mov %r15b, (%rsi)
-L4:
+L7:
     mov %r12, %rax  # cmp f == 1
     cmp $1, %rax
     sete %al
     cmp $0, %al  # if
-    je L5
+    je L8
     mov $0, %rdx  # count fallback
     lea ord_buf(%rip), %rsi
     mov $1, %edi
@@ -43,7 +55,7 @@ L4:
     mov $1, %edi
     mov $1, %eax
     syscall
-L5:
+L8:
     lea num_buf(%rip), %rsi
     mov %r12b, (%rsi)
     mov $1, %rdx

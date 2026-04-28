@@ -1,12 +1,15 @@
-# Ultra simple test
+# Test with flag-based output
 Sättantal till 0
 Sättj till 0
 Sätti_ord till 0
-Sättf to 0
+Sättf till 0
 Läs
-För i från 0 till 2
+För i från 0 till 255
     Sätttecken till tecken i input_buf
     Om tecken är 0
+        Sättf till i_ord
+    Hejdå
+    Om tecken är mindre än 33
         Sättf till i_ord
     Hejdå
     Om tecken är större än 32

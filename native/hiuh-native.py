@@ -674,8 +674,8 @@ def compile_to_asm(stmts, target='linux'):
                 body = stmt[1]
                 else_body = None
             if_end = new_label()
-            code.append(f"    test %al, %al  # if")
-            code.append(f"    jz {if_end}")
+            code.append(f"    cmp $0, %al  # if")
+            code.append(f"    je {if_end}")
             for s in body:
                 compile_stmt(s)
             if has_else:

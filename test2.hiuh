@@ -1,13 +1,20 @@
-# Ultra simple test
+# Test only with word output
 Sättantal till 0
 Sättj till 0
 Sätti_ord till 0
-Sättf to 0
+Sättf till 0
 Läs
-För i från 0 till 2
+För i från 0 till 255
     Sätttecken till tecken i input_buf
     Om tecken är 0
-        Sättf till i_ord
+        Om i_ord är 1
+            Sättf till 1
+        Hejdå
+    Hejdå
+    Om tecken är mindre än 33
+        Om i_ord är 1  
+            Sättf till 1
+        Hejdå
     Hejdå
     Om tecken är större än 32
         Lagra tecken vid j i ord_buf

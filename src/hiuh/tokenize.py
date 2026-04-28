@@ -5,34 +5,48 @@ import sys
 
 # Keywords
 KEYWORDS = {
-    'Sätt': 'SET', 'För': 'FOR', 'Från': 'FROM', 'Om': 'IF', 'Hejdå': 'END',
-    'Annars': 'ELSE', 'Läs': 'READ', 'SkrivNyRad': 'SKRIV_NL',
-    'Skriv': 'SKRIV', 'Lagra': 'STORE', 'Jämför': 'CMP',
+    'Sätt': 'SET', 'För': 'FOR', 'Om': 'IF', 'Hejdå': 'END',
+    'Annars': 'ELSE', 'Läs': 'READ', 
+    'SkrivNyRad': 'SKRIV_NL', 'Skriv': 'SKRIV', 
+    'Lagra': 'STORE', 'Jämför': 'CMP',
     'JämförBuffer': 'CMP_BUF', 'JagMåsteGåNu': 'EXIT',
     'Bryt': 'BREAK', 'till': 'TILL', 'från': 'FRAN',
     'är': 'AR', 'pluss': 'PLUS', 'ur': 'UR', 'vid': 'VID',
     'med': 'MED', 'tecken': 'CHAR', 'än': 'THAN',
     'mindre': 'LESS', 'större': 'GREATER', 'värdet': 'VAL',
     'av': 'OF', 'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
+    # Space-friendly aliases (for mobile typing)
+    'NyRad': 'SKRIV_NL',  # "Skriv NyRad" instead of "SkrivNyRad"
+    'Gå': 'EXIT',  # "Jag Gå Nu" instead of "JagMåsteGåNu"
+    'Nu': 'EXIT',
 }
 
 def tokenize(src):
     """Tokenize source string, yield tokens"""
-    prev_word = None  # Track original word before keyword conversion
     for line in src.split('\n'):
         line = line.strip()
         if not line:
             continue
-        for word in line.split():
-            # Special case: 'i' as variable name after keywords that take variable names
-            # Use original word (before keyword lookup) for context
-            if word == 'i' and prev_word in ('För', 'Sätt', 'Om', 'Lagra', 'Skriv', 'SkrivNyRad'):
-                yield word  # variable name 'i', not keyword IN
-            elif word in KEYWORDS:
-                yield KEYWORDS[word]
+        words = line.split()
+        i = 0
+        while i < len(words):
+            word = words[i]
+            # Handle "Jag Gå Nu" → EXIT (space-friendly for JagMåsteGåNu)
+            if word == 'Jag' and i + 2 < len(words) and KEYWORDS.get(words[i+1]) == 'EXIT' and KEYWORDS.get(words[i+2]) == 'EXIT':
+                yield 'EXIT'
+                i += 3
+                continue
+            if word in KEYWORDS:
+                token = KEYWORDS[word]
+                # Handle "Skriv NyRad" → SKRIV_NL (space-friendly)
+                if token == 'SKRIV' and i + 1 < len(words) and KEYWORDS.get(words[i+1]) == 'SKRIV_NL':
+                    yield 'SKRIV_NL'
+                    i += 2
+                    continue
+                yield token
             else:
                 yield word
-            prev_word = word
+            i += 1
 
 def tokenize_stream():
     """Read from stdin, output one token per line"""

@@ -21,7 +21,7 @@ def alloc_reg(name):
 def new_label():
     global LABEL_CNT
     LABEL_CNT += 1
-    return f".L{LABEL_CNT}"
+    return str(LABEL_CNT)
 
 def emit(s):
     print(s)
@@ -60,13 +60,15 @@ def compile_ir(ir, target='linux'):
     for i, s in enumerate(STRINGS):
         escaped = s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
         emit(f'msg_{i}: .ascii "{escaped}\\n\\0"')
-    emit("num_buf: .byte 0")
+    emit("msg_nl: .ascii \"\\n\\0\"")
+    emit("num_buf: .skip 8")
     emit("input_buf: .skip 256")
     emit(".bss")
     emit(".align 8")
     emit("stack: .skip 4096")
 
 def compile_stmt(stmt, target):
+    global LABEL_CNT
     op = stmt[0]
     if op == 'SET':
         name, val = stmt[1], stmt[2]
@@ -87,41 +89,40 @@ def compile_stmt(stmt, target):
         start_lbl = new_label()
         end_lbl = new_label()
         emit(f"    mov ${start}, {reg}")
-        emit(f"{start_lbl}:")
+        emit(f".L{start_lbl}:")
         emit(f"    cmp ${end}, {reg}")
-        emit(f"    jge {end_lbl}")
+        emit(f"    jge .L{end_lbl}")
         for s in body:
             compile_stmt(s, target)
         emit(f"    inc {reg}")
-        emit(f"    jmp {start_lbl}")
-        emit(f"{end_lbl}:")
+        emit(f"    jmp .L{start_lbl}")
+        emit(f".L{end_lbl}:")
     elif op == 'IF':
         cmp, body = stmt[1], stmt[2]
         var, op, val = cmp
         reg = alloc_reg(var)
         lbl = new_label()
-        # Convert val to int if string
         try:
             val_int = int(val)
         except (ValueError, TypeError):
             val_int = 0
         if op == '==':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jne {lbl}")
+            emit(f"    jne .L{lbl}")
         elif op == '!=':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    je {lbl}")
+            emit(f"    je .L{lbl}")
         elif op == '<':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jge {lbl}")  # jump if >= (not less)
+            emit(f"    jge .L{lbl}")
         elif op == '>':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jle {lbl}")  # jump if <= (not greater)
+            emit(f"    jle .L{lbl}")
         for s in body:
             compile_stmt(s, target)
-        emit(f"{lbl}:")
+        emit(f".L{lbl}:")
     elif op == 'BREAK':
-        emit("    jmp .Lend")  # Simplified
+        emit("    jmp .Lend")
     elif op == 'EXIT':
         emit("    xor %edi, %edi")
         emit("    mov $60, %rax")
@@ -129,19 +130,38 @@ def compile_stmt(stmt, target):
     elif op in ('SKRIV', 'SKRIV_NL'):
         expr = stmt[1] if len(stmt) > 1 else ''
         if expr:
-            reg = alloc_reg(expr)
-            STRINGS.append(f"%d" if expr else "")
-            idx = len(STRINGS) - 1
-            emit(f"    lea msg_{idx}(%rip), %rsi")
-            emit(f"    mov ${expr}, %rdx")
-            emit(f"    mov $1, %edi")
-            emit(f"    mov $1, %eax")
-            emit(f"    syscall")
+            if isinstance(expr, str) and not expr.isdigit():
+                reg = alloc_reg(expr)
+                lbl_s = new_label()
+                lbl_d = new_label()
+                emit(f"    # Print variable {expr}")
+                emit(f"    mov {reg}, %rax")
+                emit(f"    lea num_buf(%rip), %rsi")
+                emit(f"    cmp $10, %rax")
+                emit(f"    jb .Ls{lbl_s}")
+                emit(f"    # >=10: two digits")
+                emit(f"    mov $10, %rcx")
+                emit(f"    div %rcx")
+                emit(f"    add $48, %al")
+                emit(f"    movb %al, (%rsi)")
+                emit(f"    add $48, %ah")
+                emit(f"    movb %ah, 1(%rsi)")
+                emit(f"    mov $2, %rdx")
+                emit(f"    mov $1, %edi")
+                emit(f"    mov $1, %eax")
+                emit(f"    syscall")
+                emit(f"    jmp .Ld{lbl_d}")
+                emit(f".Ls{lbl_s}:")
+                emit(f"    add $48, %rax  # single digit")
+                emit(f"    movb %al, (%rsi)")
+                emit(f"    mov $1, %rdx")
+                emit(f"    mov $1, %edi")
+                emit(f"    mov $1, %eax")
+                emit(f"    syscall")
+                emit(f".Ld{lbl_d}:")
         if op == 'SKRIV_NL':
-            STRINGS.append("")
-            idx = len(STRINGS) - 1
-            emit(f"    lea msg_{idx}(%rip), %rsi")
-            emit(f"    mov $1, %edx")
+            emit(f"    lea msg_nl(%rip), %rsi")
+            emit(f"    mov $1, %rdx")
             emit(f"    mov $1, %edi")
             emit(f"    mov $1, %eax")
             emit(f"    syscall")

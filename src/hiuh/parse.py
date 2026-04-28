@@ -31,7 +31,7 @@ def parse_tokens(tokens):
             # Skip TILL keyword, get value after it
             val_tokens = []
             j = i + 2
-            while j < len(tokens) and tokens[j] not in ('FOR', 'IF', 'END', 'SET', 'OM', 'HEJDÅ'):
+            while j < len(tokens) and tokens[j] not in ('END', 'FOR', 'IF', 'SKRIV', 'SKRIV_NL', 'SET'):
                 val_tokens.append(tokens[j])
                 j += 1
             val = parse_value(val_tokens)

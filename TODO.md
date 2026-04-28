@@ -23,17 +23,21 @@
 
 ### Nuvarande flöde för självkompilering
 1. hiuh-native.py (Python) tokenizerar hiuh-tokenizer.hiuh
-2. Ger ord_lista: 212 ord
+2. Ger ord_lista: 152 ord
 3. För att kompilera hiuh-tokenizer.hiuh med sig själv, behöver HIUH-ord-listan
    producera samma tokenström som Python-tokenizern
 
 ### Nästa steg (prioriterad ordning)
 1. [ ] Självkompilering: bygg HIUH-parser i HIUH (för att bygga uttryck)
+   - Ett HIUH-program som kan pars-a HIUH-kod och bygga ett AST
+   - Behöver läsa ord-lista (från tokenizer) och producera strukturerad output
 2. [ ] Bygg HIUH-kodgenerator i HIUH (för att generera asm)
+   - Tar AST och genererar x86_64 assembly
 3. [ ] Självkompilerad hiuh.exe som kan kompilera hiuh-tokenizer.hiuh
 
 ## Kända buggar
-- Output innehåller fortfarande lite garbage pga oinitierad buffer (mindre problem)
+- Inga kritiska buggar i tokenizer (2026-04-28)
+- TODO: Hur läser ett HIUH-program ord-listan från tokenizer? Behöver FIOLÄS.
 
 ## Test-kommandon
 ```bash

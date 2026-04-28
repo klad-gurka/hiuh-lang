@@ -137,6 +137,12 @@ def compile_stmt(stmt, target):
         elif op == '>':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jle .L{lbl}")
+        elif op == '<=':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jg .L{lbl}")
+        elif op == '>=':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jl .L{lbl}")
         for s in body:
             compile_stmt(s, target)
         emit(f".L{lbl}:")

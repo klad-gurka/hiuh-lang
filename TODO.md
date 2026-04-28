@@ -53,11 +53,11 @@ tests/
 | Operator | Språk             | IR | X86 | WASM |
 |----------|-------------------|----|-----|------|
 | `==`     | `är`              | ✅  | ✅   | ❌    |
-| `!=`     | `är inte`         | ❌  | ❌   | ❌    |
+| `!=`     | `är inte`         | ✅  | ✅   | ❌    |
 | `<`      | `är mindre än`    | ✅  | ✅   | ❌    |
 | `>`      | `är större än`    | ✅  | ✅   | ❌    |
-| `<=`     | `är mindre eller` | ❌  | ❌   | ❌    |
-| `>=`     | `är större eller` | ❌  | ❌   | ❌    |
+| `<=`     | `är mindre eller` | ✅  | ✅   | ❌    |
+| `>=`     | `är större eller` | ✅  | ✅   | ❌    |
 
 ## Indentering
 
@@ -69,7 +69,7 @@ tests/
 ### Hög prioritet
 1. [ ] **minus, gånger, delat** - aritmetik
 2. [ ] **Läs input** - READ x86 syscall
-3. [ ] **!=, >=, <=** - jämförelseoperatorer
+3. [x] **!=, >=, <=** - jämförelseoperatorer
 4. [ ] **skriv värdet av x** - variabel-output
 
 ### Medel prioritet

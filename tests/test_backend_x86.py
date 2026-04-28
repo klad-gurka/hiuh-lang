@@ -145,6 +145,24 @@ def test_alloc_reg_same_var():
     assert r1 == r2
 
 
+def test_if_not_eq():
+    """IF (x, '!=', 0)"""
+    asm = capture_asm([('IF', ('x', '!=', 0), [])])
+    assert 'cmp $0' in asm
+    assert 'je' in asm  # jump if equal (condition failed)
+
+def test_if_less_or_eq():
+    """IF (x, '<=', 5)"""
+    asm = capture_asm([('IF', ('x', '<=', 5), [])])
+    assert 'cmp $5' in asm
+    assert 'jg' in asm  # jump if greater → exit condition if NOT <=
+
+def test_if_greater_or_eq():
+    """IF (x, '>=', 0)"""
+    asm = capture_asm([('IF', ('x', '>=', 0), [])])
+    assert 'cmp $0' in asm
+    assert 'jl' in asm  # jump if less → exit condition if NOT >=
+
 def test_set_minus():
     """SET x ('-', 'a', 3) → mov a; sub $3"""
     from hiuh.backend import x86
@@ -195,6 +213,9 @@ if __name__ == '__main__':
     test_if_eq()
     test_if_less()
     test_if_greater()
+    test_if_not_eq()
+    test_if_less_or_eq()
+    test_if_greater_or_eq()
     test_exit()
     test_break()
     test_prologue()

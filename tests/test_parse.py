@@ -82,6 +82,30 @@ def test_if_greater():
     ir = parse_tokens(lines)
     assert ir[0][1] == ('x', '>', '0')
 
+def test_if_not():
+    """om x är inte 0"""
+    src = """om x är inte 0
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', '!=', '0')
+
+def test_if_less_or_eq():
+    """om x är mindre eller 5"""
+    src = """om x är mindre eller 5
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', '<=', '5')
+
+def test_if_greater_or_eq():
+    """om x är större eller 0"""
+    src = """om x är större eller 0
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', '>=', '0')
+
 def test_break():
     """bryt"""
     src = """om x är 0
@@ -141,6 +165,9 @@ if __name__ == '__main__':
     test_if_statement()
     test_if_less()
     test_if_greater()
+    test_if_not()
+    test_if_less_or_eq()
+    test_if_greater_or_eq()
     test_break()
     test_exit()
     test_read()

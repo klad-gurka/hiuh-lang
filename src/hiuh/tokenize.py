@@ -15,6 +15,7 @@ KEYWORDS = {
     'gånger': 'TIMES', 'delat': 'DIV',
     'ur': 'UR', 'vid': 'VID', 'med': 'MED',
     'tecken': 'CHAR', 'än': 'THAN', 'mindre': 'LESS',
+    'inte': 'INTE', 'eller': 'OR',
     'större': 'GREATER', 'värdet': 'VAL', 'av': 'OF',
     'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
     # Space-friendly compound keywords

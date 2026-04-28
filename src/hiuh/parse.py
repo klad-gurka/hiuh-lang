@@ -253,19 +253,30 @@ def parse_single_line(lines, base_indent, body):
     return None, 1
 
 def parse_cmp(tokens):
-    """Parse comparison: VAR [är] [mindre/större än] VALUE"""
+    """Parse comparison: VAR [är [inte]] [mindre/större [eller]] än VALUE"""
     var = tokens[0]
     if len(tokens) >= 3:
-        # är mindre än 5 OR mindre än 5
-        if tokens[1] == 'LESS' or (tokens[1] == 'AR' and tokens[2] == 'LESS'):
+        # är mindre än 5 OR mindre än 5 (but NOT är mindre eller → <=)
+        if tokens[1] == 'LESS' or (tokens[1] == 'AR' and tokens[2] == 'LESS' and tokens[3] != 'OR'):
             val = tokens[4] if tokens[1] == 'AR' else tokens[3]
             return (var, '<', val)
-        # är större än 5 OR större än 5
-        elif tokens[1] == 'GREATER' or (tokens[1] == 'AR' and tokens[2] == 'GREATER'):
+        # är mindre eller (än) → <= (check BEFORE plain LESS)
+        if tokens[1] == 'AR' and tokens[2] == 'LESS' and tokens[3] == 'OR':
+            val = tokens[5] if len(tokens) > 5 else tokens[4]
+            return (var, '<=', val)
+        # är större än 5 OR större än 5 (but NOT är större eller → >=)
+        elif tokens[1] == 'GREATER' or (tokens[1] == 'AR' and tokens[2] == 'GREATER' and tokens[3] != 'OR'):
             val = tokens[4] if tokens[1] == 'AR' else tokens[3]
             return (var, '>', val)
+        # är större eller (än) → >= (check BEFORE plain GREATER)
+        if tokens[1] == 'AR' and tokens[2] == 'GREATER' and tokens[3] == 'OR':
+            val = tokens[5] if len(tokens) > 5 else tokens[4]
+            return (var, '>=', val)
         # är X (equality)
         elif tokens[1] == 'AR':
+            # är inte X → !=
+            if tokens[2] == 'INTE':
+                return (var, '!=', tokens[3])
             return (var, '==', tokens[2])
     return (var, '!=', 0)
 

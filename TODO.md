@@ -18,6 +18,8 @@
 - Fix 5 (v5): Word-end detection race condition. f=1 efter whitespace/null,
   f=0 efter lagring. Lagra endast printable chars när f=0.
 - Test: `printf "ab cd\n" | ./hiuh-tokenizer` ger `ab` och `cd` som separata rader
+- Självkompilering: tokenizer tokenizes sig själv → 57 ord (varje ord på egen rad)
+- [x] Rebuilt binary (2026-04-28) och commitater
 
 ## SJÄLVKOMPILERING - vägen dit
 

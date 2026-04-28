@@ -1,24 +1,32 @@
-# Simple word counter - single level, no nesting
+# Test only with word output
 Sättantal till 0
 Sättj till 0
 Sätti_ord till 0
+Sättf till 0
 Läs
 För i från 0 till 255
     Sätttecken till tecken i input_buf
     Om tecken är 0
-        Skriv värdet av antal
+        Om i_ord är 1
+            Sättf till 1
+        Hejdå
+    Hejdå
+    Om tecken är mindre än 33
+        Om i_ord är 1  
+            Sättf till 1
+        Hejdå
     Hejdå
     Om tecken är större än 32
         Lagra tecken vid j i ord_buf
         Sättj till j pluss 1
         Sätti_ord till 1
     Hejdå
-    Om tecken är mindre än 33
-        Om i_ord är 1
-            Sättantal till antal pluss 1
-            Sättj till 0
-            Sätti_ord till 0
-        Hejdå
+    Om f är 1
+        Skriv j tecken i ord_buf
+        Sättantal till antal pluss 1
+        Sättj till 0
+        Sätti_ord till 0
+        Sättf till 0
     Hejdå
 Hejdå
 Skriv värdet av antal

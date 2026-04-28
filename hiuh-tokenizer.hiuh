@@ -1,38 +1,24 @@
-# HIUH Tokenizer - Delar upp text i ord och skriver ut varje ord
-# Läser text via stdin, skriver varje ord på egen rad
-
-Sätt antal till 0
-Sätt j till 0
-Sätt j_end till 0
-Sätt i_ord till 0
-Sätt klar till 0
+# Simple word counter - single level, no nesting
+Sättantal till 0
+Sättj till 0
+Sätti_ord till 0
 Läs
 För i från 0 till 255
-    Sätt tecken till tecken i input_buf
+    Sätttecken till tecken i input_buf
     Om tecken är 0
-        Om i_ord är 1
-            Lagra i_ord vid j i ord_buf
-            Skriv j tecken i ord_buf
-            Sätt antal till antal pluss 1
-        Hejdå
         Skriv värdet av antal
-        JagMåsteGåNu 0
-    Hejdå
-    Om tecken är mindre än 33
-        Om i_ord är 1
-            Sätt j_end till j
-            Lagra i_ord vid j_end i ord_buf
-            Skriv j tecken i ord_buf
-            Sätt antal till antal pluss 1
-            Sätt j till 0
-            Sätt i_ord till 0
-            Sätt klar till 0
-        Hejdå
     Hejdå
     Om tecken är större än 32
         Lagra tecken vid j i ord_buf
-        Sätt j till j pluss 1
-        Sätt i_ord till 1
+        Sättj till j pluss 1
+        Sätti_ord till 1
+    Hejdå
+    Om tecken är mindre än 33
+        Om i_ord är 1
+            Sättantal till antal pluss 1
+            Sättj till 0
+            Sätti_ord till 0
+        Hejdå
     Hejdå
 Hejdå
 Skriv värdet av antal

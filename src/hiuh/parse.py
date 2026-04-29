@@ -173,6 +173,16 @@ def parse_value(tokens):
     if tok == 'LIST_LEN' and len(tokens) >= 2:
         list_name = tokens[1]
         return ('LIST_LEN', list_name)
+    # Check for LIST_GET: CHAR IN UR list [idx] → ('LIST_GET', list, idx)
+    if tok == 'CHAR' and len(tokens) >= 4 and tokens[1] == 'IN' and tokens[2] == 'UR':
+        list_name = tokens[3]
+        idx = tokens[4] if len(tokens) >= 5 else '0'
+        return ('LIST_GET', list_name, idx)
+    # Check for VAR IN UR list [idx] → ('LIST_GET', list, idx) - variable as source
+    if len(tokens) >= 4 and tokens[1] == 'IN' and tokens[2] == 'UR':
+        list_name = tokens[3]
+        idx = tokens[4] if len(tokens) >= 5 else '0'
+        return ('LIST_GET', list_name, idx)
     # Check for binary expressions: a PLUS/MINUS/TIMES/DIV b
     if len(tokens) >= 3 and tokens[1] in ('PLUS', 'MINUS', 'TIMES', 'DIV'):
         op_sym = {'PLUS': '+', 'MINUS': '-', 'TIMES': '*', 'DIV': '/'}[tokens[1]]
@@ -180,7 +190,7 @@ def parse_value(tokens):
         second_val = int(second) if second.isdigit() else second
         first_val = int(tok) if tok.isdigit() else tok
         return (op_sym, first_val, second_val)
-    # Plain number or identifier
+    # Plain number or identifier (including CHAR, LIST_LEN, etc.)
     if tok.isdigit():
         return int(tok)
     return tok

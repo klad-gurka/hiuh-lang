@@ -57,8 +57,8 @@ def tokenize(src):
         while i < len(words):
             word = words[i].lower()
             
-            # Handle "antal element i X" → LIST_LEN X
-            if word == 'antal' and i + 3 <= len(words):
+            # Handle "antal element i X" → LIST_LEN X (skip if after 'sätt' where antal is a variable)
+            if word == 'antal' and i + 3 <= len(words) and prev_word != 'sätt':
                 if words[i+1].lower() == 'element' and words[i+2].lower() == 'i':
                     list_name = words[i+3]
                     tokens.append('LIST_LEN')
@@ -198,8 +198,8 @@ def tokenize(src):
             if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra'):
                 tokens.append(word)  # variable name
                 last_token = word
-            # After 'sätt', next word is always a variable name (even if it matches a keyword like 'tecken')
-            elif prev_word == 'sätt':
+            # After SET/TILL, next word is a variable name (even if it's a keyword like 'antal')
+            elif prev_word in ('sätt', 'till'):
                 tokens.append(words[i])  # variable name, preserve original case
                 last_token = words[i]
             elif word in KEYWORDS:

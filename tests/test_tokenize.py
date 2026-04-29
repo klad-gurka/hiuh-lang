@@ -94,6 +94,18 @@ def test_file_write():
     indent, tokens = lines[0]
     assert tokens == ['FILE_WRITE', 'resultat.txt'], f"Got {tokens}"
 
+def test_keyword_as_variable_after_set():
+    """Keywords like 'tecken' should work as variable names after 'sätt'"""
+    lines = list(tokenize("sätt tecken till 0"))
+    indent, tokens = lines[0]
+    assert tokens == ['SET', 'tecken', 'TILL', '0'], f"Got {tokens}"
+
+def test_keyword_as_variable_case_preserved():
+    """Variable names preserve case after 'sätt'"""
+    lines = list(tokenize("Sätt Tecken Till 0"))
+    indent, tokens = lines[0]
+    assert tokens == ['SET', 'Tecken', 'TILL', '0'], f"Got {tokens}"
+
 if __name__ == '__main__':
     test_simple_set()
     test_multiple_lines()

@@ -178,6 +178,30 @@ def test_set_list_len():
     ir = parse_tokens(lines)
     assert ir == [('SET', 'n', ('LIST_LEN', 'x'))], f"Got {ir}"
 
+def test_set_list_len():
+    """sätt n till antal element i x → SET with LIST_LEN value"""
+    lines = list(tokenize("sätt n till antal element i x"))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'n', ('LIST_LEN', 'x'))], f"Got {ir}"
+
+def test_file_open():
+    """öppna X för läsning → FILE_OPEN"""
+    lines = list(tokenize("öppna data.txt för läsning"))
+    ir = parse_tokens(lines)
+    assert ir == [('FILE_OPEN', 'data.txt', 'r')], f"Got {ir}"
+
+def test_file_open_write():
+    """öppna X för skrivning → FILE_OPEN"""
+    lines = list(tokenize("öppna output.txt för skrivning"))
+    ir = parse_tokens(lines)
+    assert ir == [('FILE_OPEN', 'output.txt', 'w')], f"Got {ir}"
+
+def test_file_write():
+    """skriv till fil X → FILE_WRITE"""
+    lines = list(tokenize("skriv till fil resultat.txt"))
+    ir = parse_tokens(lines)
+    assert ir == [('FILE_WRITE', 'resultat.txt', '')], f"Got {ir}"
+
 if __name__ == '__main__':
     test_set_integer()
     test_set_plus()
@@ -202,4 +226,7 @@ if __name__ == '__main__':
     test_list_append()
     test_list_len()
     test_set_list_len()
+    test_file_open()
+    test_file_open_write()
+    test_file_write()
     print("Alla parse-tester OK!")

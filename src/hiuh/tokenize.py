@@ -29,6 +29,11 @@ KEYWORDS = {
     'antal': 'LIST_LEN',   # list length
     'element': 'LIST_GET', # get element at index
     'skapa': 'LIST_CREATE', # create list
+    # File I/O keywords
+    'öppna': 'FILE_OPEN',  # open file
+    'fil': 'FILE',         # file keyword
+    'läsning': 'READ_MODE',  # read mode
+    'skrivning': 'WRITE_MODE',  # write mode
     # Space-friendly compound keywords
     'ny': 'SKRIV_NL',  # "skriv ny rad" = SKRIV + SKRIV_NL
     'rad': 'SKRIV_NL',
@@ -155,6 +160,38 @@ def tokenize(src):
                     tokens.append('EXIT')
                     last_token = 'EXIT'
                     i += 2
+                    continue
+
+            # Handle "öppna X för läsning" → FILE_OPEN X 'r'
+            if word == 'öppna' and i + 3 < len(words):
+                filename = words[i+1]
+                if words[i+2].lower() == 'för' and words[i+3].lower() == 'läsning':
+                    tokens.append('FILE_OPEN')
+                    tokens.append(filename)
+                    tokens.append('r')
+                    last_token = 'FILE_OPEN'
+                    i += 4
+                    continue
+            
+            # Handle "öppna X för skrivning" → FILE_OPEN X 'w'
+            if word == 'öppna' and i + 3 < len(words):
+                filename = words[i+1]
+                if words[i+2].lower() == 'för' and words[i+3].lower() == 'skrivning':
+                    tokens.append('FILE_OPEN')
+                    tokens.append(filename)
+                    tokens.append('w')
+                    last_token = 'FILE_OPEN'
+                    i += 4
+                    continue
+            
+            # Handle "skriv till fil X" → FILE_WRITE X
+            if word == 'skriv' and i + 3 < len(words):
+                if words[i+1].lower() == 'till' and words[i+2].lower() == 'fil':
+                    filename = words[i+3]
+                    tokens.append('FILE_WRITE')
+                    tokens.append(filename)
+                    last_token = 'FILE_WRITE'
+                    i += 4
                     continue
             
             # 'i' after variable-taking keywords is a variable name, not IN keyword

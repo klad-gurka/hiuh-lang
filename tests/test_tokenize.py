@@ -70,6 +70,30 @@ hej då"""
     assert lines[2] == (2, ['SKRIV', 'i'])
     assert lines[3] == (0, ['EXIT'])  # hej då at indent 0 (program exit)
 
+def test_list_len():
+    """antal element i x → LIST_LEN"""
+    lines = list(tokenize("antal element i x"))
+    indent, tokens = lines[0]
+    assert tokens == ['LIST_LEN', 'x'], f"Got {tokens}"
+
+def test_file_open_read():
+    """öppna X för läsning → FILE_OPEN"""
+    lines = list(tokenize("öppna data.txt för läsning"))
+    indent, tokens = lines[0]
+    assert tokens == ['FILE_OPEN', 'data.txt', 'r'], f"Got {tokens}"
+
+def test_file_open_write():
+    """öppna X för skrivning → FILE_OPEN"""
+    lines = list(tokenize("öppna output.txt för skrivning"))
+    indent, tokens = lines[0]
+    assert tokens == ['FILE_OPEN', 'output.txt', 'w'], f"Got {tokens}"
+
+def test_file_write():
+    """skriv till fil X → FILE_WRITE"""
+    lines = list(tokenize("skriv till fil resultat.txt"))
+    indent, tokens = lines[0]
+    assert tokens == ['FILE_WRITE', 'resultat.txt'], f"Got {tokens}"
+
 if __name__ == '__main__':
     test_simple_set()
     test_multiple_lines()
@@ -79,4 +103,7 @@ if __name__ == '__main__':
     test_space_friendly_jag_ga_nu()
     test_hej_da()
     test_indentation_levels()
+    test_file_open_read()
+    test_file_open_write()
+    test_file_write()
     print("Alla tokenizer-tester OK!")

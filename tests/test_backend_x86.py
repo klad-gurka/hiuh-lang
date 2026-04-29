@@ -201,6 +201,34 @@ def test_set_div():
         compile_ir([('SET', 'x', ('/', 'a', 4))])
     asm = output.getvalue()
     assert 'idiv' in asm, f"Got: {asm}"
+def test_set_div():
+    """SET x ('/', 'a', 4) → mov a; idiv"""
+    from hiuh.backend import x86
+    x86.REG_MAP.clear()
+    x86.STRINGS.clear()
+    x86.LABEL_CNT = 0
+    x86.NEXT_REG = 0
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        compile_ir([('SET', 'x', ('/', 'a', 4))])
+    asm = output.getvalue()
+    assert 'idiv' in asm, f"Got: {asm}"
+
+def test_file_open():
+    """FILE_OPEN filename 'r' → sys_open call"""
+    asm = capture_asm([('FILE_OPEN', 'data.txt', 'r')])
+    assert 'sys_open' in asm or 'mov $2, %rax' in asm, f"Got: {asm}"
+
+def test_file_write():
+    """FILE_WRITE filename data → sys_write call"""
+    asm = capture_asm([('FILE_WRITE', 'resultat.txt', '')])
+    assert 'sys_write' in asm or 'mov $1, %rax' in asm, f"Got: {asm}"
+
+def test_file_write():
+    """FILE_WRITE filename data → sys_write call"""
+    asm = capture_asm([('FILE_WRITE', 'resultat.txt', '')])
+    assert 'sys_write' in asm or 'mov $1, %rax' in asm, f"Got: {asm}"
+
 if __name__ == '__main__':
     test_set_integer()
     test_set_multiple_vars()
@@ -225,4 +253,6 @@ if __name__ == '__main__':
     test_nested_if_in_for()
     test_alloc_reg_different_vars()
     test_alloc_reg_same_var()
+    test_file_open()
+    test_file_write()
     print("Alla x86 backend-tester OK!")

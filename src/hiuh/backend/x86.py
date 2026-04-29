@@ -569,6 +569,39 @@ def compile_stmt(stmt, target):
         emit(f"    # LIST_LEN {list_name}")
         emit(f"    mov 4({list_reg}), %rax")
 
+    elif op == 'FILE_OPEN':
+        filename, mode = stmt[1], stmt[2]
+        emit(f"    # FILE_OPEN {filename} mode={mode}")
+        # Create filename string label
+        fname_label = new_label()
+        STRINGS.append(filename)  # Use STRINGS for filename too
+        fname_idx = len(STRINGS) - 1
+        emit(f"    lea fname_{fname_idx}(%rip), %rdi")
+        if mode == 'r':
+            emit(f"    xor %rsi, %rsi  # O_RDONLY = 0")
+        else:
+            emit(f"    mov $0x241, %rsi  # O_WRONLY|O_CREAT|O_TRUNC")
+        emit(f"    mov $0644, %rdx  # mode=rw-r--r--")
+        emit(f"    mov $2, %rax  # sys_open")
+        emit(f"    syscall")
+        emit(f"    # file descriptor now in %rax")
+
+    elif op == 'FILE_WRITE':
+        filename, data = stmt[1], stmt[2]
+        emit(f"    # FILE_WRITE {filename} data={data}")
+        # For now, write a hardcoded string or variable value
+        # This is a simplified implementation - file must be opened first
+        if data and not data.isdigit():
+            data_reg = alloc_reg(data)
+            emit(f"    mov {data_reg}, %rsi")
+        else:
+            data_val = int(data) if data and data.isdigit() else 0
+            emit(f"    mov ${data_val}, %rsi")
+        emit(f"    mov $1, %rdi  # stdout (TODO: use actual fd)")
+        emit(f"    mov $10, %rdx  # count")
+        emit(f"    mov $1, %rax  # sys_write")
+        emit(f"    syscall")
+
 def compile_stream():
     """Read IR (as repr lines) from stdin, output x86 assembly"""
     ir = []

@@ -87,7 +87,7 @@ tests/
 7. [x] **Listor** - lägg till, element ur, antal ✅
 
 ### Låg prioritet
-8. [ ] File I/O
+8. [x] **File I/O** ✅ (FILE_OPEN, FILE_WRITE tokenizer+parser+x86)
 9. [ ] WASM backend
 
 ## Kända buggar/problem

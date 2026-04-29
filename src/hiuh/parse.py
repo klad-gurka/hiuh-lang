@@ -122,6 +122,18 @@ def parse_block(lines, base_indent, out):
             list_name = tokens[1] if len(tokens) > 1 else ''
             out.append(('LIST_LEN', list_name))
             i += 1
+        elif tok == 'FILE_OPEN':
+            # öppna X för läsning → FILE_OPEN X mode
+            filename = tokens[1] if len(tokens) > 1 else ''
+            mode = tokens[2] if len(tokens) > 2 else 'r'
+            out.append(('FILE_OPEN', filename, mode))
+            i += 1
+        elif tok == 'FILE_WRITE':
+            # skriv till fil X → FILE_WRITE X data
+            filename = tokens[1] if len(tokens) > 1 else ''
+            data = tokens[2] if len(tokens) > 2 else ''
+            out.append(('FILE_WRITE', filename, data))
+            i += 1
         else:
             # Unknown token, skip
             i += 1
@@ -440,6 +452,16 @@ def parse_single_line(lines, base_indent, body):
     elif tok == 'LIST_LEN':
         list_name = tokens[1] if len(tokens) > 1 else ''
         body.append(('LIST_LEN', list_name))
+        return None, 1
+    elif tok == 'FILE_OPEN':
+        filename = tokens[1] if len(tokens) > 1 else ''
+        mode = tokens[2] if len(tokens) > 2 else 'r'
+        body.append(('FILE_OPEN', filename, mode))
+        return None, 1
+    elif tok == 'FILE_WRITE':
+        filename = tokens[1] if len(tokens) > 1 else ''
+        data = tokens[2] if len(tokens) > 2 else ''
+        body.append(('FILE_WRITE', filename, data))
         return None, 1
     
     return None, 1

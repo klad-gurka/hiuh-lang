@@ -198,6 +198,10 @@ def tokenize(src):
             if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra'):
                 tokens.append(word)  # variable name
                 last_token = word
+            # After 'sätt', next word is always a variable name (even if it matches a keyword like 'tecken')
+            elif prev_word == 'sätt':
+                tokens.append(words[i])  # variable name, preserve original case
+                last_token = words[i]
             elif word in KEYWORDS:
                 tokens.append(KEYWORDS[word])
                 last_token = KEYWORDS[word]

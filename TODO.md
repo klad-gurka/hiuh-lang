@@ -38,10 +38,10 @@ tests/
 | `('CALL', name, args)` | `anropa namn med x` | `('CALL', 'add', ['x', 'y'])` | ✅ | ❌ |
 | `('RETURN', expr)` | `ge x` | `('RETURN', 'x')` | ✅ | ❌ |
 | `('WHILE', cmp, body)` | `medan x är 0` | `('WHILE', ('x', '==', '0'), [body])` | ✅ | ❌ |
-| `('LIST_CREATE', name)` | `sätt x till lista` | `('LIST_CREATE', 'x')` | ❌ | ❌ |
-| `('LIST_APPEND', list, val)` | `lägg till x till lista` | `('LIST_APPEND', 'lst', 'x')` | ❌ | ❌ |
-| `('LIST_GET', list, idx)` | `element i ur lista` | `('LIST_GET', 'lst', 'i')` | ❌ | ❌ |
-| `('LIST_LEN', list)` | `antal element i lista` | `('LIST_LEN', 'lst')` | ❌ | ❌ |
+| `('LIST_CREATE', name)` | `sätt x till lista` | `('LIST_CREATE', 'x')` | ✅ | ❌ |
+| `('LIST_APPEND', list, val)` | `lägg till x till lista` | `('LIST_APPEND', 'lst', 'x')` | ✅ | ❌ |
+| `('LIST_GET', list, idx)` | `element i ur lista` | `('LIST_GET', 'lst', 'i')` | ✅ | ❌ |
+| `('LIST_LEN', list)` | `antal element i lista` | `('LIST_LEN', 'lst')` | ✅ | ❌ |
 | `('CONCAT', a, b)` | `a sammanfogat med b` | `('CONCAT', 'a', 'b')` | ❌ | ❌ |
 | `('FILE_OPEN', filename, mode, buf)` | `öppna fil för läsning` | `('FILE_OPEN', 'data.txt', 'r', 'buf')` | ❌ | ❌ |
 | `('FILE_WRITE', filename, data)` | `skriv till fil` | `('FILE_WRITE', 'out.txt', 'hello')` | ❌ | ❌ |
@@ -84,7 +84,7 @@ tests/
 ### Medel prioritet
 5. [x] **WHILE-loop** ✅
 6. [x] **Funktioner** - grej/anropa/ge ✅
-7. [ ] **Listor** - lägg till, element ur, antal
+7. [x] **Listor** - lägg till, element ur, antal ✅
 
 ### Låg prioritet
 8. [ ] File I/O

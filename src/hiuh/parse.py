@@ -94,6 +94,34 @@ def parse_block(lines, base_indent, out):
             consumed = parse_ret(tokens)
             out.append(consumed)
             i += 1
+        elif tok == 'LIST_CREATE':
+            # sätt x till lista → LIST_CREATE x
+            name = tokens[1] if len(tokens) > 1 else ''
+            out.append(('LIST_CREATE', name))
+            i += 1
+        elif tok == 'LIST_INIT':
+            # sätt x till lista av 1, 2, 3 → LIST_INIT x 1 2 3
+            name = tokens[1] if len(tokens) > 1 else ''
+            items = tokens[2:] if len(tokens) > 2 else []
+            out.append(('LIST_INIT', name, items))
+            i += 1
+        elif tok == 'LIST_APPEND':
+            # lägg till x till y → LIST_APPEND y x
+            list_name = tokens[1] if len(tokens) > 1 else ''
+            item = tokens[2] if len(tokens) > 2 else ''
+            out.append(('LIST_APPEND', list_name, item))
+            i += 1
+        elif tok == 'LIST_GET':
+            # element i ur lst → LIST_GET lst i
+            list_name = tokens[1] if len(tokens) > 1 else ''
+            idx = tokens[2] if len(tokens) > 2 else ''
+            out.append(('LIST_GET', list_name, idx))
+            i += 1
+        elif tok == 'LIST_LEN':
+            # antal element i lst → LIST_LEN lst
+            list_name = tokens[1] if len(tokens) > 1 else ''
+            out.append(('LIST_LEN', list_name))
+            i += 1
         else:
             # Unknown token, skip
             i += 1
@@ -129,6 +157,10 @@ def parse_value(tokens):
         func_name = tokens[1]
         args = [t for t in tokens[2:] if t != 'MED']
         return ('CALL', func_name, args)
+    # Check for LIST_LEN: LIST_LEN list_name
+    if tok == 'LIST_LEN' and len(tokens) >= 2:
+        list_name = tokens[1]
+        return ('LIST_LEN', list_name)
     # Check for binary expressions: a PLUS/MINUS/TIMES/DIV b
     if len(tokens) >= 3 and tokens[1] in ('PLUS', 'MINUS', 'TIMES', 'DIV'):
         op_sym = {'PLUS': '+', 'MINUS': '-', 'TIMES': '*', 'DIV': '/'}[tokens[1]]
@@ -385,6 +417,29 @@ def parse_single_line(lines, base_indent, body):
     elif tok == 'RET':
         consumed = parse_ret(tokens)
         body.append(consumed)
+        return None, 1
+    elif tok == 'LIST_CREATE':
+        name = tokens[1] if len(tokens) > 1 else ''
+        body.append(('LIST_CREATE', name))
+        return None, 1
+    elif tok == 'LIST_INIT':
+        name = tokens[1] if len(tokens) > 1 else ''
+        items = tokens[2:] if len(tokens) > 2 else []
+        body.append(('LIST_INIT', name, items))
+        return None, 1
+    elif tok == 'LIST_APPEND':
+        list_name = tokens[1] if len(tokens) > 1 else ''
+        item = tokens[2] if len(tokens) > 2 else ''
+        body.append(('LIST_APPEND', list_name, item))
+        return None, 1
+    elif tok == 'LIST_GET':
+        list_name = tokens[1] if len(tokens) > 1 else ''
+        idx = tokens[2] if len(tokens) > 2 else ''
+        body.append(('LIST_GET', list_name, idx))
+        return None, 1
+    elif tok == 'LIST_LEN':
+        list_name = tokens[1] if len(tokens) > 1 else ''
+        body.append(('LIST_LEN', list_name))
         return None, 1
     
     return None, 1

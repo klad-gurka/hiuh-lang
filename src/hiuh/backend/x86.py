@@ -14,6 +14,7 @@ BREAK_STACK = []  # Stack of end labels for BREAK
 FUNC_LABELS = {}  # Maps func names to labels
 CURRENT_FUNC = None  # Current function being compiled
 FUNC_EPILOGUE_LABELS = {}  # func name -> epilogue label
+LISTS = {}  # Track list definitions: name -> {'size': N, 'items': [...]}
 
 # Calling convention: args in %rdi, %rsi; return in %rax
 # Caller saves: r12, r13 (used for HIUH variables)
@@ -80,6 +81,10 @@ def compile_ir(ir, target='linux'):
     emit("msg_nl: .ascii \"\\n\\0\"")
     emit("num_buf: .skip 8")
     emit("input_buf: .skip 256")
+    # List data sections
+    for list_name, list_info in LISTS.items():
+        size = list_info.get('size', 64)
+        emit(f"list_{list_name}: .skip {size}")
     emit(".bss")
     emit(".align 8")
     emit("stack: .skip 4096")
@@ -217,6 +222,11 @@ def compile_stmt(stmt, target):
             emit(f"    mov ${b}, %rcx")
             emit(f"    idiv %rcx")
             emit(f"    mov %rax, {reg}")
+        elif isinstance(val, tuple) and val[0] == 'LIST_LEN':
+            _, list_name = val
+            list_reg = alloc_reg(list_name)
+            emit(f"    # SET n = LIST_LEN {list_name}")
+            emit(f"    mov 4({list_reg}), {reg}")
         else:
             reg_v = alloc_reg(val)
             emit(f"    mov {reg_v}, {reg}")
@@ -481,6 +491,83 @@ def compile_stmt(stmt, target):
         emit(f".L{lbl_done}_read_done:")
         reg = alloc_reg(var_name)
         emit(f"    mov %rax, {reg}  # store result in {var_name}")
+
+    elif op == 'LIST_CREATE':
+        list_name = stmt[1]
+        # Allocate list: store pointer to list buffer and length=0
+        reg = alloc_reg(list_name)
+        LISTS[list_name] = {'size': 256}
+        emit(f"    # LIST_CREATE {list_name}")
+        emit(f"    lea list_{list_name}(%rip), %rax")
+        emit(f"    mov %rax, {reg}")
+        emit(f"    movl $0, 4(%rax)  # length = 0")
+    
+    elif op == 'LIST_INIT':
+        list_name = stmt[1]
+        items = stmt[2] if len(stmt) > 2 else []
+        reg = alloc_reg(list_name)
+        # Pre-compute item values
+        item_vals = []
+        for item in items:
+            try:
+                item_vals.append(int(item))
+            except:
+                item_vals.append(None)  # variable reference
+        LISTS[list_name] = {'size': 256, 'items': item_vals}
+        emit(f"    # LIST_INIT {list_name} with {len(items)} items: {items}")
+        emit(f"    lea list_{list_name}(%rip), %rax")
+        emit(f"    mov %rax, {reg}")
+        # Store length
+        emit(f"    movl ${len(items)}, 4(%rax)")
+        # Store each item at offset 8, 16, 24... (offset 0 is length)
+        for j, (item, val) in enumerate(zip(items, item_vals)):
+            off = (j + 1) * 8
+            if val is not None:
+                emit(f"    movq ${val}, {off}(%rax)  # item {j}")
+            else:
+                item_reg = alloc_reg(item)
+                emit(f"    mov {item_reg}, %rbx")
+                emit(f"    mov %rbx, {off}(%rax)  # item {j}")
+
+    elif op == 'LIST_APPEND':
+        list_name, item = stmt[1], stmt[2]
+        list_reg = alloc_reg(list_name)
+        emit(f"    # LIST_APPEND {item} -> {list_name}")
+        # Get length from offset 4
+        emit(f"    mov 4({list_reg}), %rcx  # length")
+        # Compute item value - try as integer first
+        try:
+            item_val = int(item)
+            emit(f"    mov ${item_val}, %rbx")
+        except:
+            item_reg = alloc_reg(item)
+            emit(f"    mov {item_reg}, %rbx")
+        # Store item at index (elements start at offset 8)
+        emit(f"    lea 8({list_reg}), %rax")
+        emit(f"    mov %rbx, (%rax, %rcx, 8)")
+        # Increment length
+        emit(f"    inc %rcx")
+        emit(f"    mov %rcx, 4({list_reg})")
+
+    elif op == 'LIST_GET':
+        list_name, idx = stmt[1], stmt[2]
+        list_reg = alloc_reg(list_name)
+        emit(f"    # LIST_GET {list_name}[{idx}]")
+        # Get index
+        if isinstance(idx, int):
+            emit(f"    mov ${idx}, %rcx")
+        else:
+            idx_reg = alloc_reg(idx)
+            emit(f"    mov {idx_reg}, %rcx")
+        # Load element (elements at offset 8+idx*8)
+        emit(f"    lea 8({list_reg}), %rax")
+        emit(f"    mov (%rax, %rcx, 8), %rax")
+
+    elif op == 'LIST_LEN':
+        list_name = stmt[1]
+        list_reg = alloc_reg(list_name)
+        emit(f"    # LIST_LEN {list_name}")
+        emit(f"    mov 4({list_reg}), %rax")
 
 def compile_stream():
     """Read IR (as repr lines) from stdin, output x86 assembly"""

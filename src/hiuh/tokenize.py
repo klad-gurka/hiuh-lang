@@ -23,6 +23,12 @@ KEYWORDS = {
     'grej': 'GREJ',     # function definition
     'anropa': 'CALL',   # function call
     'kalla': 'CALL',    # alias for anropa
+    # List keywords
+    'lista': 'LIST',    # list type
+    'lägg': 'LIST_APPEND',  # append to list (handled specially)
+    'antal': 'LIST_LEN',   # list length
+    'element': 'LIST_GET', # get element at index
+    'skapa': 'LIST_CREATE', # create list
     # Space-friendly compound keywords
     'ny': 'SKRIV_NL',  # "skriv ny rad" = SKRIV + SKRIV_NL
     'rad': 'SKRIV_NL',
@@ -45,6 +51,71 @@ def tokenize(src):
         i = 0
         while i < len(words):
             word = words[i].lower()
+            
+            # Handle "antal element i X" → LIST_LEN X
+            if word == 'antal' and i + 3 <= len(words):
+                if words[i+1].lower() == 'element' and words[i+2].lower() == 'i':
+                    list_name = words[i+3]
+                    tokens.append('LIST_LEN')
+                    tokens.append(list_name)
+                    last_token = 'LIST_LEN'
+                    i += 4
+                    continue
+            
+            # Handle "sätt x till lista" → LIST_CREATE
+            if word == 'sätt' and i + 3 < len(words):
+                var_name = words[i + 1]
+                rest_words = words[i + 3:]
+                rest_lower = ' '.join(rest_words).lower()
+                if rest_lower == 'lista':
+                    tokens.append('LIST_CREATE')
+                    tokens.append(var_name)
+                    last_token = 'LIST_CREATE'
+                    i += 4
+                    continue
+                if rest_lower.startswith('lista av '):
+                    # "sätt x till lista av 1, 2, 3"
+                    items_str = rest_lower[9:]  # skip "lista av "
+                    tokens.append('LIST_INIT')
+                    tokens.append(var_name)
+                    tokens.append(items_str)
+                    last_token = 'LIST_INIT'
+                    i += len(rest_words) + 4
+                    continue
+            
+            # Handle "lägg till X till Y" → LIST_APPEND Y X
+            if word == 'lägg' and i + 4 < len(words):
+                if words[i+1].lower() == 'till' and words[i+3].lower() == 'till':
+                    item = words[i+2]
+                    target = words[i+4]
+                    tokens.append('LIST_APPEND')
+                    tokens.append(target)
+                    tokens.append(item)
+                    last_token = 'LIST_APPEND'
+                    i += 5
+                    continue
+            
+            # Handle "element X ur Y" → LIST_GET Y X
+            if word == 'element' and i + 3 < len(words):
+                if words[i+2].lower() == 'ur':
+                    idx = words[i+1]
+                    list_name = words[i+3]
+                    tokens.append('LIST_GET')
+                    tokens.append(list_name)
+                    tokens.append(idx)
+                    last_token = 'LIST_GET'
+                    i += 4
+                    continue
+            
+            # Handle "antal element i X" → LIST_LEN X
+            if word == 'antal' and i + 3 < len(words):
+                if words[i+1].lower() == 'element' and words[i+2].lower() == 'i':
+                    list_name = words[i+3]
+                    tokens.append('LIST_LEN')
+                    tokens.append(list_name)
+                    last_token = 'LIST_LEN'
+                    i += 4
+                    continue
             
             # Handle "skriv värdet av x" → SKRIV_VAR x (print variable value)
             if word == 'skriv' and i + 3 < len(words):

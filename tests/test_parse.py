@@ -154,6 +154,30 @@ för i från 0 till 5
     assert ir[2][0] == 'FOR'
     assert ir[2][4][0][0] == 'IF'
 
+def test_list_create():
+    """sätt x till lista → LIST_CREATE"""
+    lines = list(tokenize("sätt x till lista"))
+    ir = parse_tokens(lines)
+    assert ir == [('LIST_CREATE', 'x')], f"Got {ir}"
+
+def test_list_append():
+    """lägg till 1 till x → LIST_APPEND"""
+    lines = list(tokenize("lägg till 1 till x"))
+    ir = parse_tokens(lines)
+    assert ir == [('LIST_APPEND', 'x', '1')], f"Got {ir}"
+
+def test_list_len():
+    """antal element i x → LIST_LEN"""
+    lines = list(tokenize("antal element i x"))
+    ir = parse_tokens(lines)
+    assert ir == [('LIST_LEN', 'x')], f"Got {ir}"
+
+def test_set_list_len():
+    """sätt n till antal element i x → SET with LIST_LEN value"""
+    lines = list(tokenize("sätt n till antal element i x"))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'n', ('LIST_LEN', 'x'))], f"Got {ir}"
+
 if __name__ == '__main__':
     test_set_integer()
     test_set_plus()
@@ -174,4 +198,8 @@ if __name__ == '__main__':
     test_skriv()
     test_skriv_nl()
     test_complex_program()
+    test_list_create()
+    test_list_append()
+    test_list_len()
+    test_set_list_len()
     print("Alla parse-tester OK!")

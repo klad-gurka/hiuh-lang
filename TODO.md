@@ -30,8 +30,8 @@ tests/
 | `('EXIT',)` | `hej då` / `jag gå nu` | `('EXIT',)` | ✅ | ❌ |
 | `('SKRIV', text)` | `skriv hello` | `('SKRIV', 'hello')` | ✅ | ❌ |
 | `('SKRIV_NL',)` | `skriv ny rad` | `('SKRIV_NL',)` | ✅ | ❌ |
-| `('SKRIV_VAR', name)` | `skriv värdet av x` | `('SKRIV_VAR', 'x')` | ❌ | ❌ |
-| `('READ',)` | `läs` | `('READ',)` | ❌ | ❌ |
+| `('SKRIV_VAR', name)` | `skriv värdet av x` | `('SKRIV_VAR', 'x')` | ✅ | ❌ |
+| `('READ',)` | `läs` | `('READ',)` | ✅ | ❌ |
 | `('STORE', buf, idx, val)` | `lagra vid i i buf` | `('STORE', 'buf', 'i', 'x')` | ❌ | ❌ |
 | `('LOAD', buf, idx)` | `tecken i ur buf` | `('LOAD', 'buf', 'i')` | ❌ | ❌ |
 | `('FUNC_DEF', name, params, body)` | `grej namn param` | `('FUNC_DEF', 'add', ['a', 'b'], [body])` | ✅ | ❌ |

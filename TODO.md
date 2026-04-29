@@ -17,79 +17,89 @@ tests/
   test_backend_x86.py
 ```
 
-## IR-nod dokumentation
+## IR-design
 
-### Satser (Statements)
+### Principer
+- IR ska följa HIUH:s svenska språk så nära som möjligt
+- Operatorer ska vara korta men läsbara svenska ord
+- Tokenizern mappar svenska alias → IR operatorer
+- Parse.py产出 enhetliga IR-namn, oavsett vilket keyword som användes
+
+### Operatorer (Jämförelse)
+
+| IR operator | Source keywords | Betydelse |
+|-------------|-----------------|-----------|
+| `mindre` | "är mindre än" | a < b |
+| `mindreLikaMed` | "är mindre eller" | a <= b |
+| `större` | "är större än" | a > b |
+| `störreLikaMed` | "är större eller" | a >= b |
+| `likaMed` | "är" | a == b |
+| `inteLikaMed` | "är inte" | a != b |
+
+### IR-nod dokumentation
+
+#### Satser (Statements)
 
 | IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
 |--------|-------------------|------------|-----|------|
-| `('SET', name, expr)` | `sätt x till 5` | `('SET', 'x', 5)` | ✅ | ❌ |
-| `('FOR', var, start, end, body)` | `för x från 0 till 10` | `('FOR', 'x', 0, 10, [body])` | ✅ | ❌ |
-| `('IF', cmp, body)` | `om x är 0` | `('IF', ('x', '==', '0'), [body])` | ✅ | ❌ |
-| `('BREAK',)` | `bryt` | `('BREAK',)` | ✅ | ❌ |
-| `('EXIT',)` | `hej då` / `jag gå nu` | `('EXIT',)` | ✅ | ❌ |
+| `('SÄTT', name, expr)` | `sätt x till 5` | `('SÄTT', 'x', 5)` | ✅ | ❌ |
+| `('FÖR', var, start, end, body)` | `för x från 0 till 10` | `('FÖR', 'x', 0, 10, [body])` | ✅ | ❌ |
+| `('WHILE', var, op, val, body)` | `medan x är mindre än 5` | `('WHILE', 'x', 'mindre', '5', [body])` | ✅ | ❌ |
+| `('OM', var, op, val, true_body, false_body)` | `om x är mindre än 5` | `('OM', 'x', 'mindre', '5', [...], [...])` | ❌ | ❌ |
+| `('BRYT',)` | `bryt` | `('BRYT',)` | ✅ | ❌ |
+| `('HEJDÅ',)` | `hej då` / `jag gå nu` | `('HEJDÅ',)` | ✅ | ❌ |
 | `('SKRIV', text)` | `skriv hello` | `('SKRIV', 'hello')` | ✅ | ❌ |
 | `('SKRIV_NL',)` | `skriv ny rad` | `('SKRIV_NL',)` | ✅ | ❌ |
 | `('SKRIV_VAR', name)` | `skriv värdet av x` | `('SKRIV_VAR', 'x')` | ✅ | ❌ |
-| `('READ',)` | `läs` | `('READ',)` | ✅ | ❌ |
-| `('STORE', buf, idx, val)` | `lagra vid i i buf` | `('STORE', 'buf', 'i', 'x')` | ❌ | ❌ |
-| `('LOAD', buf, idx)` | `tecken i ur buf` | `('LOAD', 'buf', 'i')` | ❌ | ❌ |
-| `('FUNC_DEF', name, params, body)` | `grej namn param` | `('FUNC_DEF', 'add', ['a', 'b'], [body])` | ✅ | ❌ |
-| `('CALL', name, args)` | `anropa namn med x` | `('CALL', 'add', ['x', 'y'])` | ✅ | ❌ |
-| `('RETURN', expr)` | `ge x` | `('RETURN', 'x')` | ✅ | ❌ |
-| `('WHILE', cmp, body)` | `medan x är 0` | `('WHILE', ('x', '==', '0'), [body])` | ✅ | ❌ |
-| `('LIST_CREATE', name)` | `sätt x till lista` | `('LIST_CREATE', 'x')` | ✅ | ❌ |
-| `('LIST_APPEND', list, val)` | `lägg till x till lista` | `('LIST_APPEND', 'lst', 'x')` | ✅ | ❌ |
-| `('LIST_GET', list, idx)` | `element i ur lista` | `('LIST_GET', 'lst', 'i')` | ✅ | ❌ |
-| `('LIST_LEN', list)` | `antal element i lista` | `('LIST_LEN', 'lst')` | ✅ | ❌ |
-| `('CONCAT', a, b)` | `a sammanfogat med b` | `('CONCAT', 'a', 'b')` | ❌ | ❌ |
-| `('FILE_OPEN', filename, mode, buf)` | `öppna fil för läsning` | `('FILE_OPEN', 'data.txt', 'r', 'buf')` | ❌ | ❌ |
-| `('FILE_WRITE', filename, data)` | `skriv till fil` | `('FILE_WRITE', 'out.txt', 'hello')` | ❌ | ❌ |
+| `('LÄS',)` | `läs` | `('LÄS',)` | ✅ | ❌ |
+| `('GREJ', name, params, body)` | `grej namn param` | `('GREJ', 'add', ['a', 'b'], [body])` | ✅ | ❌ |
+| `('ANROPA', name, args)` | `anropa namn med x` | `('ANROPA', 'add', ['x', 'y'])` | ✅ | ❌ |
+| `('GE', expr)` | `ge x` | `('GE', 'x')` | ✅ | ❌ |
+| `('LISTA', name)` | `sätt x till lista` | `('LISTA', 'x')` | ✅ | ❌ |
+| `('LÄGG_TILL', list, val)` | `lägg till x till lista` | `('LÄGG_TILL', 'lst', 'x')` | ✅ | ❌ |
+| `('ELEMENT', list, idx)` | `element i ur lista` | `('ELEMENT', 'lst', 'i')` | ✅ | ❌ |
+| `('ANTAL', list)` | `antal element i lista` | `('ANTAL', 'lst')` | ✅ | ❌ |
 
-### Uttryck (Expressions)
+#### Uttryck (Expressions)
 
 | IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
 |--------|-------------------|------------|-----|------|
-| `('LIT', n)` | `5` (literalt tal) | `('LIT', 5)` | ✅ | ❌ |
-| `('VAR', name)` | `x` (variabel-referens) | `('VAR', 'x')` | ✅ | ❌ |
-| `('ADD', a, b)` | `a pluss b` | `('ADD', 'a', 'b')` | ✅ | ❌ |
-| `('SUB', a, b)` | `a minus b` | `('SUB', 'a', 'b')` | ❌ | ❌ |
-| `('MUL', a, b)` | `a gånger b` | `('MUL', 'a', 'b')` | ❌ | ❌ |
-| `('DIV', a, b)` | `a delat b` | `('DIV', 'a', 'b')` | ❌ | ❌ |
-
-### Jämförelse (Comparisons)
-
-| IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
-|--------|-------------------|------------|-----|------|
-| `('EQ', a, b)` | `är` | `('EQ', 'x', '0')` | ✅ | ❌ |
-| `('NE', a, b)` | `är inte` | `('NE', 'x', '0')` | ❌ | ❌ |
-| `('LT', a, b)` | `är mindre än` | `('LT', 'x', '5')` | ✅ | ❌ |
-| `('GT', a, b)` | `är större än` | `('GT', 'x', '0')` | ✅ | ❌ |
-| `('LE', a, b)` | `är mindre eller` | `('LE', 'x', '5')` | ❌ | ❌ |
-| `('GE', a, b)` | `är större eller` | `('GE', 'x', '0')` | ❌ | ❌ |
-
-## Indentering
-
-- ✅ Python-style: block bestäms av indentering, inga END-nyckelord
-- Indentering: 4 spaces = 1 nivå
+| `('PLUS', a, b)` | `a pluss b` | `('PLUS', 'x', 1)` | ✅ | ❌ |
+| `('MINUS', a, b)` | `a minus b` | `('MINUS', 'x', 1)` | ❌ | ❌ |
+| `('GENOM', a, b)` | `a delat b` | `('GENOM', 'x', 2)` | ❌ | ❌ |
 
 ## Nästa steg
 
 ### Hög prioritet
-1. [x] **Implementera alla uttryck** - SUB, MUL, DIV ✅
-2. [x] **Implementera alla jämförelser** - NE, LE, GE ✅
-3. [x] **Läs input** - READ x86 syscall ✅
-4. [x] **skriv värdet av x** - SKRIV_VAR ✅
+1. [x] **IF_ELSE** - parse.py stödjer OM med true_body och false_body
+2. [ ] **Uppdatera IR** - använd svenska operatorer (mindre, likaMed, etc)
+3. [ ] **Uppdatera x86 backend** - generera kod för OM (IF) med true/false body
+4. [ ] **Uppdatera tokenizer** - mappar svenska keywords → IR operatorer
 
 ### Medel prioritet
-5. [x] **WHILE-loop** ✅
-6. [x] **Funktioner** - grej/anropa/ge ✅
-7. [x] **Listor** - lägg till, element ur, antal ✅
+5. [ ] **Fixa UT expression i x86 backend** (PLUS ok, MINUS/GENOM saknas)
+6. [ ] **Implementera WHILE med OM-format** (nuvarande WHILE är annorlunda)
 
 ### Låg prioritet
-8. [x] **File I/O** ✅ (FILE_OPEN, FILE_WRITE tokenizer+parser+x86)
-9. [ ] WASM backend
+7. [ ] WASM backend
+8. [ ] Självkompilering
 
 ## Kända buggar/problem
 
 - `i` är keyword `IN` → kan inte användas som variabelnamn
+
+## Exempel: hur IR ser ut (ny design)
+
+```python
+# Om-sats med else
+('OM', 'x', 'mindre', '5',
+    [('SKRIV', 'hej')],
+    [('SKRIV', 'annat')])
+
+# För-loop med body
+('FÖR', 'i', '0', '10',
+    [('SKRIV', 'i')])
+
+# Sätt med uttryck
+('SÄTT', 'n', ('PLUS', 'n', '1'))
+```

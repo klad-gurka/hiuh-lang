@@ -34,10 +34,10 @@ tests/
 | `('READ',)` | `läs` | `('READ',)` | ❌ | ❌ |
 | `('STORE', buf, idx, val)` | `lagra vid i i buf` | `('STORE', 'buf', 'i', 'x')` | ❌ | ❌ |
 | `('LOAD', buf, idx)` | `tecken i ur buf` | `('LOAD', 'buf', 'i')` | ❌ | ❌ |
-| `('FUNC_DEF', name, params, body)` | `grej namn param` | `('FUNC_DEF', 'add', ['a', 'b'], [body])` | ❌ | ❌ |
-| `('CALL', name, args)` | `anropa namn med x` | `('CALL', 'add', ['x', 'y'])` | ❌ | ❌ |
-| `('RETURN', expr)` | `ge x` | `('RETURN', 'x')` | ❌ | ❌ |
-| `('WHILE', cmp, body)` | `medan x är 0` | `('WHILE', ('x', '==', '0'), [body])` | ❌ | ❌ |
+| `('FUNC_DEF', name, params, body)` | `grej namn param` | `('FUNC_DEF', 'add', ['a', 'b'], [body])` | ✅ | ❌ |
+| `('CALL', name, args)` | `anropa namn med x` | `('CALL', 'add', ['x', 'y'])` | ✅ | ❌ |
+| `('RETURN', expr)` | `ge x` | `('RETURN', 'x')` | ✅ | ❌ |
+| `('WHILE', cmp, body)` | `medan x är 0` | `('WHILE', ('x', '==', '0'), [body])` | ✅ | ❌ |
 | `('LIST_CREATE', name)` | `sätt x till lista` | `('LIST_CREATE', 'x')` | ❌ | ❌ |
 | `('LIST_APPEND', list, val)` | `lägg till x till lista` | `('LIST_APPEND', 'lst', 'x')` | ❌ | ❌ |
 | `('LIST_GET', list, idx)` | `element i ur lista` | `('LIST_GET', 'lst', 'i')` | ❌ | ❌ |
@@ -83,7 +83,7 @@ tests/
 
 ### Medel prioritet
 5. [x] **WHILE-loop** ✅
-6. [ ] **Funktioner** - grej/anropa/ge
+6. [x] **Funktioner** - grej/anropa/ge ✅
 7. [ ] **Listor** - lägg till, element ur, antal
 
 ### Låg prioritet
@@ -93,4 +93,3 @@ tests/
 ## Kända buggar/problem
 
 - `i` är keyword `IN` → kan inte användas som variabelnamn
-- READ syscall är inte implementerad i x86.py

@@ -19,6 +19,10 @@ KEYWORDS = {
     'större': 'GREATER', 'värdet': 'VAL', 'av': 'OF',
     'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
     'medan': 'WHILE',
+    # Function keywords
+    'grej': 'GREJ',     # function definition
+    'anropa': 'CALL',   # function call
+    'kalla': 'CALL',    # alias for anropa
     # Space-friendly compound keywords
     'ny': 'SKRIV_NL',  # "skriv ny rad" = SKRIV + SKRIV_NL
     'rad': 'SKRIV_NL',

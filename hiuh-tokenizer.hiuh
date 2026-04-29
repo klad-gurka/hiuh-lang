@@ -1,0 +1,50 @@
+# HIUH Tokenizer - Räknar ord i text
+# Läser text (via Läs), delar vid mellanslag
+# Output: Antalet ord som hittades
+
+# Initiera
+Sätt i till 0
+Sätt antal till 0
+Sätt i_smitt till 0
+Sätt tecken till 0
+Sätt noll till 0
+Sätt ett till 1
+
+# Läs text-sträng in i källa
+Läs
+
+# Loopa igenom text tecken för tecken
+För i från 0 till 256
+    Sätt tecken till tecken i ur källa
+
+    # Om tecken är noll (slut), sluta
+    Om tecken är noll
+        Sätt antal till antal
+    Hejdå
+
+    # Kolla om tecken är space (32)
+    Sätt är_space till tecken är 32
+
+    # Spara föregående i_smitt
+    Sätt tmp till i_smitt
+
+    # Logik:
+    # Om är_space: i_smitt = 0 (vi lämnar ordet)
+    # Om INTE är_space OCH tmp == 0: nytt ord → antal++, i_smitt = 1
+    # Om INTE är_space OCH tmp == 1: fortsätt ordet → i_smitt = 1
+    Om är_space är noll
+        # Inte space
+        Om tmp är noll
+            # Start av nytt ord!
+            Sätt antal till antal pluss 1
+        Hejdå
+        # Markera att vi är inne i ett ord
+        Sätt i_smitt till ett
+    Annars
+        # Är space: vi är inte i ett ord
+        Sätt i_smitt till noll
+    Hejdå
+Hejdå
+
+# Skriv ut antalet ord
+Skriv värdet av antal

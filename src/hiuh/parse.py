@@ -82,6 +82,18 @@ def parse_block(lines, base_indent, out):
         elif tok == 'READ':
             out.append(('READ', 'input_buf'))
             i += 1
+        elif tok == 'GREJ':
+            consumed, body_len = parse_grej(lines[i:], base_indent)
+            out.append(consumed)
+            i += body_len
+        elif tok == 'CALL':
+            consumed = parse_call(tokens)
+            out.append(consumed)
+            i += 1
+        elif tok == 'RET':
+            consumed = parse_ret(tokens)
+            out.append(consumed)
+            i += 1
         else:
             # Unknown token, skip
             i += 1
@@ -112,6 +124,11 @@ def parse_value(tokens):
     if not tokens:
         return 0
     tok = tokens[0]
+    # Check for function call: CALL func_name [MED arg1 [MED arg2 ...]]
+    if tok == 'CALL' and len(tokens) >= 2:
+        func_name = tokens[1]
+        args = [t for t in tokens[2:] if t != 'MED']
+        return ('CALL', func_name, args)
     # Check for binary expressions: a PLUS/MINUS/TIMES/DIV b
     if len(tokens) >= 3 and tokens[1] in ('PLUS', 'MINUS', 'TIMES', 'DIV'):
         op_sym = {'PLUS': '+', 'MINUS': '-', 'TIMES': '*', 'DIV': '/'}[tokens[1]]
@@ -252,6 +269,63 @@ def parse_while(lines, base_indent):
     ir = ('WHILE', (var, op, val), body)
     return ir, i
 
+def parse_grej(lines, base_indent):
+    """
+    Parse GREJ (function definition) including its indented body.
+    Returns (ir_statement, lines_consumed)
+    """
+    indent, tokens = lines[0]
+    
+    # Parse GREJ header: grej func_name param1 [param2 ...]
+    func_name = tokens[1]
+    params = tokens[2:]
+    # Remove MED keywords from params if any
+    params = [p for p in params if p != 'MED']
+    
+    # Check if there's a body (next line at higher indent)
+    if len(lines) < 2:
+        return ('FUNC_DEF', func_name, params, []), 1
+    
+    next_indent, next_tokens = lines[1]
+    if next_indent <= base_indent:
+        # No body (dedent after GREJ line)
+        return ('FUNC_DEF', func_name, params, []), 1
+    
+    # Multi-line GREJ with body at next_indent
+    body = []
+    i = 1  # Start after GREJ line
+    while i < len(lines):
+        child_indent, child_tokens = lines[i]
+        if child_indent <= base_indent:
+            # Dedent - body is done
+            break
+        consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
+        i += body_len
+    
+    ir = ('FUNC_DEF', func_name, params, body)
+    return ir, i
+
+def parse_call(tokens):
+    """Parse CALL statement: anropa func_name [med arg1 [med arg2 ...]]"""
+    func_name = tokens[1]
+    args = []
+    j = 2
+    # Skip MED keywords and collect args
+    while j < len(tokens):
+        if tokens[j] != 'MED':
+            args.append(tokens[j])
+        j += 1
+    return ('CALL', func_name, args)
+
+def parse_ret(tokens):
+    """Parse RETURN statement: ge expr"""
+    if len(tokens) >= 2:
+        val = tokens[1]
+        # Try to parse as expression
+        val_expr = parse_value([val])
+        return ('RETURN', val_expr)
+    return ('RETURN', 0)
+
 def parse_single_line(lines, base_indent, body):
     """Parse a single line into body list, returns (ir, lines_consumed)"""
     if not lines:
@@ -300,6 +374,18 @@ def parse_single_line(lines, base_indent, body):
         consumed, body_len = parse_while(lines, base_indent)
         body.append(consumed)
         return None, body_len
+    elif tok == 'GREJ':
+        consumed, body_len = parse_grej(lines, base_indent)
+        body.append(consumed)
+        return None, body_len
+    elif tok == 'CALL':
+        consumed = parse_call(tokens)
+        body.append(consumed)
+        return None, 1
+    elif tok == 'RET':
+        consumed = parse_ret(tokens)
+        body.append(consumed)
+        return None, 1
     
     return None, 1
 

@@ -11,6 +11,13 @@ NEXT_REG = 0
 STRINGS = []
 LABEL_CNT = 0
 BREAK_STACK = []  # Stack of end labels for BREAK
+FUNC_LABELS = {}  # Maps func names to labels
+CURRENT_FUNC = None  # Current function being compiled
+FUNC_EPILOGUE_LABELS = {}  # func name -> epilogue label
+
+# Calling convention: args in %rdi, %rsi; return in %rax
+# Caller saves: r12, r13 (used for HIUH variables)
+# Callee saves: rbp, rbx, r14, r15
 
 def alloc_reg(name):
     global NEXT_REG
@@ -47,14 +54,23 @@ def compile_ir(ir, target='linux'):
     emit("    push %rbp")
     emit("    lea stack(%rip), %r14")
     
+    # First pass: collect function definitions
+    func_defs = []
     for stmt in ir:
-        compile_stmt(stmt, target)
+        if stmt[0] == 'FUNC_DEF':
+            func_defs.append(stmt)
+        else:
+            compile_stmt(stmt, target)
     
     emit("    xor %eax, %eax")
     emit("    pop %rbp")
     emit("    pop %r13")
     emit("    pop %r12")
     emit("    ret")
+    
+    # Emit function definitions AFTER main returns
+    for func_def in func_defs:
+        compile_func_def(func_def, target)
     
     # Data section
     emit(".data")
@@ -68,12 +84,113 @@ def compile_ir(ir, target='linux'):
     emit(".align 8")
     emit("stack: .skip 4096")
 
+def compile_func_def(stmt, target):
+    """Compile a function definition"""
+    global LABEL_CNT, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
+    func_name, params, body = stmt[1], stmt[2], stmt[3]
+    func_lbl = f"func_{func_name}"
+    epilog_lbl = new_label()
+    FUNC_EPILOGUE_LABELS[func_name] = epilog_lbl
+    
+    # Emit function label
+    emit(f"{func_lbl}:")
+    
+    # Function prologue
+    emit("    push %rbp")
+    emit("    mov %rsp, %rbp")
+    emit("    sub $16, %rsp   # shadow space + alignment")
+    emit("    push %r12")
+    emit("    push %r13")
+    
+    # Map parameters to registers (rdi=param0, rsi=param1)
+    saved_reg_map = dict(REG_MAP)
+    saved_next_reg = NEXT_REG
+    REG_MAP.clear()
+    NEXT_REG = 0
+    
+    param_regs = ['%rdi', '%rsi']
+    for j, param in enumerate(params[:2]):
+        REG_MAP[param] = param_regs[j]
+    
+    # Compile function body
+    for s in body:
+        compile_stmt(s, target)
+    
+    # Function epilogue
+    emit(f".L{epilog_lbl}:")
+    emit("    add $16, %rsp")
+    emit("    pop %r13")
+    emit("    pop %r12")
+    emit("    pop %rbp")
+    emit("    ret")
+    
+    # Restore global register map for main
+    REG_MAP.clear()
+    REG_MAP.update(saved_reg_map)
+    NEXT_REG = saved_next_reg
+
+def compile_call(func_name, args, target_reg):
+    """Compile a function call, result goes to target_reg"""
+    global REG_MAP, NEXT_REG
+    
+    # Save registers that caller-saved registers we'll clobber
+    saved_regs = []
+    for r in ['%r12', '%r13']:
+        for var, reg in REG_MAP.items():
+            if reg == r:
+                emit(f"    push {r}   # save caller reg {r} for {var}")
+                saved_regs.append(r)
+                break
+    
+    # Prepare arguments: first 2 args in rdi, rsi
+    # Remaining args on stack (pushed in reverse order)
+    arg_regs = ['%rdi', '%rsi']
+    
+    # Stack arguments (if more than 2)
+    stack_args = args[2:]
+    for j, arg in enumerate(reversed(stack_args)):
+        if isinstance(arg, int):
+            emit(f"    push ${arg}   # stack arg {j}")
+        else:
+            arg_reg = alloc_reg(arg)
+            emit(f"    push {arg_reg}   # stack arg {arg}")
+    
+    # Register arguments
+    for j, arg in enumerate(args[:2]):
+        if isinstance(arg, int):
+            emit(f"    mov ${arg}, {arg_regs[j]}")
+        else:
+            arg_reg = alloc_reg(arg)
+            emit(f"    mov {arg_reg}, {arg_regs[j]}")
+    
+    # Emit call
+    func_lbl = f"func_{func_name}"
+    emit(f"    call {func_lbl}")
+    
+    # Clean up stack arguments
+    if len(stack_args) > 0:
+        emit(f"    add ${len(stack_args) * 8}, %rsp")
+    
+    # Move return value to target
+    emit(f"    mov %rax, {target_reg}")
+    
+    # Restore saved registers
+    for r in reversed(saved_regs):
+        emit(f"    pop {r}   # restore caller reg {r}")
+
 def compile_stmt(stmt, target):
-    global LABEL_CNT
+    global LABEL_CNT, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
     op = stmt[0]
     if op == 'SET':
         name, val = stmt[1], stmt[2]
         reg = alloc_reg(name)
+        
+        # Handle function call as value
+        if isinstance(val, tuple) and val[0] == 'CALL':
+            _, func_name, args = val
+            compile_call(func_name, args, reg)
+            return
+        
         if isinstance(val, int):
             emit(f"    mov ${val}, {reg}")
         elif isinstance(val, tuple) and val[0] == '+':
@@ -191,6 +308,74 @@ def compile_stmt(stmt, target):
         emit("    xor %edi, %edi")
         emit("    mov $60, %rax")
         emit("    syscall")
+    elif op == 'FUNC_DEF':
+        # Handled in compile_func_def, which is called after main returns
+        pass
+    elif op == 'FUNC_DEF':
+        func_name, params, body = stmt[1], stmt[2], stmt[3]
+        func_lbl = f"func_{func_name}"
+        epilog_lbl = new_label()
+        FUNC_EPILOGUE_LABELS[func_name] = epilog_lbl
+        
+        # Emit function label
+        emit(f"{func_lbl}:")
+        
+        # Function prologue
+        emit("    push %rbp")
+        emit("    mov %rsp, %rbp")
+        emit("    sub $16, %rsp   # shadow space + alignment")
+        emit("    push %r12")
+        emit("    push %r13")
+        
+        # Map parameters to registers (rdi=param0, rsi=param1)
+        saved_reg_map = dict(REG_MAP)
+        saved_next_reg = NEXT_REG
+        REG_MAP.clear()
+        NEXT_REG = 0
+        
+        param_regs = ['%rdi', '%rsi']
+        for j, param in enumerate(params[:2]):
+            REG_MAP[param] = param_regs[j]
+        
+        # Compile function body
+        for s in body:
+            compile_stmt(s, target)
+        
+        # Function epilogue
+        emit(f".L{epilog_lbl}:")
+        emit("    add $16, %rsp")
+        emit("    pop %r13")
+        emit("    pop %r12")
+        emit("    pop %rbp")
+        emit("    ret")
+        
+        # Restore global register map for main
+        REG_MAP.clear()
+        REG_MAP.update(saved_reg_map)
+        NEXT_REG = saved_next_reg
+    elif op == 'CALL':
+        func_name, args = stmt[1], stmt[2]
+        # Compile call as statement (result in rax, discarded)
+        compile_call(func_name, args, '%rax')
+    elif op == 'RETURN':
+        val = stmt[1]
+        # Compile expression into rax
+        if isinstance(val, int):
+            emit(f"    mov ${val}, %rax")
+        elif isinstance(val, str):
+            ret_reg = alloc_reg(val)
+            emit(f"    mov {ret_reg}, %rax")
+        elif isinstance(val, tuple) and val[0] == 'CALL':
+            _, func_name, args = val
+            compile_call(func_name, args, '%rax')
+        else:
+            emit(f"    mov $0, %rax")
+        # Jump to epilogue if in a function
+        if CURRENT_FUNC and CURRENT_FUNC in FUNC_EPILOGUE_LABELS:
+            emit(f"    jmp .L{FUNC_EPILOGUE_LABELS[CURRENT_FUNC]}")
+        else:
+            # In main context, just continue (or could error)
+            pass
     elif op in ('SKRIV', 'SKRIV_NL'):
         expr = stmt[1] if len(stmt) > 1 else ''
         if expr:
@@ -221,7 +406,7 @@ def compile_stmt(stmt, target):
                 emit(f".Ls{lbl_s}:")
                 emit(f"    add $48, %rax  # single digit")
                 emit(f"    movb %al, (%rsi)")
-                emit(f"    mov $1, %edx")
+                emit(f"    mov $1, %rdx")
                 emit(f"    mov $1, %edi")
                 emit(f"    mov $1, %eax")
                 emit(f"    syscall")
@@ -260,7 +445,7 @@ def compile_stmt(stmt, target):
         emit(f".LV{lbl_s}:")
         emit(f"    add $48, %rax  # single digit")
         emit(f"    movb %al, (%rsi)")
-        emit(f"    mov $1, %edx")
+        emit(f"    mov $1, %rdx")
         emit(f"    mov $1, %edi")
         emit(f"    mov $1, %eax")
         emit(f"    syscall")
@@ -268,7 +453,6 @@ def compile_stmt(stmt, target):
     elif op == 'READ':
         var_name = stmt[1] if len(stmt) > 1 else 'input_buf'
         lbl_loop = new_label()
-        lbl_null = new_label()
         lbl_done = new_label()
         emit(f"    # READ: read integer from stdin")
         emit(f"    lea input_buf(%rip), %rsi")

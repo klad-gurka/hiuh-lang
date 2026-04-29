@@ -178,12 +178,6 @@ def test_set_list_len():
     ir = parse_tokens(lines)
     assert ir == [('SET', 'n', ('LIST_LEN', 'x'))], f"Got {ir}"
 
-def test_set_list_len():
-    """sätt n till antal element i x → SET with LIST_LEN value"""
-    lines = list(tokenize("sätt n till antal element i x"))
-    ir = parse_tokens(lines)
-    assert ir == [('SET', 'n', ('LIST_LEN', 'x'))], f"Got {ir}"
-
 def test_file_open():
     """öppna X för läsning → FILE_OPEN"""
     lines = list(tokenize("öppna data.txt för läsning"))

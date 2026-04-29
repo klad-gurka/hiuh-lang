@@ -319,9 +319,6 @@ def compile_stmt(stmt, target):
         emit("    mov $60, %rax")
         emit("    syscall")
     elif op == 'FUNC_DEF':
-        # Handled in compile_func_def, which is called after main returns
-        pass
-    elif op == 'FUNC_DEF':
         func_name, params, body = stmt[1], stmt[2], stmt[3]
         func_lbl = f"func_{func_name}"
         epilog_lbl = new_label()

@@ -200,26 +200,64 @@ def compile_stmt(stmt, target):
             emit(f"    mov ${val}, {reg}")
         elif isinstance(val, tuple) and val[0] == '+':
             _, a, b = val
-            reg_a = alloc_reg(a)
+            # Load left operand (a) into its register
+            if isinstance(a, int):
+                reg_a = alloc_reg(a)
+                emit(f"    mov ${a}, {reg_a}")
+            else:
+                reg_a = alloc_reg(a)
+            # Now move to target register and add second operand
             emit(f"    mov {reg_a}, {reg}")
-            emit(f"    add ${b}, {reg}")
+            try:
+                b_int = int(b)
+                emit(f"    add ${b_int}, {reg}")
+            except (ValueError, TypeError):
+                reg_b = alloc_reg(b)
+                emit(f"    add {reg_b}, {reg}")
         elif isinstance(val, tuple) and val[0] == '-':
             _, a, b = val
-            reg_a = alloc_reg(a)
+            if isinstance(a, int):
+                reg_a = alloc_reg(a)
+                emit(f"    mov ${a}, {reg_a}")
+            else:
+                reg_a = alloc_reg(a)
             emit(f"    mov {reg_a}, {reg}")
-            emit(f"    sub ${b}, {reg}")
+            try:
+                b_int = int(b)
+                emit(f"    sub ${b_int}, {reg}")
+            except (ValueError, TypeError):
+                reg_b = alloc_reg(b)
+                emit(f"    sub {reg_b}, {reg}")
         elif isinstance(val, tuple) and val[0] == '*':
             _, a, b = val
-            reg_a = alloc_reg(a)
+            if isinstance(a, int):
+                reg_a = alloc_reg(a)
+                emit(f"    mov ${a}, {reg_a}")
+            else:
+                reg_a = alloc_reg(a)
             emit(f"    mov {reg_a}, %rax")
-            emit(f"    imul ${b}, %rax")
+            try:
+                b_int = int(b)
+                emit(f"    imul ${b_int}, %rax")
+            except (ValueError, TypeError):
+                reg_b = alloc_reg(b)
+                emit(f"    imul {reg_b}, %rax")
             emit(f"    mov %rax, {reg}")
         elif isinstance(val, tuple) and val[0] == '/':
             _, a, b = val
-            reg_a = alloc_reg(a)
+            if isinstance(a, int):
+                reg_a = alloc_reg(a)
+                emit(f"    mov ${a}, {reg_a}")
+            else:
+                reg_a = alloc_reg(a)
             emit(f"    mov {reg_a}, %rax")
             emit(f"    xor %edx, %edx")
-            emit(f"    mov ${b}, %rcx")
+            try:
+                b_int = int(b)
+                emit(f"    mov ${b_int}, %rcx")
+            except (ValueError, TypeError):
+                reg_b = alloc_reg(b)
+                emit(f"    mov {reg_b}, %rcx")
             emit(f"    idiv %rcx")
             emit(f"    mov %rax, {reg}")
         elif isinstance(val, tuple) and val[0] == 'LIST_LEN':

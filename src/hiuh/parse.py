@@ -258,6 +258,7 @@ def parse_for_single(tokens):
 def parse_if(lines, base_indent):
     """
     Parse IF statement including its indented body.
+    If ELSE is found, parse false_body as well.
     Returns (ir_statement, lines_consumed)
     """
     indent, tokens = lines[0]
@@ -268,25 +269,36 @@ def parse_if(lines, base_indent):
     
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
-        return ('IF', (var, op, val), []), 1
+        return ('IF', (var, op, val), [], []), 1
     
     next_indent, next_tokens = lines[1]
     if next_indent <= base_indent:
         # No body (dedent after IF line)
-        return ('IF', (var, op, val), []), 1
+        return ('IF', (var, op, val), [], []), 1
     
     # Multi-line IF with body at next_indent
-    body = []
+    true_body = []
+    false_body = []
+    in_false_body = False
     i = 1  # Start after IF line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
+        
+        # Check for ELSE at same indent level (base_indent)
+        if child_indent == base_indent and child_tokens and child_tokens[0] == 'ELSE':
+            in_false_body = True
+            i += 1
+            continue
+        
         if child_indent <= base_indent:
-            # Dedent - body is done
+            # Dedent - we're done with the IF statement
             break
-        consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
+        
+        consumed, body_len = parse_single_line(lines[i:], base_indent + 1, 
+                                              false_body if in_false_body else true_body)
         i += body_len
     
-    ir = ('IF', (var, op, val), body)
+    ir = ('IF', (var, op, val), true_body, false_body)
     return ir, i
 
 def parse_while(lines, base_indent):

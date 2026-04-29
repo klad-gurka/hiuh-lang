@@ -196,6 +196,45 @@ def test_file_write():
     ir = parse_tokens(lines)
     assert ir == [('FILE_WRITE', 'resultat.txt', '')], f"Got {ir}"
 
+def test_if_else():
+    """om x är 5
+        skriv hej
+    annars
+        skriv annat
+    """
+    src = """om x är 5
+    skriv hej
+annars
+    skriv annat"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert len(ir) == 1
+    assert ir[0][0] == 'IF'
+    assert ir[0][1] == ('x', '==', '5')  # value is string, not int
+    assert len(ir[0][2]) == 1      # true body has 1 statement
+    assert ir[0][2][0] == ('SKRIV', 'hej')
+    assert len(ir[0][3]) == 1      # false body has 1 statement
+    assert ir[0][3][0] == ('SKRIV', 'annat')
+
+def test_if_else_with_for():
+    """om x är 5
+        för i från 0 till 3
+            skriv i
+    annars
+        skriv fallback
+    """
+    src = """om x är 5
+    för i från 0 till 3
+        skriv i
+annars
+    skriv fallback"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][0] == 'IF'
+    assert ir[0][1] == ('x', '==', '5')  # value is string, not int
+    assert ir[0][2][0][0] == 'FOR'  # true body: FOR loop
+    assert ir[0][3][0] == ('SKRIV', 'fallback')  # false body
+
 if __name__ == '__main__':
     test_set_integer()
     test_set_plus()
@@ -223,4 +262,6 @@ if __name__ == '__main__':
     test_file_open()
     test_file_open_write()
     test_file_write()
+    test_if_else()
+    test_if_else_with_for()
     print("Alla parse-tester OK!")

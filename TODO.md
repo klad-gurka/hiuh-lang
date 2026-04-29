@@ -27,46 +27,55 @@ tests/
 
 ### Operatorer (Jämförelse)
 
-| IR operator | Source keywords | Betydelse |
-|-------------|-----------------|-----------|
-| `mindre` | "är mindre än" | a < b |
-| `mindreLikaMed` | "är mindre eller" | a <= b |
-| `större` | "är större än" | a > b |
-| `störreLikaMed` | "är större eller" | a >= b |
-| `likaMed` | "är" | a == b |
-| `inteLikaMed` | "är inte" | a != b |
+| IR operator     | Source keywords               | Betydelse |
+|-----------------|-------------------------------|-----------|
+| `mindre`        | "är mindre än"                | a < b     |
+| `mindreLikaMed` | "är mindre än eller lika med" | a <= b    |
+| `större`        | "är större än"                | a > b     |
+| `störreLikaMed` | "är större än eller lika med" | a >= b    |
+| `likaMed`       | "är lika med"                 | a == b    |
+| `inteLikaMed`   | "är inte lika med"            | a != b    |
 
 ### IR-nod dokumentation
 
 #### Satser (Statements)
 
-| IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
-|--------|-------------------|------------|-----|------|
-| `('SÄTT', name, expr)` | `sätt x till 5` | `('SÄTT', 'x', 5)` | ✅ | ❌ |
-| `('FÖR', var, start, end, body)` | `för x från 0 till 10` | `('FÖR', 'x', 0, 10, [body])` | ✅ | ❌ |
-| `('WHILE', var, op, val, body)` | `medan x är mindre än 5` | `('WHILE', 'x', 'mindre', '5', [body])` | ✅ | ❌ |
-| `('OM', var, op, val, true_body, false_body)` | `om x är mindre än 5` | `('OM', 'x', 'mindre', '5', [...], [...])` | ❌ | ❌ |
-| `('BRYT',)` | `bryt` | `('BRYT',)` | ✅ | ❌ |
-| `('HEJDÅ',)` | `hej då` / `jag gå nu` | `('HEJDÅ',)` | ✅ | ❌ |
-| `('SKRIV', text)` | `skriv hello` | `('SKRIV', 'hello')` | ✅ | ❌ |
-| `('SKRIV_NL',)` | `skriv ny rad` | `('SKRIV_NL',)` | ✅ | ❌ |
-| `('SKRIV_VAR', name)` | `skriv värdet av x` | `('SKRIV_VAR', 'x')` | ✅ | ❌ |
-| `('LÄS',)` | `läs` | `('LÄS',)` | ✅ | ❌ |
-| `('GREJ', name, params, body)` | `grej namn param` | `('GREJ', 'add', ['a', 'b'], [body])` | ✅ | ❌ |
-| `('ANROPA', name, args)` | `anropa namn med x` | `('ANROPA', 'add', ['x', 'y'])` | ✅ | ❌ |
-| `('GE', expr)` | `ge x` | `('GE', 'x')` | ✅ | ❌ |
-| `('LISTA', name)` | `sätt x till lista` | `('LISTA', 'x')` | ✅ | ❌ |
-| `('LÄGG_TILL', list, val)` | `lägg till x till lista` | `('LÄGG_TILL', 'lst', 'x')` | ✅ | ❌ |
-| `('ELEMENT', list, idx)` | `element i ur lista` | `('ELEMENT', 'lst', 'i')` | ✅ | ❌ |
-| `('ANTAL', list)` | `antal element i lista` | `('ANTAL', 'lst')` | ✅ | ❌ |
+| Språk-konstruktion                 | IR nod                                | IR-exempel                                                                                 | X86 | WASM |
+|------------------------------------|---------------------------------------|--------------------------------------------------------------------------------------------|-----|------|
+| `sätt x till 5`                    | `('SÄTT', name, expr)`                | `('SÄTT', 'x', ('HELTAL', 5))`                                                             | ❌   | ❌    |
+| `för x från 0 till 10`             | `('FÖR', var, start, end, body)`      | `('FÖR', 'x', 0, 10, [body])`                                                              | ❌   | ❌    |
+| `medan x är mindre än 5`           | `('MEDAN', expr, body)`               | `('MEDAN', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [body])`                          | ❌   | ❌    |
+| `om x är mindre än 5`              | `('OM', expr, true_body, false_body)` | `('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [...], [...])`                       | ❌   | ❌    |
+| `bryt`                             | `('BRYT',)`                           | `('BRYT',)`                                                                                | ❌   | ❌    |
+| `hej då` / `jag gå nu`             | `('HEJDÅ',)`                          | `('HEJDÅ',)`                                                                               | ❌   | ❌    |
+| `skriv hello`                      | `('SKRIV', expr)`                     | `('SKRIV', ('TEXT', 'hello'))`                                                             | ❌   | ❌    |
+| `skriv radbryt`                    | `('SKRIV', expr)`                     | `('SKRIV', ('RADBRYT',))`                                                                  | ❌   | ❌    |
+| `skriv värdet av x`                | `('SKRIV_VÄRDE', name)`               | `('SKRIV', ('VARIABEL', 'x'))`                                                             | ❌   | ❌    |
+| `läs rad till x`                   | `('LÄS_RAD', name)`                   | `('LÄS_RAD', 'x')`                                                                         | ❌   | ❌    |
+| `sätt funk till grej med a, b`     | `('GREJ', params, body)`              | `('SÄTT', 'funk', ('GREJ', ['a', 'b'], [body])`                                            | ❌   | ❌    |
+| `sätt a till funk med x, y`        | `('ANROPA', var, args)`               | `('SÄTT', 'x', ('ANROPA', 'funk', [('VARIABEL', 'x'), ('VARIABEL', 'y')])`                 | ❌   | ❌    |
+| `ge x`                             | `('GE', expr)`                        | `('GE', ('VARIABEL', 'x'))`                                                                | ❌   | ❌    |
+| `sätt a till ny lista`             | `('NY_LISTA', args)`                  | `('SÄTT', ('VARIABEL', 'a'), ('NY_LISTA', []))`                                            | ❌   | ❌    |
+| `sätt a till ny lista med 1, 2, 3` | `('NY_LISTA', args)`                  | `('SÄTT', ('VARIABEL', 'a'), ('NY_LISTA', [('HELTAL', 1), ('HELTAL', 2), ('HELTAL', 3)]))` | ❌   | ❌    |
+| `lägg till x i a`                  | `('LÄGG_TILL', expr, var)`            | `('LÄGG_TILL', ('VARIABEL', x'), 'a')`                                                     | ❌   | ❌    |
+| `ta bort apa från a`               | `('TA_BORT', expr, var)`              | `('TA_BORT', ('TEXT', 'apa'), 'a')`                                                        | ❌   | ❌    |
+| `ta bort element 3 från a`         | `('TA_BORT_INDEX', index, var)`       | `('TA_BORT_INDEX', 3, 'a')`                                                                | ❌   | ❌    |
+| `sätt x till element 3 från a`     | `('HÄMTA_INDEX', index, var)`         | `('SÄTT', 'x', ('HÄMTA_INDEX', 3, 'a'))`                                                   | ❌   | ❌    |
+| `byt ut element 3 från a till b`   | `('BYT_UT', index, var, expr)`        | `('BYT_UT', 3, 'a', ('VARIABEL', 'b'))`                                                    | ❌   | ❌    |
+| `antal element i lst`              | `('ANTAL', var)`                      | `('ANTAL', 'lst')`                                                                         | ❌   | ❌    |
+| `skriv buf till hej.txt`           | `('SKRIV_FIL', text, path)`           | `('SKRIV_VAR', 'buf', 'hej.txt')`                                                          | ❌   | ❌    |
+| `läs från hej.txt till buf`        | `('LÄS_FIL', path, var)`              | `('LÄS', ('TEXT', 'hej.txt'), 'buf'))`                                                     | ❌   | ❌    |
+
+TODO: uppdatera tabell ovan med korrekt x86-status
 
 #### Uttryck (Expressions)
 
-| IR nod | Språk-konstruktion | IR-exempel | X86 | WASM |
-|--------|-------------------|------------|-----|------|
-| `('PLUS', a, b)` | `a pluss b` | `('PLUS', 'x', 1)` | ✅ | ❌ |
-| `('MINUS', a, b)` | `a minus b` | `('MINUS', 'x', 1)` | ❌ | ❌ |
-| `('GENOM', a, b)` | `a delat b` | `('GENOM', 'x', 2)` | ❌ | ❌ |
+| IR nod             | Språk-konstruktion | IR-exempel           | X86 | WASM |
+|--------------------|--------------------|----------------------|-----|------|
+| `('PLUSS', a, b)`  | `a pluss b`        | `('PLUSS', 'x', 1)`  | ✅ | ❌ |
+| `('MINUS', a, b)`  | `a minus b`        | `('MINUS', 'x', 1)`  | ❌ | ❌ |
+| `('DELA', a, b)`   | `a delat b`        | `('DELA', 'x', 2)`   | ❌ | ❌ |
+| `('GÅNGER', a, b)` | `a gånger b`       | `('GÅNGER', 'x', 2)` | ❌ | ❌ |
 
 ## Nästa steg
 
@@ -92,7 +101,7 @@ tests/
 
 ```python
 # Om-sats med else
-('OM', 'x', 'mindre', '5',
+('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', '5')),
     [('SKRIV', 'hej')],
     [('SKRIV', 'annat')])
 

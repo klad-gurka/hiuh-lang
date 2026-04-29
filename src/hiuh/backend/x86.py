@@ -286,34 +286,43 @@ def compile_stmt(stmt, target):
         BREAK_STACK.pop()
     elif op == 'IF':
         cmp, body = stmt[1], stmt[2]
+        false_body = stmt[3] if len(stmt) > 3 else []
         var, op, val = cmp
         reg = alloc_reg(var)
-        lbl = new_label()
+        skip_label = new_label()  # skip false body
+        end_label = new_label()   # merge point after entire IF
         try:
             val_int = int(val)
         except (ValueError, TypeError):
             val_int = 0
         if op == '==':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jne .L{lbl}")
+            emit(f"    jne .L{skip_label}")
         elif op == '!=':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    je .L{lbl}")
+            emit(f"    je .L{skip_label}")
         elif op == '<':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jge .L{lbl}")
+            emit(f"    jge .L{skip_label}")
         elif op == '>':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jle .L{lbl}")
+            emit(f"    jle .L{skip_label}")
         elif op == '<=':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jg .L{lbl}")
+            emit(f"    jg .L{skip_label}")
         elif op == '>=':
             emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jl .L{lbl}")
+            emit(f"    jl .L{skip_label}")
         for s in body:
             compile_stmt(s, target)
-        emit(f".L{lbl}:")
+        if false_body:
+            emit(f"    jmp .L{end_label}")
+            emit(f".L{skip_label}:")
+            for s in false_body:
+                compile_stmt(s, target)
+            emit(f".L{end_label}:")
+        else:
+            emit(f".L{skip_label}:")
     elif op == 'WHILE':
         cmp, body = stmt[1], stmt[2]
         var, op, val = cmp

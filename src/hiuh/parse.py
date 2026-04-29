@@ -71,6 +71,10 @@ def parse_block(lines, base_indent, out):
             expr = tokens[1] if len(tokens) > 1 else ''
             out.append(('SKRIV_NL', expr))
             i += 1
+        elif tok == 'SKRIV_VAR':
+            name = tokens[1] if len(tokens) > 1 else ''
+            out.append(('SKRIV_VAR', name))
+            i += 1
         elif tok == 'READ':
             out.append(('READ', 'input_buf'))
             i += 1
@@ -239,6 +243,10 @@ def parse_single_line(lines, base_indent, body):
     elif tok == 'SKRIV_NL':
         expr = tokens[1] if len(tokens) > 1 else ''
         body.append(('SKRIV_NL', expr))
+        return None, 1
+    elif tok == 'SKRIV_VAR':
+        name = tokens[1] if len(tokens) > 1 else ''
+        body.append(('SKRIV_VAR', name))
         return None, 1
     elif tok == 'FOR':
         consumed = parse_for_single(tokens)

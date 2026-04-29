@@ -40,6 +40,14 @@ def tokenize(src):
         while i < len(words):
             word = words[i].lower()
             
+            # Handle "skriv värdet av x" → SKRIV_VAR x (print variable value)
+            if word == 'skriv' and i + 3 < len(words):
+                if words[i+1].lower() == 'värdet' and words[i+2].lower() == 'av':
+                    tokens.append('SKRIV_VAR')
+                    tokens.append(words[i+3])
+                    i += 4
+                    continue
+            
             # Handle "skriv ny rad" → SKRIV_NL (space-friendly)
             if word == 'skriv' and i + 2 < len(words):
                 if words[i+1].lower() == 'ny' and words[i+2].lower() == 'rad':

@@ -57,6 +57,10 @@ def parse_block(lines, base_indent, out):
             consumed, body_len = parse_if(lines[i:], base_indent)
             out.append(consumed)
             i += body_len
+        elif tok == 'WHILE':
+            consumed, body_len = parse_while(lines[i:], base_indent)
+            out.append(consumed)
+            i += body_len
         elif tok == 'EXIT':
             out.append(('EXIT', 0))
             i += 1
@@ -214,6 +218,40 @@ def parse_if(lines, base_indent):
     ir = ('IF', (var, op, val), body)
     return ir, i
 
+def parse_while(lines, base_indent):
+    """
+    Parse WHILE statement including its indented body.
+    Returns (ir_statement, lines_consumed)
+    """
+    indent, tokens = lines[0]
+    
+    # Parse the WHILE condition
+    cmp_result = parse_cmp(tokens[1:])
+    var, op, val = cmp_result
+    
+    # Check if there's a body (next line at higher indent)
+    if len(lines) < 2:
+        return ('WHILE', (var, op, val), []), 1
+    
+    next_indent, next_tokens = lines[1]
+    if next_indent <= base_indent:
+        # No body (dedent after WHILE line)
+        return ('WHILE', (var, op, val), []), 1
+    
+    # Multi-line WHILE with body at next_indent
+    body = []
+    i = 1  # Start after WHILE line
+    while i < len(lines):
+        child_indent, child_tokens = lines[i]
+        if child_indent <= base_indent:
+            # Dedent - body is done
+            break
+        consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
+        i += body_len
+    
+    ir = ('WHILE', (var, op, val), body)
+    return ir, i
+
 def parse_single_line(lines, base_indent, body):
     """Parse a single line into body list, returns (ir, lines_consumed)"""
     if not lines:
@@ -229,7 +267,9 @@ def parse_single_line(lines, base_indent, body):
     tok = tokens[0]
     
     if tok == 'SET':
-        return parse_set(tokens), 1
+        consumed = parse_set(tokens)
+        body.extend(consumed)
+        return None, 1
     elif tok == 'EXIT':
         body.append(('EXIT', 0))
         return None, 1
@@ -253,10 +293,13 @@ def parse_single_line(lines, base_indent, body):
         body.append(consumed)
         return None, 1
     elif tok == 'IF':
-        cmp_result = parse_cmp(tokens[1:])
-        var, op, val = cmp_result
-        body.append(('IF', (var, op, val), []))
-        return None, 1
+        consumed, body_len = parse_if(lines, base_indent)
+        body.append(consumed)
+        return None, body_len
+    elif tok == 'WHILE':
+        consumed, body_len = parse_while(lines, base_indent)
+        body.append(consumed)
+        return None, body_len
     
     return None, 1
 

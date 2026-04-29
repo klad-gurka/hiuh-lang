@@ -10,6 +10,7 @@ REG_MAP = {}
 NEXT_REG = 0
 STRINGS = []
 LABEL_CNT = 0
+BREAK_STACK = []  # Stack of end labels for BREAK
 
 def alloc_reg(name):
     global NEXT_REG
@@ -107,6 +108,7 @@ def compile_stmt(stmt, target):
         reg = alloc_reg(var)
         start_lbl = new_label()
         end_lbl = new_label()
+        BREAK_STACK.append(end_lbl)
         emit(f"    mov ${start}, {reg}")
         emit(f".L{start_lbl}:")
         emit(f"    cmp ${end}, {reg}")
@@ -116,6 +118,7 @@ def compile_stmt(stmt, target):
         emit(f"    inc {reg}")
         emit(f"    jmp .L{start_lbl}")
         emit(f".L{end_lbl}:")
+        BREAK_STACK.pop()
     elif op == 'IF':
         cmp, body = stmt[1], stmt[2]
         var, op, val = cmp
@@ -146,8 +149,44 @@ def compile_stmt(stmt, target):
         for s in body:
             compile_stmt(s, target)
         emit(f".L{lbl}:")
+    elif op == 'WHILE':
+        cmp, body = stmt[1], stmt[2]
+        var, op, val = cmp
+        reg = alloc_reg(var)
+        start_lbl = new_label()
+        end_lbl = new_label()
+        BREAK_STACK.append(end_lbl)
+        emit(f".L{start_lbl}:")
+        try:
+            val_int = int(val)
+        except (ValueError, TypeError):
+            val_int = 0
+        if op == '==':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jne .L{end_lbl}")
+        elif op == '!=':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    je .L{end_lbl}")
+        elif op == '<':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jge .L{end_lbl}")
+        elif op == '>':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jle .L{end_lbl}")
+        elif op == '<=':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jg .L{end_lbl}")
+        elif op == '>=':
+            emit(f"    cmp ${val_int}, {reg}")
+            emit(f"    jl .L{end_lbl}")
+        for s in body:
+            compile_stmt(s, target)
+        emit(f"    jmp .L{start_lbl}")
+        emit(f".L{end_lbl}:")
+        BREAK_STACK.pop()
     elif op == 'BREAK':
-        emit("    jmp .Lend")
+        end_lbl = BREAK_STACK[-1] if BREAK_STACK else 'end'
+        emit(f"    jmp .L{end_lbl}")
     elif op == 'EXIT':
         emit("    xor %edi, %edi")
         emit("    mov $60, %rax")

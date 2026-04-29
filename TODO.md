@@ -76,13 +76,13 @@ tests/
 ## Nästa steg
 
 ### Hög prioritet
-1. [ ] **Implementera alla uttryck** - SUB, MUL, DIV
-2. [ ] **Implementera alla jämförelser** - NE, LE, GE
-3. [ ] **Läs input** - READ x86 syscall
-4. [ ] **skriv värdet av x** - SKRIV_VAR
+1. [x] **Implementera alla uttryck** - SUB, MUL, DIV ✅
+2. [x] **Implementera alla jämförelser** - NE, LE, GE ✅
+3. [x] **Läs input** - READ x86 syscall ✅
+4. [x] **skriv värdet av x** - SKRIV_VAR ✅
 
 ### Medel prioritet
-5. [ ] **WHILE-loop**
+5. [x] **WHILE-loop** ✅
 6. [ ] **Funktioner** - grej/anropa/ge
 7. [ ] **Listor** - lägg till, element ur, antal
 

@@ -210,8 +210,8 @@ def tokenize(src):
                     i += 4
                     continue
             
-            # 'i' after variable-taking keywords is a variable name, not IN keyword
-            if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra', 'av', 'är', 'medan', 'WHILE', 'IF', 'FOR', 'SET'):
+            # 'i' after variable-taking keywords/operators is a variable name, not IN keyword
+            if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra', 'av', 'är', 'medan', 'WHILE', 'IF', 'FOR', 'SET', 'pluss', 'minus', 'gånger', 'delat', 'PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
                 tokens.append(word)  # variable name
                 last_token = word
             # After SET/TILL, next word is a variable name (even if it's a keyword like 'antal')

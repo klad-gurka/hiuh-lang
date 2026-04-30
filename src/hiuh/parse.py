@@ -268,7 +268,12 @@ def parse_for(lines, base_indent):
             break
         # Parse the body line
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
-        i += body_len
+        if body_len == 0:
+            # parse_single_line couldn't handle this line - recurse into parse_block
+            consumed = parse_block(lines[i:], base_indent + 1, body)
+            i += consumed
+        else:
+            i += body_len
 
     ir = ('FOR', var, start, end, body)
     return ir, i
@@ -372,7 +377,13 @@ def parse_while(lines, base_indent):
             # Dedent - body is done
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
-        i += body_len
+        if body_len == 0:
+            # parse_single_line couldn't handle this line - recurse into parse_block
+            # Use base_indent + 2 to match body indentation level
+            consumed = parse_block(lines[i:], base_indent + 2, body)
+            i += consumed
+        else:
+            i += body_len
 
     ir = ('WHILE', (var, op, val), body)
     return ir, i

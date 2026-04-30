@@ -277,6 +277,63 @@ medan x är mindre än 3
 
 
 # ─────────────────────────────────────────────
+# FÖR + BRYT (FOR loop + BREAK)
+# ─────────────────────────────────────────────
+
+def test_for_break_early():
+    """FÖR med bryt efter halva"""
+    src = '''sätt x till 0
+för i från 0 till 10
+  sätt x till x pluss i
+  om i är lika med 5
+    bryt
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '15', f"Fick: {stdout!r}"
+
+
+def test_for_break_first():
+    """BRYT i första iterationen av FÖR"""
+    src = '''sätt x till 0
+för i från 0 till 5
+  bryt
+  sätt x till x pluss i'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '', f"Fick: {stdout!r}"
+
+
+def test_for_no_break():
+    """FÖR utan bryt (exit via villkor)"""
+    src = '''sätt x till 0
+för i från 0 till 3
+  sätt x till x pluss i
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '3', f"Fick: {stdout!r}"
+
+
+# HEJDÅ (EXIT)
+# ─────────────────────────────────────────────
+
+def test_hejda_exits():
+    """hejdå avslutar programmet"""
+    src = '''sätt x till 42
+hejdå
+sätt x till 99'''
+    _, _, rc = run_hiuh(src)
+    assert rc == 0, f"Fick rc: {rc}"
+
+
+# SKRIV text (literal integers)
+# ─────────────────────────────────────────────
+
+def test_skriv_integer_literal():
+    """skriv numeriskt värde (99)"""
+    src = '''skriv 99'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '99', f"Fick: {stdout!r}"
+
+
 # SKRIV_VÄRDE (print variable)
 # ─────────────────────────────────────────────
 

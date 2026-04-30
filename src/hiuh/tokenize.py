@@ -6,7 +6,7 @@ import sys
 # Keywords (lowercase for case-insensitive matching)
 KEYWORDS = {
     # Core keywords
-    'sätt': 'SET', 'för': 'FOR', 'om': 'IF', 'hejdå': 'END',
+    'sätt': 'SET', 'för': 'FOR', 'om': 'IF', 'hejdå': 'EXIT',
     'annars': 'ELSE', 'läs': 'READ', 'skriv': 'SKRIV', 'skrivnyrad': 'SKRIV_NL',
     'lagra': 'STORE', 'jämför': 'CMP',
     'jämförbuffer': 'CMP_BUF', 'jagmåstegånu': 'EXIT',

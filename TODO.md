@@ -13,9 +13,9 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | FÖR | ✅ | ✅ | ✅ | ✅ | ✅ |
 | MEDAN | ✅ | ✅ | ✅ | ✅ | ✅ |
 | OM | ✅ | ✅ | ✅ | ✅ | ✅ |
-| BRYT | ✅ | ✅ | ❌ | ❌ | ✅ |
-| HEJDÅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SKRIV | ✅ | ✅ | ❌ | ❌ | ❌ |
+| BRYT | ✅ | ✅ | ✅ | ✅ | ✅ |
+| HEJDÅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| SKRIV | ✅ | ✅ | ✅ | ❌ | ✅ |
 | SKRIV_VÄRDE | ✅ | ✅ | ✅ | ❌ | ✅ |
 | LÄS_RAD | ✅ | ✅ | ❌ | ❌ | ❌ |
 | GREJ | ✅ | ✅ | ❌ | ❌ | ❌ |

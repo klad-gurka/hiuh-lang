@@ -193,12 +193,15 @@ def compile_call(func_name, args, target_reg):
     if len(stack_args) > 0:
         emit(f"    add ${len(stack_args) * 8}, %rsp")
     
-    # Move return value to target
-    emit(f"    mov %rax, {target_reg}")
+    # Save return value to temp location (before pops restores old values)
+    emit(f"    mov %rax, %r14  # temp save return value")
     
     # Restore saved registers
     for r in reversed(saved_regs):
         emit(f"    pop {r}   # restore caller reg {r}")
+    
+    # Move return value to target (after restores)
+    emit(f"    mov %r14, {target_reg}")
 
 def compile_stmt(stmt, target):
     global LABEL_CNT, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
@@ -415,12 +418,16 @@ def compile_stmt(stmt, target):
         # Map parameters to registers (rdi=param0, rsi=param1)
         saved_reg_map = dict(REG_MAP)
         saved_next_reg = NEXT_REG
+        saved_current_func = CURRENT_FUNC
         REG_MAP.clear()
         NEXT_REG = 0
         
         param_regs = ['%rdi', '%rsi']
         for j, param in enumerate(params[:2]):
             REG_MAP[param] = param_regs[j]
+        
+        # Set CURRENT_FUNC so GE knows to generate epilogue jump
+        CURRENT_FUNC = func_name
         
         # Compile function body
         for s in body:
@@ -438,6 +445,7 @@ def compile_stmt(stmt, target):
         REG_MAP.clear()
         REG_MAP.update(saved_reg_map)
         NEXT_REG = saved_next_reg
+        CURRENT_FUNC = saved_current_func
     elif op == 'ANROPA':
         func_name, args = stmt[1], stmt[2]
         # Compile call as statement (result in rax, discarded)

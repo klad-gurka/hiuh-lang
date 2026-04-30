@@ -17,16 +17,16 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | HEJDÅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SKRIV | ✅ | ✅ | ✅ | ✅ | ✅ |  # unified: text, variabel, uttryck, radbryt |
 | LÄS_RAD | ✅ | ✅ | ❌ | ❌ | ❌ |
-| GREJ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| ANROPA | ✅ | ✅ | ❌ | ❌ | ❌ |
-| GE | ✅ | ✅ | ❌ | ❌ | ❌ |
-| NY_LISTA | ✅ | ✅ | ✅ | ❌ | ❌ |
-| LÄGG_TILL | ✅ | ✅ | ❌ | ❌ | ❌ |
-| TA_BORT | ✅ | ✅ | ❌ | ❌ | ❌ |
+| GREJ | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration (fix: CURRENT_FUNC, return save)
+| ANROPA | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration (fix: return value save)
+| GE | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration (epilogue jump)
+| NY_LISTA | ✅ | ✅ | ✅ | ✅ | ✅ |
+| LÄGG_TILL | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration
+| TA_BORT | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration
 | TA_BORT_INDEX | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test +integration (fix: movl 32-bit length)
 | HÄMTA_INDEX | ✅ | ✅ | ✅ | ✅ | ✅ |  # LIST_GET i SET + integration
 | BYT_UT | ✅ | ✅ | ✅ | ✅ | ✅ |  # Ny: tokenizer + parse + x86 + tester
-| ANTAL | ✅ | ✅ | ❌ | ❌ | ❌ |
+| ANTAL | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration
 | SKRIV_FIL | ✅ | ✅ | ❌ | ❌ | ❌ |
 | LÄS_FIL | ✅ | ✅ | ❌ | ❌ | ❌ |
 

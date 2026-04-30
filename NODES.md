@@ -81,26 +81,22 @@ Avsluta programmet.
 ---
 
 ### SKRIV
-Skriv text eller uttryck.
+Skriv text, variabel, uttryck eller radbrytning.
 
-**Signatur:** `('SKRIV', expr: str|int|tuple)`
+**Signatur:** `('SKRIV', expr)`
 
-**Exempel:**
-```python
-('SKRIV', 'hej världen')
-('SKRIV', ('PLUSS', 'x', 1))
-```
-
----
-
-### SKRIV_VÄRDE
-Skriv variabels värde.
-
-**Signatur:** `('SKRIV_VÄRDE', name: str)`
+**Expr kan vara:**
+- `('VARIABEL', 'x')` — skriv värdet av x
+- `('TEXT', 'hej')` — skriv text
+- `('RADBRYT',)` — skriv radbrytning
+- `('PLUSS', 'x', 1)` — skriv uttryck
 
 **Exempel:**
 ```python
-('SKRIV_VÄRDE', 'x')
+('SKRIV', ('VARIABEL', 'x'))     # skriv värdet av x
+('SKRIV', ('TEXT', 'hej'))       # skriv hej
+('SKRIV', ('RADBRYT',))          # skriv ny rad
+('SKRIV', ('PLUSS', 'x', 1))    # skriv x + 1
 ```
 
 ---

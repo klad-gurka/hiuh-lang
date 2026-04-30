@@ -15,8 +15,7 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | OM | ✅ | ✅ | ✅ | ✅ | ✅ |
 | BRYT | ✅ | ✅ | ✅ | ✅ | ✅ |
 | HEJDÅ | ✅ | ✅ | ✅ | ✅ | ✅ |
-| SKRIV | ✅ | ✅ | ✅ | ❌ | ✅ |
-| SKRIV_VÄRDE | ✅ | ✅ | ✅ | ❌ | ✅ |
+| SKRIV | ✅ | ✅ | ❌ | ❌ | ✅ |  # unified: text, variabel, uttryck, radbryt |
 | LÄS_RAD | ✅ | ✅ | ❌ | ❌ | ❌ |
 | GREJ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | ANROPA | ✅ | ✅ | ❌ | ❌ | ❌ |

@@ -68,3 +68,10 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 ## Kända buggar/problem
 
 - `i` är keyword `IN` → kan inte användas som variabelnamn
+
+## Ändringslogg
+
+### 2026-04-30
+- [x] **FIX**: parse.py `parse_for`: body loop använde `child_indent < base_indent` för dedent-check vilket orsakade infinite loop när nästa rad har samma indent som FOR-linjen. Ändrad till `child_indent <= base_indent` (som redan fanns i WHILE och IF). Symptom: `sätt x till x pluss 1` i FOR-body gav `('SET', 'x', 'pluss')` istället för `('SET', 'x', ('PLUSS', 'x', 1))`.
+- [x] **TEST**: Lade till `test_for_body_with_arithmetic` i tests/test_parse.py
+- [x] **TEST**: Fixade `test_list_init` som felaktigt förväntade sig `LIST_INIT` istället för `NY_LISTA`

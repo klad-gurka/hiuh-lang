@@ -160,11 +160,21 @@ def test_list_create():
     ir = parse_tokens(lines)
     assert ir == [('LIST_CREATE', 'x')], f"Got {ir}"
 
+def test_for_body_with_arithmetic():
+    """för i från 0 till 3\n    sätt x till x pluss 1"""
+    src = """för i från 0 till 3
+    sätt x till x pluss 1"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][0] == 'FOR'
+    assert ir[0][4][0] == ('SET', 'x', ('PLUSS', 'x', 1)), f"Got {ir[0][4][0]}"
+
+
 def test_list_init():
-    """sätt x till lista av 1, 2, 3 → LIST_INIT"""
+    """sätt x till lista av 1, 2, 3 → NY_LISTA"""
     lines = list(tokenize("sätt x till lista av 1, 2, 3"))
     ir = parse_tokens(lines)
-    assert ir == [('LIST_INIT', 'x', ['1', '2', '3'])], f"Got {ir}"
+    assert ir == [('NY_LISTA', 'x', ['1', '2', '3'])], f"Got {ir}"
 
 def test_list_append():
     """lägg till 1 till x → LIST_APPEND"""

@@ -263,7 +263,7 @@ def parse_for(lines, base_indent):
     i = 1  # Start after FOR line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        if child_indent < base_indent:
+        if child_indent <= base_indent:
             # Dedent - body is done
             break
         # Parse the body line

@@ -159,6 +159,29 @@ medan n är inte lika med 0
 
 
 # ─────────────────────────────────────────────
+# FÖR (FOR loop) + aritmetik
+# ─────────────────────────────────────────────
+
+def test_for_sum():
+    """FÖR: räkna summan 0+1+2+3+4"""
+    src = '''sätt x till 0
+för i från 0 till 5
+  sätt x till x pluss i
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '10', f"Fick: {stdout!r}"
+
+
+def test_for_print():
+    """FÖR: skriv ut 0, 1, 2"""
+    src = '''för i från 0 till 3
+  skriv värdet av i
+  skriv ny rad'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '0\n1\n2', f"Fick: {stdout!r}"
+
+
+# ─────────────────────────────────────────────
 # OM / ANNARS (IF / ELSE) + jämförelser
 # ─────────────────────────────────────────────
 

@@ -10,7 +10,7 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | IR nod | Parse impl | Parse test | X86 impl | X86 test | Integration |
 |--------------------------------|:---------:|:---------:|:--------:|:--------:|:-----------:|
 | SÄTT | ✅ | ✅ | ✅ | ✅ | ❌ |
-| FÖR | ✅ | ✅ | ❌ | ❌ | ❌ |
+| FÖR | ✅ | ✅ | ✅ | ✅ | ❌ |
 | MEDAN | ✅ | ✅ | ✅ | ✅ | ❌ |
 | OM | ✅ | ✅ | ✅ | ✅ | ❌ |
 | BRYT | ✅ | ✅ | ❌ | ❌ | ❌ |

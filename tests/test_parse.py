@@ -212,6 +212,18 @@ def test_file_write():
     ir = parse_tokens(lines)
     assert ir == [('SKRIV_FIL', 'resultat.txt', '')], f"Got {ir}"
 
+def test_file_read():
+    """läs från fil X till Y → FILE_READ"""
+    lines = list(tokenize("läs från fil data.txt till buf"))
+    ir = parse_tokens(lines)
+    assert ir == [('LÄS_FIL', 'data.txt', 'buf')], f"Got {ir}"
+
+def test_read_line():
+    """läs rad X → READ_LINE"""
+    lines = list(tokenize("läs rad namn"))
+    ir = parse_tokens(lines)
+    assert ir == [('LÄS_RAD', 'namn')], f"Got {ir}"
+
 def test_if_else():
     """om x är 5
         skriv hej
@@ -277,6 +289,8 @@ if __name__ == '__main__':
     test_file_open()
     test_file_open_write()
     test_file_write()
+    test_file_read()
+    test_read_line()
     test_if_else()
     test_if_else_with_for()
     print("Alla parse-tester OK!")

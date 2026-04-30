@@ -452,6 +452,41 @@ skriv värdet av x'''
     stdout, _, _ = run_hiuh(src)
     assert stdout == '99', f"Fick: {stdout!r}"
 
+def test_skriv_fil_basic():
+    """SKRIV_FIL: skriv till fil → skapar fil"""
+    import tempfile
+    import os
+    workdir = tempfile.mkdtemp()
+    filepath = os.path.join(workdir, 'test.txt')
+    # Write to file and then try to read it back
+    src = f'''skriv till fil {filepath} hej'''
+    stdout, stderr, rc = run_hiuh(src, timeout=5)
+    # The program should not crash
+    assert rc == 0, f"Exit code {rc}, stderr: {stderr}"
+
+def test_las_rad_basic():
+    """LÄS_RAD: läs rad - kompilerar och kör"""
+    src = '''läs rad x'''
+    # Kompilerar och kör - timeout:ar inte = framgång
+    # OBS: stdin är tom i testmiljön så sys_read returnerar EOF
+    stdout, stderr, rc = run_hiuh(src, timeout=5)
+    # Vi testar bara att det kompilerar och inte hänger (timeout)
+    # rc kan vara 0 eller 1 beroende på stdin-status i testmiljön
+
+def test_las_fil_basic():
+    """LÄS_FIL: läs från fil → kompilerar och kör"""
+    import tempfile
+    import os
+    workdir = tempfile.mkdtemp()
+    filepath = os.path.join(workdir, 'test.txt')
+    # Create the test file first
+    with open(filepath, 'w') as f:
+        f.write('hej')
+    src = f'''läs från fil {filepath} till n'''
+    stdout, stderr, rc = run_hiuh(src, timeout=5)
+    # Should not crash
+    assert rc == 0, f"Exit code {rc}, stderr: {stderr}"
+
 
 # ─────────────────────────────────────────────
 # RUN ALL

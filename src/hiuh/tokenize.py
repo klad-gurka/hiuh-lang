@@ -230,6 +230,29 @@ def tokenize(src):
                     i += 4
                     continue
             
+            # Handle "läs från fil X till Y" → FILE_READ X Y
+            if word == 'läs' and i + 4 < len(words):
+                if words[i+1].lower() == 'från' and words[i+2].lower() == 'fil':
+                    filepath = words[i+3]
+                    if words[i+4].lower() == 'till':
+                        var_name = words[i+5] if i + 5 < len(words) else ''
+                        tokens.append('LÄS_FIL')
+                        tokens.append(filepath)
+                        tokens.append(var_name)
+                        last_token = 'FILE_READ'
+                        i += 6
+                        continue
+            
+            # Handle "läs rad X" → READ_LINE X
+            if word == 'läs' and i + 2 < len(words):
+                if words[i+1].lower() == 'rad':
+                    var_name = words[i+2]
+                    tokens.append('LÄS_RAD')
+                    tokens.append(var_name)
+                    last_token = 'READ_LINE'
+                    i += 3
+                    continue
+            
             # 'i' after variable-taking keywords/operators is a variable name, not IN keyword
             if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra', 'av', 'är', 'medan', 'WHILE', 'IF', 'FOR', 'SET', 'pluss', 'minus', 'gånger', 'delat', 'PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
                 tokens.append(word)  # variable name

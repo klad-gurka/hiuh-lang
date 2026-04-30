@@ -212,6 +212,19 @@ def test_file_write():
     asm = capture_asm([('SKRIV_FIL', 'resultat.txt', '')])
     assert 'sys_write' in asm or 'mov $1, %rax' in asm, f"Got: {asm}"
 
+def test_file_read():
+    """FILE_READ filepath var → sys_open + sys_read + sys_close"""
+    asm = capture_asm([('LÄS_FIL', 'data.txt', 'buf')])
+    assert 'sys_open' in asm or 'mov $2, %rax' in asm, f"Got: {asm}"
+    assert 'sys_read' in asm or 'mov $0, %rax' in asm, f"Got: {asm}"
+    assert 'sys_close' in asm or 'mov $3, %rax' in asm, f"Got: {asm}"
+
+def test_read_line():
+    """READ_LINE var → sys_read into input_buf"""
+    asm = capture_asm([('LÄS_RAD', 'namn')])
+    assert 'sys_read' in asm or 'mov $0, %rax' in asm, f"Got: {asm}"
+    assert 'input_buf' in asm, f"Got: {asm}"
+
 def test_skriv_radbryt():
     """SKRIV ('RADBRYT',) → newline via msg_nl"""
     asm = capture_asm([('SKRIV', ('RADBRYT',))])
@@ -304,6 +317,8 @@ if __name__ == '__main__':
     test_alloc_reg_same_var()
     test_file_open()
     test_file_write()
+    test_file_read()
+    test_read_line()
     test_skriv_radbryt()
     test_skriv_variabel()
     test_skriv_heltal()

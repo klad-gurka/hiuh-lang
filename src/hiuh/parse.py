@@ -198,6 +198,17 @@ def parse_block(lines, base_indent, out):
             data = tokens[2] if len(tokens) > 2 else ''
             out.append(('SKRIV_FIL', filename, data))
             i += 1
+        elif tok == 'LÄS_FIL':
+            # läs från fil X till Y → FILE_READ X Y
+            filepath = tokens[1] if len(tokens) > 1 else ''
+            var_name = tokens[2] if len(tokens) > 2 else ''
+            out.append(('LÄS_FIL', filepath, var_name))
+            i += 1
+        elif tok == 'LÄS_RAD':
+            # läs rad X → READ_LINE X
+            var_name = tokens[1] if len(tokens) > 1 else ''
+            out.append(('LÄS_RAD', var_name))
+            i += 1
         else:
             # Unknown token, skip
             i += 1
@@ -604,6 +615,15 @@ def parse_single_line(lines, base_indent, body):
         filename = tokens[1] if len(tokens) > 1 else ''
         data = tokens[2] if len(tokens) > 2 else ''
         body.append(('SKRIV_FIL', filename, data))
+        return None, 1
+    elif tok == 'LÄS_FIL':
+        filepath = tokens[1] if len(tokens) > 1 else ''
+        var_name = tokens[2] if len(tokens) > 2 else ''
+        body.append(('LÄS_FIL', filepath, var_name))
+        return None, 1
+    elif tok == 'LÄS_RAD':
+        var_name = tokens[1] if len(tokens) > 1 else ''
+        body.append(('LÄS_RAD', var_name))
         return None, 1
 
     return None, 1

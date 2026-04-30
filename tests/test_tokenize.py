@@ -94,6 +94,18 @@ def test_file_write():
     indent, tokens = lines[0]
     assert tokens == ['SKRIV_FIL', 'resultat.txt'], f"Got {tokens}"
 
+def test_file_read():
+    """läs från fil X till Y → FILE_READ"""
+    lines = list(tokenize("läs från fil data.txt till buf"))
+    indent, tokens = lines[0]
+    assert tokens == ['LÄS_FIL', 'data.txt', 'buf'], f"Got {tokens}"
+
+def test_read_line():
+    """läs rad X → READ_LINE"""
+    lines = list(tokenize("läs rad namn"))
+    indent, tokens = lines[0]
+    assert tokens == ['LÄS_RAD', 'namn'], f"Got {tokens}"
+
 def test_keyword_as_variable_after_set():
     """Keywords like 'tecken' should work as variable names after 'sätt'"""
     lines = list(tokenize("sätt tecken till 0"))
@@ -118,4 +130,6 @@ if __name__ == '__main__':
     test_file_open_read()
     test_file_open_write()
     test_file_write()
+    test_file_read()
+    test_read_line()
     print("Alla tokenizer-tester OK!")

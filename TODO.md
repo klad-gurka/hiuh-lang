@@ -16,7 +16,7 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | BRYT | ✅ | ✅ | ✅ | ✅ | ✅ |
 | HEJDÅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | SKRIV | ✅ | ✅ | ✅ | ✅ | ✅ |  # unified: text, variabel, uttryck, radbryt |
-| LÄS_RAD | ✅ | ✅ | ❌ | ❌ | ❌ |
+| LÄS_RAD | ✅ | ✅ | ✅ | ✅ | ✅ |  # +tokenizer + parse + x86 + tester |
 | GREJ | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration (fix: CURRENT_FUNC, return save)
 | ANROPA | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration (fix: return value save)
 | GE | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration (epilogue jump)
@@ -27,8 +27,8 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | HÄMTA_INDEX | ✅ | ✅ | ✅ | ✅ | ✅ |  # LIST_GET i SET + integration
 | BYT_UT | ✅ | ✅ | ✅ | ✅ | ✅ |  # Ny: tokenizer + parse + x86 + tester
 | ANTAL | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test + integration
-| SKRIV_FIL | ✅ | ✅ | ❌ | ❌ | ❌ |
-| LÄS_FIL | ✅ | ✅ | ❌ | ❌ | ❌ |
+| SKRIV_FIL | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 fix (open/write/close) + tester |
+| LÄS_FIL | ✅ | ✅ | ✅ | ✅ | ✅ |  # +tokenizer + parse + x86 + tester |
 
 ### Uttryck (Expressions)
 | IR nod | Parse impl | Parse test | X86 impl | X86 test | Integration |

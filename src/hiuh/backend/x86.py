@@ -94,7 +94,7 @@ def compile_ir(ir, target='linux'):
     emit(".data")
     for i, s in enumerate(STRINGS):
         escaped = s.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n')
-        emit(f'msg_{i}: .ascii "{escaped}\\n\\0"')
+        emit(f'msg_{i}: .asciz "{escaped}"')
     emit("msg_nl: .ascii \"\\n\\0\"")
     emit("num_buf: .skip 8")
     emit("input_buf: .skip 256")
@@ -104,6 +104,7 @@ def compile_ir(ir, target='linux'):
         emit(f"list_{list_name}: .skip {size}")
     emit(".bss")
     emit(".align 8")
+    emit("file_buf: .skip 4096")
     emit("stack: .skip 4096")
 
 def compile_func_def(stmt, target):
@@ -547,11 +548,11 @@ def compile_stmt(stmt, target):
                     emit(f"    syscall")
                     emit(f".Ld{lbl_d}:")
                 elif expr[0] == 'TEXT':
-                    text = expr[1]
+                    text = expr[1] + '\n'  # Add newline to text
                     STRINGS.append(text)
                     idx = len(STRINGS) - 1
                     emit(f"    lea msg_{idx}(%rip), %rsi")
-                    emit(f"    mov ${len(text)+1}, %rdx")
+                    emit(f"    mov ${len(text)}, %rdx")
                     emit(f"    mov $1, %edi")
                     emit(f"    mov $1, %eax")
                     emit(f"    syscall")
@@ -860,11 +861,10 @@ def compile_stmt(stmt, target):
     elif op == 'ÖPPNA_FIL':
         filename, mode = stmt[1], stmt[2]
         emit(f"    # FILE_OPEN {filename} mode={mode}")
-        # Create filename string label
-        fname_label = new_label()
-        STRINGS.append(filename)  # Use STRINGS for filename too
+        # Create filename string label (uses msg_ labels)
+        STRINGS.append(filename)
         fname_idx = len(STRINGS) - 1
-        emit(f"    lea fname_{fname_idx}(%rip), %rdi")
+        emit(f"    lea msg_{fname_idx}(%rip), %rdi")
         if mode == 'r':
             emit(f"    xor %rsi, %rsi  # O_RDONLY = 0")
         else:
@@ -877,18 +877,83 @@ def compile_stmt(stmt, target):
     elif op == 'SKRIV_FIL':
         filename, data = stmt[1], stmt[2]
         emit(f"    # FILE_WRITE {filename} data={data}")
-        # For now, write a hardcoded string or variable value
-        # This is a simplified implementation - file must be opened first
-        if data and not data.isdigit():
-            data_reg = alloc_reg(data)
-            emit(f"    mov {data_reg}, %rsi")
-        else:
-            data_val = int(data) if data and data.isdigit() else 0
-            emit(f"    mov ${data_val}, %rsi")
-        emit(f"    mov $1, %rdi  # stdout (TODO: use actual fd)")
-        emit(f"    mov $10, %rdx  # count")
+        # Add filename to data section
+        STRINGS.append(filename)
+        fname_idx = len(STRINGS) - 1
+        # Open file: syscall open(path, O_WRONLY|O_CREAT|O_TRUNC, 0644)
+        emit(f"    lea msg_{fname_idx}(%rip), %rdi")
+        emit(f"    mov $0x241, %rsi  # O_WRONLY|O_CREAT|O_TRUNC")
+        emit(f"    mov $0644, %rdx")
+        emit(f"    mov $2, %rax  # sys_open")
+        emit(f"    syscall")
+        emit(f"    mov %rax, %r15  # save fd in callee-saved register")
+        # Write data string
+        STRINGS.append(data)
+        data_idx = len(STRINGS) - 1
+        emit(f"    lea msg_{data_idx}(%rip), %rsi  # data string")
+        emit(f"    mov ${len(data)}, %rdx  # length")
+        emit(f"    mov %r15, %rdi  # fd")
         emit(f"    mov $1, %rax  # sys_write")
         emit(f"    syscall")
+        # Close file
+        emit(f"    mov %r15, %rdi")
+        emit(f"    mov $3, %rax  # sys_close")
+        emit(f"    syscall")
+
+    elif op == 'LÄS_FIL':
+        filepath, var_name = stmt[1], stmt[2]
+        emit(f"    # FILE_READ {filepath} -> {var_name}")
+        # Add filepath to data section
+        STRINGS.append(filepath)
+        fname_idx = len(STRINGS) - 1
+        # Open file: syscall open(path, O_RDONLY, 0)
+        emit(f"    lea msg_{fname_idx}(%rip), %rdi")
+        emit(f"    xor %rsi, %rsi  # O_RDONLY = 0")
+        emit(f"    xor %rdx, %rdx  # mode = 0")
+        emit(f"    mov $2, %rax  # sys_open")
+        emit(f"    syscall")
+        emit(f"    mov %rax, %r15  # save fd in callee-saved register")
+        # Read file into buffer
+        emit(f"    lea file_buf(%rip), %rsi")
+        emit(f"    mov $4096, %rdx  # max bytes")
+        emit(f"    mov %r15, %rdi  # fd")
+        emit(f"    mov $0, %rax  # sys_read")
+        emit(f"    syscall")
+        # Store bytes read in variable
+        reg = alloc_reg(var_name)
+        emit(f"    mov %rax, {reg}  # store byte count in {var_name}")
+        # Close file
+        emit(f"    mov %r15, %rdi")
+        emit(f"    mov $3, %rax  # sys_close")
+        emit(f"    syscall")
+
+    elif op == 'LÄS_RAD':
+        var_name = stmt[1]
+        lbl_s = new_label()
+        emit(f"    # READ_LINE {var_name}")
+        emit(f"    lea input_buf(%rip), %rsi")
+        emit(f"    mov $256, %rdx")
+        emit(f"    mov $0, %edi  # stdin")
+        emit(f"    mov $0, %rax  # sys_read")
+        emit(f"    syscall")
+        emit(f"    # Null-terminate at newline or end")
+        emit(f"    mov $0, %rcx  # index = 0")
+        emit(f"    mov $10, %r8b   # newline = 10 (byte)")
+        emit(f".Ls{lbl_s}_scan_newline:")
+        emit(f"    cmp $255, %rcx  # max 255")
+        emit(f"    jge .Ls{lbl_s}_scan_end")
+        emit(f"    movb (%rsi,%rcx), %al")
+        emit(f"    cmp $0, %al  # null terminator?")
+        emit(f"    je .Ls{lbl_s}_scan_end")
+        emit(f"    cmp %r8b, %al  # newline?")
+        emit(f"    je .Ls{lbl_s}_scan_end")
+        emit(f"    inc %rcx")
+        emit(f"    jmp .Ls{lbl_s}_scan_newline")
+        emit(f".Ls{lbl_s}_scan_end:")
+        emit(f"    movb $0, (%rsi,%rcx)  # null terminate")
+        emit(f"    mov %rsi, %rax  # buffer address")
+        reg = alloc_reg(var_name)
+        emit(f"    mov %rax, {reg}  # store buffer address in {var_name}")
 
 def compile_stream():
     """Read IR (as repr lines) from stdin, output x86 assembly"""

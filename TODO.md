@@ -15,6 +15,7 @@ tests/
   test_tokenize.py
   test_parse.py
   test_backend_x86.py
+  test_integration.py  ← faktisk körning av HIUH-program
 ```
 
 ## IR-design
@@ -28,54 +29,51 @@ tests/
 ### Operatorer (Jämförelse)
 
 | IR operator     | Source keywords               | Betydelse |
-|-----------------|-------------------------------|-----------|
-| `mindre`        | "är mindre än"                | a < b     |
-| `mindreLikaMed` | "är mindre än eller lika med" | a <= b    |
-| `större`        | "är större än"                | a > b     |
-| `störreLikaMed` | "är större än eller lika med" | a >= b    |
-| `likaMed`       | "är lika med"                 | a == b    |
-| `inteLikaMed`   | "är inte lika med"            | a != b    |
+|----------------|------------------------------|-----------|
+| `mindre`       | "är mindre än"               | a < b     |
+| `mindreLikaMed`| "är mindre än eller lika med"| a <= b    |
+| `större`        | "är större än"               | a > b     |
+| `störreLikaMed`| "är större än eller lika med"| a >= b    |
+| `likaMed`       | "är lika med"                | a == b    |
+| `inteLikaMed`  | "är inte lika med"           | a != b    |
 
 ### IR-nod dokumentation
 
 #### Satser (Statements)
 
-| Språk-konstruktion                 | IR nod                                | IR-exempel                                                                                 | X86 | WASM |
-|------------------------------------|---------------------------------------|--------------------------------------------------------------------------------------------|-----|------|
-| `sätt x till 5`                    | `('SÄTT', name, expr)`                | `('SÄTT', 'x', ('HELTAL', 5))`                                                             | ❌   | ❌    |
-| `för x från 0 till 10`             | `('FÖR', var, start, end, body)`      | `('FÖR', 'x', 0, 10, [body])`                                                              | ❌   | ❌    |
-| `medan x är mindre än 5`           | `('MEDAN', expr, body)`               | `('MEDAN', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [body])`                          | ✅   | ❌    |
-| `om x är mindre än 5`              | `('OM', expr, true_body, false_body)` | `('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [...], [...])`                       | ✅   | ❌    |
-| `bryt`                             | `('BRYT',)`                           | `('BRYT',)`                                                                                | ❌   | ❌    |
-| `hej då` / `jag gå nu`             | `('HEJDÅ',)`                          | `('HEJDÅ',)`                                                                               | ❌   | ❌    |
-| `skriv hello`                      | `('SKRIV', expr)`                     | `('SKRIV', ('TEXT', 'hello'))`                                                             | ❌   | ❌    |
-| `skriv radbryt`                    | `('SKRIV', expr)`                     | `('SKRIV', ('RADBRYT',))`                                                                  | ❌   | ❌    |
-| `skriv värdet av x`                | `('SKRIV_VÄRDE', name)`               | `('SKRIV', ('VARIABEL', 'x'))`                                                             | ❌   | ❌    |
-| `läs rad till x`                   | `('LÄS_RAD', name)`                   | `('LÄS_RAD', 'x')`                                                                         | ❌   | ❌    |
-| `sätt funk till grej med a, b`     | `('GREJ', params, body)`              | `('SÄTT', 'funk', ('GREJ', ['a', 'b'], [body])`                                            | ❌   | ❌    |
-| `sätt a till funk med x, y`        | `('ANROPA', var, args)`               | `('SÄTT', 'x', ('ANROPA', 'funk', [('VARIABEL', 'x'), ('VARIABEL', 'y')])`                 | ❌   | ❌    |
-| `ge x`                             | `('GE', expr)`                        | `('GE', ('VARIABEL', 'x'))`                                                                | ❌   | ❌    |
-| `sätt a till ny lista`             | `('NY_LISTA', args)`                  | `('SÄTT', ('VARIABEL', 'a'), ('NY_LISTA', []))`                                            | ❌   | ❌    |
-| `sätt a till ny lista med 1, 2, 3` | `('NY_LISTA', args)`                  | `('SÄTT', ('VARIABEL', 'a'), ('NY_LISTA', [('HELTAL', 1), ('HELTAL', 2), ('HELTAL', 3)]))` | ❌   | ❌    |
-| `lägg till x i a`                  | `('LÄGG_TILL', expr, var)`            | `('LÄGG_TILL', ('VARIABEL', x'), 'a')`                                                     | ❌   | ❌    |
-| `ta bort apa från a`               | `('TA_BORT', expr, var)`              | `('TA_BORT', ('TEXT', 'apa'), 'a')`                                                        | ❌   | ❌    |
-| `ta bort element 3 från a`         | `('LIST_REMOVE_INDEX', var, index)`   | `('LIST_REMOVE_INDEX', 'a', 3)`                                                             | ✅   | ❌    |
-| `sätt x till element 3 från a`     | `('HÄMTA_INDEX', index, var)`         | `('SÄTT', 'x', ('HÄMTA_INDEX', 3, 'a'))`                                                   | ❌   | ❌    |
-| `byt ut element 3 från a till b`   | `('BYT_UT', index, var, expr)`        | `('BYT_UT', 3, 'a', ('VARIABEL', 'b'))`                                                    | ❌   | ❌    |
-| `antal element i lst`              | `('ANTAL', var)`                      | `('ANTAL', 'lst')`                                                                         | ❌   | ❌    |
-| `skriv buf till hej.txt`           | `('SKRIV_FIL', text, path)`           | `('SKRIV_VAR', 'buf', 'hej.txt')`                                                          | ❌   | ❌    |
-| `läs från hej.txt till buf`        | `('LÄS_FIL', path, var)`              | `('LÄS', ('TEXT', 'hej.txt'), 'buf'))`                                                     | ❌   | ❌    |
-
-TODO: uppdatera tabell ovan med korrekt x86-status
+| Språk-konstruktion              | IR nod                          | Parse impl | Parse test | X86 impl | X86 test | Integration |
+|--------------------------------|---------------------------------|:---------:|:---------:|:--------:|:--------:|:-----------:|
+| `sätt x till 5`                | `('SÄTT', name, expr)`          | ✅        | ✅        | ✅       | ✅       | ❌          |
+| `för x från 0 till 10`          | `('FÖR', var, start, end, body)`| ✅        | ✅        | ❌       | ❌       | ❌          |
+| `medan x är mindre än 5`       | `('MEDAN', expr, body)`          | ✅        | ✅        | ✅       | ✅       | ❌          |
+| `om x är mindre än 5`          | `('OM', expr, true, false)`     | ✅        | ✅        | ✅       | ✅       | ❌          |
+| `bryt`                         | `('BRYT',)`                     | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `hej då` / `jag gå nu`         | `('HEJDÅ',)`                    | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `skriv hello`                  | `('SKRIV', expr)`               | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `skriv värdet av x`            | `('SKRIV_VÄRDE', name)`         | ✅        | ✅        | ✅       | ❌       | ❌          |
+| `läs rad till x`               | `('LÄS_RAD', name)`             | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `sätt funk till grej med a, b` | `('GREJ', params, body)`        | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `sätt a till funk med x, y`     | `('ANROPA', var, args)`         | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `ge x`                         | `('GE', expr)`                  | ✅        | ❌        | ❌       | ❌       | ❌          |
+| `sätt a till ny lista`         | `('NY_LISTA', args)`            | ✅        | ✅        | ✅       | ❌       | ❌          |
+| `sätt a till lista av 1, 2, 3` | `('LIST_INIT', name, items)`    | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `lägg till x i a`              | `('LÄGG_TILL', item, var)`     | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `ta bort apa från a`           | `('TA_BORT', val, var)`        | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `ta bort element 3 från a`     | `('TA_BORT_INDEX', var, idx)`   | ✅        | ❌        | ✅       | ❌       | ❌          |
+| `sätt x till element 3 från a`  | `('HÄMTA_INDEX', var, idx)`    | ❌        | ❌        | ❌       | ❌       | ❌          |
+| `byt ut element 3 från a till b`| `('BYT_UT', var, idx, expr)`   | ❌        | ❌        | ❌       | ❌       | ❌          |
+| `antal element i lst`          | `('ANTAL', var)`                | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `skriv buf till hej.txt`       | `('SKRIV_FIL', path, buf)`     | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `läs från hej.txt till buf`    | `('LÄS_FIL', path, var)`        | ✅        | ✅        | ❌       | ❌       | ❌          |
 
 #### Uttryck (Expressions)
 
-| IR nod             | Språk-konstruktion | IR-exempel           | X86 | WASM |
-|--------------------|--------------------|----------------------|-----|------|
-| `('PLUSS', a, b)`  | `a pluss b`        | `('PLUSS', 'x', 1)`  | ✅ | ❌ |
-| `('MINUS', a, b)`  | `a minus b`        | `('MINUS', 'x', 1)`  | ✅ | ❌ |
-| `('DELA', a, b)`   | `a delat b`        | `('DELA', 'x', 2)`   | ✅ | ❌ |
-| `('GÅNGER', a, b)` | `a gånger b`       | `('GÅNGER', 'x', 2)` | ✅ | ❌ |
+| IR nod                      | Språk-konstruktion  | IR-exempel                | Parse impl | Parse test | X86 impl | X86 test | Integration |
+|-----------------------------|---------------------|--------------------------|:----------:|:----------:|:--------:|:--------:|:-----------:|
+| `('PLUSS', a, b)`           | `a pluss b`         | `('PLUSS', 'x', 1)`      | ✅         | ✅         | ✅       | ✅       | ❌          |
+| `('MINUS', a, b)`           | `a minus b`         | `('MINUS', 'x', 1)`      | ✅         | ✅         | ✅       | ✅       | ❌          |
+| `('DELA', a, b)`            | `a delat b`         | `('DELA', 'x', 2)`       | ✅         | ✅         | ✅       | ✅       | ❌          |
+| `('GÅNGER', a, b)`          | `a gånger b`        | `('GÅNGER', 'x', 2)`     | ✅         | ✅         | ✅       | ✅       | ❌          |
 
 ## Nästa steg
 
@@ -84,14 +82,19 @@ TODO: uppdatera tabell ovan med korrekt x86-status
 2. [x] **Uppdatera IR** - använd svenska operatorer (mindre, likaMed, etc)
 3. [x] **Uppdatera x86 backend** - generera kod för OM (IF) med true/false body
 4. [x] **Uppdatera tokenizer** - mappar svenska keywords → IR operatorer
+5. [x] **Integrationstester** - test_integration.py med faktisk körning
 
 ### Medel prioritet
-5. [x] **Fixa UT expression i x86 backend** (PLUS/MINUS/TIMES/DIV i SKRIV funkar nu)
-6. [x] **WHILE** - fungerar med samma struktur som IF (villkor som tuple `('x', 'mindre', '5')`)
+6. [x] **Fixa UT expression i x86 backend** (PLUSS/MINUS/GÅNGER/DELA i SKRIV funkar nu)
+7. [x] **WHILE** - fungerar med samma struktur som IF
+8. [ ] **FOR** - implementera x86 backend för för-loop
+9. [ ] **SKRIV text** - implementera x86 backend för textutskrift
+10. [ ] **Fixa parse-tester** för TA_BORT_INDEX och GE
 
 ### Låg prioritet
-7. [ ] WASM backend
-8. [ ] Självkompilering
+11. [ ] Självkompilering
+12. [ ] HÄMTA_INDEX - implementera parser + x86
+13. [ ] BYT_UT - implementera parser + x86
 
 ## Kända buggar/problem
 
@@ -100,15 +103,18 @@ TODO: uppdatera tabell ovan med korrekt x86-status
 ## Exempel: hur IR ser ut (ny design)
 
 ```python
+# Sätt med uttryck
+('SÄTT', 'n', ('PLUSS', 'n', 1))
+
 # Om-sats med else
-('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', '5')),
+('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)),
     [('SKRIV', 'hej')],
     [('SKRIV', 'annat')])
 
-# För-loop med body
-('FÖR', 'i', '0', '10',
-    [('SKRIV', 'i')])
+# Medansloop
+('MEDAN', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)),
+    [('SET', 'x', ('PLUSS', 'x', 1))])
 
-# Sätt med uttryck
-('SÄTT', 'n', ('PLUS', 'n', '1'))
+# För-loop (ej implementerad i x86 än)
+('FÖR', 'i', 0, 10, [('SKRIV', ('VARIABEL', 'i'))])
 ```

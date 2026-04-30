@@ -489,6 +489,49 @@ def test_las_fil_basic():
 
 
 # ─────────────────────────────────────────────
+# GREJ / GE / ANROPA
+# ─────────────────────────────────────────────
+
+def test_grej_ge_anropa_basic():
+    """GREJ + GE + ANROPA: function that returns x*2, called with anropa"""
+    src = '''grej dubbla x
+  sätt resultat till x gånger 2
+  ge resultat
+slut
+
+sätt a till 5
+sätt b till anropa dubbla med a
+skriv värdet av b'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '10', f"Fick: {stdout!r}"
+
+
+def test_grej_ge_literal():
+    """GE with literal value"""
+    src = '''grej hämta_sju till grej
+  ge 7
+slut
+
+sätt x till anropa hämta_sju till grej
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '7', f"Fick: {stdout!r}"
+
+
+def test_grej_ge_expression():
+    """GE with complex expression: x * 2"""
+    src = '''grej dubblaTill x
+  ge x gånger 2
+slut
+
+sätt a till 7
+sätt b till anropa dubblaTill med a
+skriv värdet av b'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '14', f"Fick: {stdout!r}"
+
+
+# ─────────────────────────────────────────────
 # RUN ALL
 # ─────────────────────────────────────────────
 
@@ -522,6 +565,9 @@ if __name__ == '__main__':
         test_skriv_multiple,
         test_skriv_nl,
         test_finishes_within_timeout,
+        test_grej_ge_anropa_basic,
+        test_grej_ge_literal,
+        test_grej_ge_expression,
     ]
 
     failed = []

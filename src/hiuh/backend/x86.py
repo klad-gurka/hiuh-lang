@@ -462,6 +462,56 @@ def compile_stmt(stmt, target):
         elif isinstance(val, tuple) and val[0] == 'ANROPA':
             _, func_name, args = val
             compile_call(func_name, args, '%rax')
+        elif isinstance(val, tuple) and val[0] in ('PLUSS', '+'):
+            _, a, b = val
+            if isinstance(a, int):
+                emit(f"    mov ${a}, %rax")
+            else:
+                reg_a = alloc_reg(a)
+                emit(f"    mov {reg_a}, %rax")
+            if isinstance(b, int):
+                emit(f"    add ${b}, %rax")
+            else:
+                reg_b = alloc_reg(b)
+                emit(f"    add {reg_b}, %rax")
+        elif isinstance(val, tuple) and val[0] in ('MINUS', '-'):
+            _, a, b = val
+            if isinstance(a, int):
+                emit(f"    mov ${a}, %rax")
+            else:
+                reg_a = alloc_reg(a)
+                emit(f"    mov {reg_a}, %rax")
+            if isinstance(b, int):
+                emit(f"    sub ${b}, %rax")
+            else:
+                reg_b = alloc_reg(b)
+                emit(f"    sub {reg_b}, %rax")
+        elif isinstance(val, tuple) and val[0] in ('GÅNGER', '*'):
+            _, a, b = val
+            if isinstance(a, int):
+                emit(f"    mov ${a}, %rax")
+            else:
+                reg_a = alloc_reg(a)
+                emit(f"    mov {reg_a}, %rax")
+            if isinstance(b, int):
+                emit(f"    imul ${b}, %rax")
+            else:
+                reg_b = alloc_reg(b)
+                emit(f"    imul {reg_b}, %rax")
+        elif isinstance(val, tuple) and val[0] in ('DELA', '/'):
+            _, a, b = val
+            if isinstance(a, int):
+                emit(f"    mov ${a}, %rax")
+            else:
+                reg_a = alloc_reg(a)
+                emit(f"    mov {reg_a}, %rax")
+            emit(f"    xor %edx, %edx")
+            if isinstance(b, int):
+                emit(f"    mov ${b}, %rcx")
+            else:
+                reg_b = alloc_reg(b)
+                emit(f"    mov {reg_b}, %rcx")
+            emit(f"    idiv %rcx")
         else:
             emit(f"    mov $0, %rax")
         # Jump to epilogue if in a function

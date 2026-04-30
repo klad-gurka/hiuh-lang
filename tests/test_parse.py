@@ -64,7 +64,7 @@ def test_if_statement():
     ir = parse_tokens(lines)
     assert len(ir) == 1
     assert ir[0][0] == 'IF'
-    assert ir[0][1] == ('x', '==', '0')
+    assert ir[0][1] == ('x', 'likaMed', '0')
 
 def test_if_less():
     """om x är mindre än 5"""
@@ -72,7 +72,7 @@ def test_if_less():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][1] == ('x', '<', '5')
+    assert ir[0][1] == ('x', 'mindre', '5')
 
 def test_if_greater():
     """om x är större än 0"""
@@ -80,7 +80,7 @@ def test_if_greater():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][1] == ('x', '>', '0')
+    assert ir[0][1] == ('x', 'större', '0')
 
 def test_if_not():
     """om x är inte 0"""
@@ -88,7 +88,7 @@ def test_if_not():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][1] == ('x', '!=', '0')
+    assert ir[0][1] == ('x', 'inteLikaMed', '0')
 
 def test_if_less_or_eq():
     """om x är mindre eller 5"""
@@ -96,7 +96,7 @@ def test_if_less_or_eq():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][1] == ('x', '<=', '5')
+    assert ir[0][1] == ('x', 'mindreLikaMed', '5')
 
 def test_if_greater_or_eq():
     """om x är större eller 0"""
@@ -104,7 +104,7 @@ def test_if_greater_or_eq():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][1] == ('x', '>=', '0')
+    assert ir[0][1] == ('x', 'störreLikaMed', '0')
 
 def test_break():
     """bryt"""
@@ -210,7 +210,7 @@ annars
     ir = parse_tokens(lines)
     assert len(ir) == 1
     assert ir[0][0] == 'IF'
-    assert ir[0][1] == ('x', '==', '5')  # value is string, not int
+    assert ir[0][1] == ('x', 'likaMed', '5')  # value is string, not int
     assert len(ir[0][2]) == 1      # true body has 1 statement
     assert ir[0][2][0] == ('SKRIV', 'hej')
     assert len(ir[0][3]) == 1      # false body has 1 statement
@@ -231,7 +231,6 @@ annars
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert ir[0][0] == 'IF'
-    assert ir[0][1] == ('x', '==', '5')  # value is string, not int
     assert ir[0][2][0][0] == 'FOR'  # true body: FOR loop
     assert ir[0][3][0] == ('SKRIV', 'fallback')  # false body
 

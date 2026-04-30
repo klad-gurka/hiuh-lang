@@ -295,22 +295,22 @@ def compile_stmt(stmt, target):
             val_int = int(val)
         except (ValueError, TypeError):
             val_int = 0
-        if op == '==':
+        if op == 'likaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jne .L{skip_label}")
-        elif op == '!=':
+        elif op == 'inteLikaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    je .L{skip_label}")
-        elif op == '<':
+        elif op == 'mindre':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jge .L{skip_label}")
-        elif op == '>':
+        elif op == 'större':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jle .L{skip_label}")
-        elif op == '<=':
+        elif op == 'mindreLikaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jg .L{skip_label}")
-        elif op == '>=':
+        elif op == 'störreLikaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jl .L{skip_label}")
         for s in body:
@@ -335,22 +335,22 @@ def compile_stmt(stmt, target):
             val_int = int(val)
         except (ValueError, TypeError):
             val_int = 0
-        if op == '==':
+        if op == 'likaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jne .L{end_lbl}")
-        elif op == '!=':
+        elif op == 'inteLikaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    je .L{end_lbl}")
-        elif op == '<':
+        elif op == 'mindre':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jge .L{end_lbl}")
-        elif op == '>':
+        elif op == 'större':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jle .L{end_lbl}")
-        elif op == '<=':
+        elif op == 'mindreLikaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jg .L{end_lbl}")
-        elif op == '>=':
+        elif op == 'störreLikaMed':
             emit(f"    cmp ${val_int}, {reg}")
             emit(f"    jl .L{end_lbl}")
         for s in body:

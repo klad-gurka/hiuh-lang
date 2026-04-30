@@ -81,9 +81,9 @@ TODO: uppdatera tabell ovan med korrekt x86-status
 
 ### Hög prioritet
 1. [x] **IF_ELSE** - parse.py stödjer OM med true_body och false_body
-2. [ ] **Uppdatera IR** - använd svenska operatorer (mindre, likaMed, etc)
-3. [ ] **Uppdatera x86 backend** - generera kod för OM (IF) med true/false body
-4. [ ] **Uppdatera tokenizer** - mappar svenska keywords → IR operatorer
+2. [x] **Uppdatera IR** - använd svenska operatorer (mindre, likaMed, etc)
+3. [x] **Uppdatera x86 backend** - generera kod för OM (IF) med true/false body
+4. [x] **Uppdatera tokenizer** - mappar svenska keywords → IR operatorer
 
 ### Medel prioritet
 5. [ ] **Fixa UT expression i x86 backend** (PLUS ok, MINUS/GENOM saknas)

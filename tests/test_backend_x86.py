@@ -59,19 +59,19 @@ def test_for_with_body():
     assert 'mov $5' in asm
 
 def test_if_eq():
-    """IF (x, '==', 0) → cmp + je"""
-    asm = capture_asm([('IF', ('x', '==', '0'), [('SET', 'y', 1)])])
+    """IF (x, 'likaMed', 0) → cmp + jne"""
+    asm = capture_asm([('IF', ('x', 'likaMed', '0'), [('SET', 'y', 1)])])
     assert 'cmp $0' in asm
     assert 'jne' in asm  # jump if NOT equal
 
 def test_if_less():
-    """IF (x, '<', 5)"""
-    asm = capture_asm([('IF', ('x', '<', 5), [])])
+    """IF (x, 'mindre', 5)"""
+    asm = capture_asm([('IF', ('x', 'mindre', 5), [])])
     assert 'cmp $5' in asm
 
 def test_if_greater():
-    """IF (x, '>', 0)"""
-    asm = capture_asm([('IF', ('x', '>', 0), [])])
+    """IF (x, 'större', 0)"""
+    asm = capture_asm([('IF', ('x', 'större', 0), [])])
     assert 'cmp $0' in asm
 
 def test_exit():
@@ -119,7 +119,7 @@ def test_nested_if_in_for():
     """IF inside FOR"""
     asm = capture_asm([
         ('FOR', 'i', 0, 5, [
-            ('IF', ('i', '==', 3), [('EXIT', 0)])
+            ('IF', ('i', 'likaMed', 3), [('EXIT', 0)])
         ])
     ])
     # FOR generates loop with labels
@@ -146,20 +146,20 @@ def test_alloc_reg_same_var():
 
 
 def test_if_not_eq():
-    """IF (x, '!=', 0)"""
-    asm = capture_asm([('IF', ('x', '!=', 0), [])])
+    """IF (x, 'inteLikaMed', 0)"""
+    asm = capture_asm([('IF', ('x', 'inteLikaMed', 0), [])])
     assert 'cmp $0' in asm
     assert 'je' in asm  # jump if equal (condition failed)
 
 def test_if_less_or_eq():
-    """IF (x, '<=', 5)"""
-    asm = capture_asm([('IF', ('x', '<=', 5), [])])
+    """IF (x, 'mindreLikaMed', 5)"""
+    asm = capture_asm([('IF', ('x', 'mindreLikaMed', 5), [])])
     assert 'cmp $5' in asm
     assert 'jg' in asm  # jump if greater → exit condition if NOT <=
 
 def test_if_greater_or_eq():
-    """IF (x, '>=', 0)"""
-    asm = capture_asm([('IF', ('x', '>=', 0), [])])
+    """IF (x, 'störreLikaMed', 0)"""
+    asm = capture_asm([('IF', ('x', 'störreLikaMed', 0), [])])
     assert 'cmp $0' in asm
     assert 'jl' in asm  # jump if less → exit condition if NOT >=
 

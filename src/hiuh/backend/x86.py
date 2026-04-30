@@ -215,7 +215,7 @@ def compile_stmt(stmt, target):
         
         if isinstance(val, int):
             emit(f"    mov ${val}, {reg}")
-        elif isinstance(val, tuple) and val[0] == '+':
+        elif isinstance(val, tuple) and val[0] in ('+', 'PLUSS'):
             _, a, b = val
             # Load left operand (a) into its register
             if isinstance(a, int):
@@ -231,7 +231,7 @@ def compile_stmt(stmt, target):
             except (ValueError, TypeError):
                 reg_b = alloc_reg(b)
                 emit(f"    add {reg_b}, {reg}")
-        elif isinstance(val, tuple) and val[0] == '-':
+        elif isinstance(val, tuple) and val[0] in ('-', 'MINUS'):
             _, a, b = val
             if isinstance(a, int):
                 reg_a = alloc_reg(a)
@@ -245,7 +245,7 @@ def compile_stmt(stmt, target):
             except (ValueError, TypeError):
                 reg_b = alloc_reg(b)
                 emit(f"    sub {reg_b}, {reg}")
-        elif isinstance(val, tuple) and val[0] == '*':
+        elif isinstance(val, tuple) and val[0] in ('*', 'GÅNGER'):
             _, a, b = val
             if isinstance(a, int):
                 reg_a = alloc_reg(a)
@@ -260,7 +260,7 @@ def compile_stmt(stmt, target):
                 reg_b = alloc_reg(b)
                 emit(f"    imul {reg_b}, %rax")
             emit(f"    mov %rax, {reg}")
-        elif isinstance(val, tuple) and val[0] == '/':
+        elif isinstance(val, tuple) and val[0] in ('/', 'DELA'):
             _, a, b = val
             if isinstance(a, int):
                 reg_a = alloc_reg(a)

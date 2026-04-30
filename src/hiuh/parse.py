@@ -55,6 +55,20 @@ def parse_skriv_expr(tokens):
     if len(tokens) >= 3 and tokens[1].lower() in ('pluss', 'minus', 'gånger', 'dela'):
         return parse_value(tokens)
     
+    # Check for TEXT keyword: text "string" → ('TEXT', 'string')
+    # Also handle TEXT followed by a string literal as first token
+    if token.upper() == 'TEXT' and len(tokens) >= 2:
+        text_val = tokens[1]
+        if text_val.startswith('"'):
+            # Handle multi-token string: "hello world" → tokens: ['"hello', 'world"']
+            if not text_val.endswith('"') and len(tokens) >= 3:
+                # Concatenate remaining tokens to form complete string
+                text_val = text_val + ' ' + ' '.join(tokens[2:])
+                # Remove surrounding quotes
+                return ('TEXT', text_val[1:-1])
+            return ('TEXT', text_val[1:-1])
+        return ('TEXT', text_val)
+    
     # Single token
     if len(tokens) == 1:
         # Number?
@@ -258,7 +272,7 @@ def parse_value(tokens):
         list_name = tokens[1]
         return ('ANTAL', list_name)
     # Check for TEXT keyword: text "string" → ('TEXT', 'string')
-    if tok == 'TEXT' and len(tokens) >= 2:
+    if tok.upper() == 'TEXT' and len(tokens) >= 2:
         text_val = tokens[1]
         if text_val.startswith('"'):
             return ('TEXT', text_val[1:-1])

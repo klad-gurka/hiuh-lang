@@ -1,0 +1,6 @@
+grej hämta_hälsning till grej
+  ge text "hej"
+slut
+
+sätt msg till anropa hämta_hälsning till grej
+skriv msg

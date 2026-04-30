@@ -17,10 +17,12 @@ def run_hiuh(src, timeout=5):
         f.write(src)
     result = subprocess.run(
         [RUN_SCRIPT, hiuh_file, str(timeout)],
-        capture_output=True, text=True, timeout=timeout + 10,
+        capture_output=True, timeout=timeout + 10,
         cwd=os.path.dirname(RUN_SCRIPT)
     )
-    return result.stdout.strip(), result.stderr.strip(), result.returncode
+    stdout = result.stdout.decode('utf-8', errors='replace').strip()
+    stderr = result.stderr.decode('utf-8', errors='replace').strip()
+    return stdout, stderr, result.returncode
 
 
 # ─────────────────────────────────────────────
@@ -518,6 +520,19 @@ skriv värdet av x'''
     assert stdout == '7', f"Fick: {stdout!r}"
 
 
+def test_grej_ge_text():
+    """GE with TEXT expression - return a string from a function"""
+    src = '''grej hämta_hälsning till grej
+  ge text "hej"
+slut
+
+sätt msg till anropa hämta_hälsning till grej
+skriv msg'''
+
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == 'hej', f"Fick: {stdout!r}"
+
+
 def test_grej_ge_expression():
     """GE with complex expression: x * 2"""
     src = '''grej dubblaTill x
@@ -567,6 +582,7 @@ if __name__ == '__main__':
         test_finishes_within_timeout,
         test_grej_ge_anropa_basic,
         test_grej_ge_literal,
+        test_grej_ge_text,
         test_grej_ge_expression,
     ]
 

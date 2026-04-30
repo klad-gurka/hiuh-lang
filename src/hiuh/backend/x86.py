@@ -89,7 +89,7 @@ def compile_ir(ir, target='linux'):
     # Emit function definitions AFTER main returns
     for func_def in func_defs:
         compile_func_def(func_def, target)
-    
+
     # Data section
     emit(".data")
     for i, s in enumerate(STRINGS):
@@ -156,14 +156,10 @@ def compile_call(func_name, args, target_reg):
     """Compile a function call, result goes to target_reg"""
     global REG_MAP, NEXT_REG
     
-    # Save registers that caller-saved registers we'll clobber
-    saved_regs = []
+    # Save ALL caller-saved registers (r12, r13) before the call
+    # They may contain live values even if not yet assigned to variables
     for r in ['%r12', '%r13']:
-        for var, reg in REG_MAP.items():
-            if reg == r:
-                emit(f"    push {r}   # save caller reg {r} for {var}")
-                saved_regs.append(r)
-                break
+        emit(f"    push {r}   # save caller-saved reg")
     
     # Prepare arguments: first 2 args in rdi, rsi
     # Remaining args on stack (pushed in reverse order)
@@ -197,9 +193,9 @@ def compile_call(func_name, args, target_reg):
     # Save return value to temp location (before pops restores old values)
     emit(f"    mov %rax, %r14  # temp save return value")
     
-    # Restore saved registers
-    for r in reversed(saved_regs):
-        emit(f"    pop {r}   # restore caller reg {r}")
+    # Restore saved registers (in reverse order)
+    for r in reversed(['%r12', '%r13']):
+        emit(f"    pop {r}   # restore caller-saved reg")
     
     # Move return value to target (after restores)
     emit(f"    mov %r14, {target_reg}")

@@ -130,7 +130,7 @@ def test_skriv():
     """skriv x"""
     lines = list(tokenize("skriv x"))
     ir = parse_tokens(lines)
-    assert ir == [('SKRIV', 'x')]
+    assert ir == [('SKRIV', ('VARIABEL', 'x'))]
 
 def test_skriv_nl():
     """skriv ny rad → SKRIV ('RADBRYT',)"""
@@ -240,9 +240,9 @@ annars
     assert ir[0][0] == 'OM'
     assert ir[0][1] == ('x', 'likaMed', '5')  # value is string, not int
     assert len(ir[0][2]) == 1      # true body has 1 statement
-    assert ir[0][2][0] == ('SKRIV', 'hej')
+    assert ir[0][2][0] == ('SKRIV', ('VARIABEL', 'hej'))
     assert len(ir[0][3]) == 1      # false body has 1 statement
-    assert ir[0][3][0] == ('SKRIV', 'annat')
+    assert ir[0][3][0] == ('SKRIV', ('VARIABEL', 'annat'))
 
 def test_if_else_with_for():
     """om x är 5
@@ -260,7 +260,7 @@ annars
     ir = parse_tokens(lines)
     assert ir[0][0] == 'OM'
     assert ir[0][2][0][0] == 'FÖR'  # true body: FOR loop
-    assert ir[0][3][0] == ('SKRIV', 'fallback')  # false body
+    assert ir[0][3][0] == ('SKRIV', ('VARIABEL', 'fallback'))  # false body
 
 if __name__ == '__main__':
     test_set_integer()
@@ -398,7 +398,7 @@ def test_grej_simple():
 slut"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('GREJ', 'hej', ['världen'], [('SKRIV', 'hello')]), f"Got {ir}"
+    assert ir[0] == ('GREJ', 'hej', ['världen'], [('SKRIV', ('VARIABEL', 'hello'))]), f"Got {ir}"
 
 def test_call_anropa():
     """anropa func med 1 → CALL"""

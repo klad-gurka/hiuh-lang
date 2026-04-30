@@ -109,7 +109,7 @@ def compile_ir(ir, target='linux'):
 
 def compile_func_def(stmt, target):
     """Compile a function definition"""
-    global LABEL_CNT, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
+    global LABEL_CNT, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG, STRINGS
     func_name, params, body = stmt[1], stmt[2], stmt[3]
     func_lbl = f"func_{func_name}"
     epilog_lbl = new_label()

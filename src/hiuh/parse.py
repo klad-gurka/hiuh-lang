@@ -68,8 +68,10 @@ def parse_block(lines, base_indent, out):
             out.append(('BREAK',))
             i += 1
         elif tok == 'SKRIV':
-            expr = tokens[1] if len(tokens) > 1 else ''
-            out.append(('SKRIV', expr))
+            # Parse expression after SKRIV: skriv x PLUS/MINUS/TIMES/DIV y
+            val_tokens = tokens[1:]
+            val = parse_value(val_tokens)
+            out.append(('SKRIV', val))
             i += 1
         elif tok == 'SKRIV_NL':
             expr = tokens[1] if len(tokens) > 1 else ''
@@ -417,8 +419,10 @@ def parse_single_line(lines, base_indent, body):
         body.append(('BREAK',))
         return None, 1
     elif tok == 'SKRIV':
-        expr = tokens[1] if len(tokens) > 1 else ''
-        body.append(('SKRIV', expr))
+        # Parse expression after SKRIV: skriv x PLUS/MINUS/TIMES/DIV y
+        val_tokens = tokens[1:]
+        val = parse_value(val_tokens)
+        body.append(('SKRIV', val))
         return None, 1
     elif tok == 'SKRIV_NL':
         expr = tokens[1] if len(tokens) > 1 else ''

@@ -86,7 +86,7 @@ TODO: uppdatera tabell ovan med korrekt x86-status
 4. [x] **Uppdatera tokenizer** - mappar svenska keywords → IR operatorer
 
 ### Medel prioritet
-5. [ ] **Fixa UT expression i x86 backend** (PLUS ok, MINUS/GENOM saknas)
+5. [x] **Fixa UT expression i x86 backend** (PLUS/MINUS/TIMES/DIV i SKRIV funkar nu)
 6. [ ] **Implementera WHILE med OM-format** (nuvarande WHILE är annorlunda)
 
 ### Låg prioritet

@@ -433,7 +433,71 @@ def compile_stmt(stmt, target):
     elif op in ('SKRIV', 'SKRIV_NL'):
         expr = stmt[1] if len(stmt) > 1 else ''
         if expr:
-            if isinstance(expr, str) and not expr.isdigit():
+            # Handle tuple expressions: ('+', a, b), ('-', a, b), ('*', a, b), ('/', a, b)
+            if isinstance(expr, tuple) and len(expr) == 3 and expr[0] in ('+', '-', '*', '/'):
+                _, a, b = expr
+                op_sym = expr[0]
+                # Compute expression into %rax first
+                if isinstance(a, int):
+                    emit(f"    mov ${a}, %rax")
+                else:
+                    reg_a = alloc_reg(a)
+                    emit(f"    mov {reg_a}, %rax")
+                if op_sym == '+':
+                    if isinstance(b, int):
+                        emit(f"    add ${b}, %rax")
+                    else:
+                        reg_b = alloc_reg(b)
+                        emit(f"    add {reg_b}, %rax")
+                elif op_sym == '-':
+                    if isinstance(b, int):
+                        emit(f"    sub ${b}, %rax")
+                    else:
+                        reg_b = alloc_reg(b)
+                        emit(f"    sub {reg_b}, %rax")
+                elif op_sym == '*':
+                    if isinstance(b, int):
+                        emit(f"    imul ${b}, %rax")
+                    else:
+                        reg_b = alloc_reg(b)
+                        emit(f"    imul {reg_b}, %rax")
+                elif op_sym == '/':
+                    emit(f"    xor %edx, %edx")
+                    if isinstance(b, int):
+                        emit(f"    mov ${b}, %rcx")
+                    else:
+                        reg_b = alloc_reg(b)
+                        emit(f"    mov {reg_b}, %rcx")
+                    emit(f"    idiv %rcx")
+                # Now print %rax
+                lbl_s = new_label()
+                lbl_d = new_label()
+                emit(f"    xor %edx, %edx")
+                emit(f"    lea num_buf(%rip), %rsi")
+                emit(f"    cmp $10, %rax")
+                emit(f"    jb .Ls{lbl_s}")
+                emit(f"    mov $10, %rcx")
+                emit(f"    div %rcx")
+                emit(f"    push %rax")
+                emit(f"    add $48, %dl")
+                emit(f"    movb %dl, 1(%rsi)")
+                emit(f"    pop %rax")
+                emit(f"    add $48, %al")
+                emit(f"    movb %al, (%rsi)")
+                emit(f"    mov $2, %rdx")
+                emit(f"    mov $1, %edi")
+                emit(f"    mov $1, %eax")
+                emit(f"    syscall")
+                emit(f"    jmp .Ld{lbl_d}")
+                emit(f".Ls{lbl_s}:")
+                emit(f"    add $48, %rax")
+                emit(f"    movb %al, (%rsi)")
+                emit(f"    mov $1, %rdx")
+                emit(f"    mov $1, %edi")
+                emit(f"    mov $1, %eax")
+                emit(f"    syscall")
+                emit(f".Ld{lbl_d}:")
+            elif isinstance(expr, str) and not expr.isdigit():
                 reg = alloc_reg(expr)
                 lbl_s = new_label()
                 lbl_d = new_label()
@@ -459,6 +523,35 @@ def compile_stmt(stmt, target):
                 emit(f"    jmp .Ld{lbl_d}")
                 emit(f".Ls{lbl_s}:")
                 emit(f"    add $48, %rax  # single digit")
+                emit(f"    movb %al, (%rsi)")
+                emit(f"    mov $1, %rdx")
+                emit(f"    mov $1, %edi")
+                emit(f"    mov $1, %eax")
+                emit(f"    syscall")
+                emit(f".Ld{lbl_d}:")
+            elif isinstance(expr, int):
+                # Print literal integer
+                emit(f"    # Print integer {expr}")
+                emit(f"    mov ${expr}, %rax")
+                emit(f"    xor %edx, %edx")
+                emit(f"    lea num_buf(%rip), %rsi")
+                emit(f"    cmp $10, %rax")
+                emit(f"    jb .Ls{lbl_s}")
+                emit(f"    mov $10, %rcx")
+                emit(f"    div %rcx")
+                emit(f"    push %rax")
+                emit(f"    add $48, %dl")
+                emit(f"    movb %dl, 1(%rsi)")
+                emit(f"    pop %rax")
+                emit(f"    add $48, %al")
+                emit(f"    movb %al, (%rsi)")
+                emit(f"    mov $2, %rdx")
+                emit(f"    mov $1, %edi")
+                emit(f"    mov $1, %eax")
+                emit(f"    syscall")
+                emit(f"    jmp .Ld{lbl_d}")
+                emit(f".Ls{lbl_s}:")
+                emit(f"    add $48, %rax")
                 emit(f"    movb %al, (%rsi)")
                 emit(f"    mov $1, %rdx")
                 emit(f"    mov $1, %edi")

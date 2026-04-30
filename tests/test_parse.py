@@ -264,3 +264,35 @@ if __name__ == '__main__':
     test_if_else()
     test_if_else_with_for()
     print("Alla parse-tester OK!")
+
+def test_skriv_expr_times():
+    """skriv a gånger 2 → SKRIV with expression"""
+    lines = list(tokenize("skriv a gånger 2"))
+    ir = parse_tokens(lines)
+    assert ir == [('SKRIV', ('*', 'a', 2))], f"Got {ir}"
+
+def test_skriv_expr_minus():
+    """skriv x minus 3 → SKRIV with expression"""
+    lines = list(tokenize("skriv x minus 3"))
+    ir = parse_tokens(lines)
+    assert ir == [('SKRIV', ('-', 'x', 3))], f"Got {ir}"
+
+def test_skriv_expr_plus():
+    """skriv a pluss 4 → SKRIV with expression"""
+    lines = list(tokenize("skriv a pluss 4"))
+    ir = parse_tokens(lines)
+    assert ir == [('SKRIV', ('+', 'a', 4))], f"Got {ir}"
+
+def test_skriv_expr_div():
+    """skriv b delat 2 → SKRIV with expression"""
+    lines = list(tokenize("skriv b delat 2"))
+    ir = parse_tokens(lines)
+    assert ir == [('SKRIV', ('/', 'b', 2))], f"Got {ir}"
+
+def test_skriv_expr_with_for():
+    """för i från 0 till 3\n    skriv i gånger 2"""
+    src = """för i från 0 till 3
+    skriv i gånger 2"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][4][0] == ('SKRIV', ('*', 'i', 2)), f"Got {ir}"

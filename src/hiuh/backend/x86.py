@@ -449,6 +449,8 @@ def compile_stmt(stmt, target):
             pass
     elif op in ('SKRIV', 'SKRIV_NL'):
         expr = stmt[1] if len(stmt) > 1 else ''
+        lbl_s = new_label()
+        lbl_d = new_label()
         if expr:
             # Handle tuple expressions: ('+', a, b), ('-', a, b), ('*', a, b), ('/', a, b)
             if isinstance(expr, tuple) and len(expr) == 3 and expr[0] in ('PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
@@ -656,7 +658,7 @@ def compile_stmt(stmt, target):
         emit(f"    mov %rax, {reg}")
         emit(f"    movl $0, 4(%rax)  # length = 0")
     
-    elif op == 'LIST_INIT':
+    elif op == 'NY_LISTA':
         list_name = stmt[1]
         items = stmt[2] if len(stmt) > 2 else []
         reg = alloc_reg(list_name)
@@ -668,7 +670,7 @@ def compile_stmt(stmt, target):
             except:
                 item_vals.append(None)  # variable reference
         LISTS[list_name] = {'size': 256, 'items': item_vals}
-        emit(f"    # LIST_INIT {list_name} with {len(items)} items: {items}")
+        emit(f"    # NY_LISTA {list_name} with {len(items)} items: {items}")
         emit(f"    lea list_{list_name}(%rip), %rax")
         emit(f"    mov %rax, {reg}")
         # Store length

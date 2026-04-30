@@ -111,11 +111,11 @@ def parse_block(lines, base_indent, out):
             name = tokens[1] if len(tokens) > 1 else ''
             out.append(('LIST_CREATE', name))
             i += 1
-        elif tok == 'LIST_INIT':
-            # sätt x till lista av 1, 2, 3 → LIST_INIT x 1 2 3
+        elif tok == 'NY_LISTA':
+            # sätt x till lista av 1, 2, 3 → NY_LISTA x 1 2 3
             name = tokens[1] if len(tokens) > 1 else ''
             items = tokens[2:] if len(tokens) > 2 else []
-            out.append(('LIST_INIT', name, items))
+            out.append(('NY_LISTA', name, items))
             i += 1
         elif tok == 'LIST_APPEND':
             # lägg till x till y → LIST_APPEND y x
@@ -490,10 +490,10 @@ def parse_single_line(lines, base_indent, body):
         name = tokens[1] if len(tokens) > 1 else ''
         body.append(('LIST_CREATE', name))
         return None, 1
-    elif tok == 'LIST_INIT':
+    elif tok == 'NY_LISTA':
         name = tokens[1] if len(tokens) > 1 else ''
         items = tokens[2:] if len(tokens) > 2 else []
-        body.append(('LIST_INIT', name, items))
+        body.append(('NY_LISTA', name, items))
         return None, 1
     elif tok == 'LIST_APPEND':
         list_name = tokens[1] if len(tokens) > 1 else ''
@@ -552,10 +552,13 @@ def parse_cmp(tokens):
             return (var, 'störreLikaMed', val)
         # är X (equality) → likaMed
         elif tokens[1] == 'AR':
-            # är inte X → inteLikaMed
+            # är inte lika med X → inteLikaMed
             if tokens[2] == 'INTE':
-                return (var, 'inteLikaMed', tokens[3])
-            return (var, 'likaMed', tokens[2])
+                val = tokens[5] if len(tokens) > 5 and tokens[4] == 'MED' else tokens[3]
+                return (var, 'inteLikaMed', val)
+            # är lika med X → likaMed X
+            val = tokens[4] if len(tokens) > 4 and tokens[3] == 'MED' else tokens[2]
+            return (var, 'likaMed', val)
     return (var, 'inteLikaMed', 0)
 
 def parse_stream():

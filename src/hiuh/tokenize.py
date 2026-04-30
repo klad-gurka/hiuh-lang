@@ -84,10 +84,10 @@ def tokenize(src):
                     items_str = rest_lower[9:]  # skip "lista av "
                     # Split on commas, filter empty, strip whitespace
                     items = [x.strip() for x in items_str.split(',') if x.strip()]
-                    tokens.append('LIST_INIT')
+                    tokens.append('NY_LISTA')
                     tokens.append(var_name)
                     tokens.extend(items)
-                    last_token = 'LIST_INIT'
+                    last_token = 'NY_LISTA'
                     i += len(rest_words) + 4
                     continue
             
@@ -211,7 +211,7 @@ def tokenize(src):
                     continue
             
             # 'i' after variable-taking keywords is a variable name, not IN keyword
-            if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra'):
+            if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra', 'av', 'är'):
                 tokens.append(word)  # variable name
                 last_token = word
             # After SET/TILL, next word is a variable name (even if it's a keyword like 'antal')

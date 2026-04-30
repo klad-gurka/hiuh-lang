@@ -55,8 +55,8 @@ tests/
 | `sätt funk till grej med a, b` | `('GREJ', params, body)`        | ✅        | ✅        | ❌       | ❌       | ❌          |
 | `sätt a till funk med x, y`     | `('ANROPA', var, args)`         | ✅        | ✅        | ❌       | ❌       | ❌          |
 | `ge x`                         | `('GE', expr)`                  | ✅        | ❌        | ❌       | ❌       | ❌          |
-| `sätt a till ny lista`         | `('NY_LISTA', args)`            | ✅        | ✅        | ✅       | ❌       | ❌          |
-| `sätt a till lista av 1, 2, 3` | `('LIST_INIT', name, items)`    | ✅        | ✅        | ❌       | ❌       | ❌          |
+| `sätt a till ny lista`         | `('NY_LISTA', name, items)`  | ✅        | ✅        | ✅       | ❌       | ❌          |
+| `sätt a till lista av 1, 2, 3` | `('NY_LISTA', name, [items])` | ✅        | ✅        | ❌       | ❌       | ❌          |
 | `lägg till x i a`              | `('LÄGG_TILL', item, var)`     | ✅        | ✅        | ❌       | ❌       | ❌          |
 | `ta bort apa från a`           | `('TA_BORT', val, var)`        | ✅        | ✅        | ❌       | ❌       | ❌          |
 | `ta bort element 3 från a`     | `('TA_BORT_INDEX', var, idx)`   | ✅        | ❌        | ✅       | ❌       | ❌          |

@@ -217,6 +217,14 @@ def compile_stmt(stmt, target):
             compile_call(func_name, args, reg)
             return
         
+        # Handle TEXT: store string pointer
+        if isinstance(val, tuple) and val[0] == 'TEXT':
+            _, text = val
+            STRINGS.append(text)
+            idx = len(STRINGS) - 1
+            emit(f"    lea msg_{idx}(%rip), {reg}")
+            return
+        
         if isinstance(val, int):
             emit(f"    mov ${val}, {reg}")
         elif isinstance(val, tuple) and val[0] in ('+', 'PLUSS'):
@@ -457,8 +465,21 @@ def compile_stmt(stmt, target):
         if isinstance(val, int):
             emit(f"    mov ${val}, %rax")
         elif isinstance(val, str):
-            ret_reg = alloc_reg(val)
-            emit(f"    mov {ret_reg}, %rax")
+            if val.startswith('"'):
+                # String literal: strip quotes, add to data section, return pointer
+                text = val[1:-1]  # remove surrounding quotes
+                STRINGS.append(text)
+                idx = len(STRINGS) - 1
+                emit(f"    lea msg_{idx}(%rip), %rax")
+            else:
+                # Variable name
+                ret_reg = alloc_reg(val)
+                emit(f"    mov {ret_reg}, %rax")
+        elif isinstance(val, tuple) and val[0] == 'TEXT':
+            _, text = val
+            STRINGS.append(text)
+            idx = len(STRINGS) - 1
+            emit(f"    lea msg_{idx}(%rip), %rax")
         elif isinstance(val, tuple) and val[0] == 'ANROPA':
             _, func_name, args = val
             compile_call(func_name, args, '%rax')

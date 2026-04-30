@@ -60,8 +60,11 @@ def parse_skriv_expr(tokens):
         # Number?
         if token.isdigit():
             return ('HELTAL', int(token))
-        # Otherwise text (bare string - backend interprets as variable name if used as such)
-        return token
+        # String literal?
+        if token.startswith('"') and token.endswith('"'):
+            return ('TEXT', token[1:-1])
+        # Otherwise it's a variable reference
+        return ('VARIABEL', token)
     
     # For multi-token, fall back to parse_value for expressions
     return parse_value(tokens)
@@ -248,12 +251,18 @@ def parse_value(tokens):
         if func_name in ('anropa', 'kalla'):
             func_name = tokens[2] if len(tokens) > 2 else func_name
         # Strip commas from args (e.g. '1,' -> '1')
-        args = [t.rstrip(',') for t in tokens[2:] if t not in ('MED',)]
+        args = [t.rstrip(',') for t in tokens[2:] if t not in ('MED', 'TILL', 'GREJ', 'GE')]
         return ('ANROPA', func_name, args)
     # Check for LIST_LEN: LIST_LEN list_name
     if tok == 'ANTAL' and len(tokens) >= 2:
         list_name = tokens[1]
         return ('ANTAL', list_name)
+    # Check for TEXT keyword: text "string" → ('TEXT', 'string')
+    if tok == 'TEXT' and len(tokens) >= 2:
+        text_val = tokens[1]
+        if text_val.startswith('"'):
+            return ('TEXT', text_val[1:-1])
+        return ('TEXT', text_val)
     # Check for LIST_GET: LIST_GET list_name idx (bare LIST_GET tokens from tokenizer)
     if tok == 'HÄMTA_INDEX' and len(tokens) >= 3:
         list_name = tokens[1]
@@ -282,11 +291,14 @@ def parse_value(tokens):
     if tok not in ('SÄTT', 'TILL', 'GREJ', 'FÖR', 'OM', 'MEDAN', 'BRYT', 'SKRIV',
                   'GE', 'GREJ') and tok in FUNC_NAMES and len(tokens) >= 2:
         func_name = tok
-        args = [t.rstrip(',') for t in tokens[1:] if t not in ('MED',)]
+        args = [t.rstrip(',') for t in tokens[1:] if t not in ('MED', 'TILL', 'GREJ', 'GE')]
         return ('ANROPA', func_name, args)
     # Plain number or identifier (including CHAR, LIST_LEN, etc.)
     if tok.isdigit():
         return int(tok)
+    # String literal?
+    if tok.startswith('"') and tok.endswith('"'):
+        return ('TEXT', tok[1:-1])
     return tok
 
 def parse_for(lines, base_indent):
@@ -460,8 +472,8 @@ def parse_grej(lines, base_indent):
     # Parse GREJ header: grej func_name param1 [param2 ...]
     func_name = tokens[1]
     params = tokens[2:]
-    # Remove MED keywords from params if any
-    params = [p for p in params if p != 'MED']
+    # Remove noise keywords from params
+    params = [p for p in params if p not in ('MED', 'TILL', 'GREJ')]
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
@@ -493,7 +505,7 @@ def parse_call(tokens):
     j = 2
     # Skip MED keywords and collect args
     while j < len(tokens):
-        if tokens[j] != 'MED':
+        if tokens[j] not in ('MED', 'TILL'):
             args.append(tokens[j])
         j += 1
     return ('ANROPA', func_name, args)
@@ -503,6 +515,9 @@ def parse_ret(tokens):
     if len(tokens) >= 2:
         val_tokens = tokens[1:]
         val_expr = parse_value(val_tokens)
+        # Wrap string literals in TEXT tuple for proper string pointer handling
+        if isinstance(val_expr, str) and val_expr.startswith('"'):
+            return ('GE', ('TEXT', val_expr[1:-1]))
         return ('GE', val_expr)
     return ('GE', 0)
 

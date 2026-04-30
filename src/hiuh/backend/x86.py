@@ -37,11 +37,28 @@ def emit(s):
 
 def compile_ir(ir, target='linux'):
     """Compile IR to x86 assembly"""
+    global REG_MAP, NEXT_REG, STRINGS, LABEL_CNT, BREAK_STACK, FUNC_LABELS, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, LISTS
+    # Reset state for each compilation
+    REG_MAP = {}
+    NEXT_REG = 0
+    STRINGS = []
+    LABEL_CNT = 0
+    BREAK_STACK = []
+    FUNC_LABELS = {}
+    CURRENT_FUNC = None
+    FUNC_EPILOGUE_LABELS = {}
+    LISTS = {}
+
     emit(".text")
     if target == 'windows':
         emit(".globl main")
         emit("main:")
+    elif target == 'gcc':
+        # For gcc linking: just emit main, no _start
+        emit(".globl main")
+        emit("main:")
     else:
+        # Standalone: _start calls main
         emit(".globl _start")
         emit("_start:")
         emit("    call main")
@@ -705,6 +722,50 @@ def compile_stmt(stmt, target):
         list_reg = alloc_reg(list_name)
         emit(f"    # LIST_LEN {list_name}")
         emit(f"    mov 4({list_reg}), %rax")
+
+    elif op == 'LIST_REMOVE_INDEX':
+        list_name, idx = stmt[1], stmt[2]
+        list_reg = alloc_reg(list_name)
+        lbl_skip = new_label()
+        lbl_done = new_label()
+        emit(f"    # LIST_REMOVE_INDEX {list_name}[{idx}]")
+        # Get length
+        emit(f"    mov 4({list_reg}), %rcx  # length")
+        # Check bounds: if idx >= length, skip
+        if isinstance(idx, int):
+            emit(f"    cmp ${idx}, %rcx")
+        else:
+            idx_reg = alloc_reg(idx)
+            emit(f"    mov {idx_reg}, %r8")
+            emit(f"    cmp %r8, %rcx")
+        emit(f"    jle .L{lbl_skip}  # idx >= length, nothing to remove")
+        # Compute byte offset: elements start at offset 8, each element is 8 bytes
+        if isinstance(idx, int):
+            offset = (idx + 1) * 8
+            emit(f"    lea {offset}({list_reg}), %rax  # address of element[{idx}]")
+        else:
+            idx_reg = alloc_reg(idx)
+            emit(f"    lea 8({list_reg}), %rax")
+            emit(f"    mov {idx_reg}, %r9")
+            emit(f"    shl $3, %r9  # idx * 8")
+            emit(f"    add %r9, %rax  # address of element[{idx}]")
+        # Shift elements down: for i = idx+1 to length-1: element[i-1] = element[i]
+        emit(f"    # Shift elements down")
+        emit(f"    mov %rcx, %r10  # length - 1 (last index)")
+        emit(f"    dec %r10")
+        emit(f"    lea 8({list_reg}), %r11  # base of elements")
+        emit(f".L{lbl_done}_shift:")
+        emit(f"    cmp %r10, %rax  # current >= last?")
+        emit(f"    jge .L{lbl_done}_shift_end")
+        emit(f"    mov 8(%rax), %rbx  # next element")
+        emit(f"    mov %rbx, (%rax)  # copy to current")
+        emit(f"    add $8, %rax  # next position")
+        emit(f"    jmp .L{lbl_done}_shift")
+        emit(f".L{lbl_done}_shift_end:")
+        # Decrement length
+        emit(f"    dec %rcx")
+        emit(f"    mov %rcx, 4({list_reg})")
+        emit(f".L{lbl_skip}:")
 
     elif op == 'FILE_OPEN':
         filename, mode = stmt[1], stmt[2]

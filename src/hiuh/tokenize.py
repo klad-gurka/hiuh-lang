@@ -45,6 +45,7 @@ def tokenize(src):
     """Tokenize source string, yield (indent_level, tokens) for each line"""
     prev_word = None
     last_token = None  # Track the last token added
+    first_indent = None  # Track first non-empty line's indent for normalization
     for line in src.split('\n'):
         # Calculate indentation level
         indent = len(line) - len(line.lstrip())
@@ -211,7 +212,12 @@ def tokenize(src):
             prev_word = word
             i += 1
         if tokens:
-            yield (indent // 4, tokens)  # 4 spaces = 1 indent level
+            # Normalize indentation: compute relative indent from first line's indent
+            # This handles both tabs and spaces correctly
+            if first_indent is None:
+                first_indent = indent
+            norm_indent = indent - first_indent
+            yield (norm_indent, tokens)
 
 def tokenize_stream():
     """Read from stdin, output indent level + tokens"""

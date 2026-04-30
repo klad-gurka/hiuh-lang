@@ -29,7 +29,7 @@ def test_for_loop():
     lines = list(tokenize(src))
     assert len(lines) == 2
     assert lines[0] == (0, ['FOR', 'x', 'FRAN', '0', 'TILL', '10'])
-    assert lines[1] == (1, ['SKRIV', 'x'])
+    assert lines[1] == (4, ['SKRIV', 'x'])
 
 def test_if_statement():
     """om x är 0"""
@@ -38,7 +38,7 @@ def test_if_statement():
     lines = list(tokenize(src))
     assert len(lines) == 2
     assert lines[0] == (0, ['IF', 'x', 'AR', '0'])
-    assert lines[1] == (1, ['SKRIV', 'x'])
+    assert lines[1] == (4, ['SKRIV', 'x'])
 
 def test_space_friendly_skriv_ny_rad():
     """skriv ny rad x"""
@@ -66,8 +66,8 @@ def test_indentation_levels():
 hej då"""
     lines = list(tokenize(src))
     assert lines[0] == (0, ['FOR', 'i', 'FRAN', '0', 'TILL', '10'])
-    assert lines[1] == (1, ['IF', 'i', 'AR', '5'])
-    assert lines[2] == (2, ['SKRIV', 'i'])
+    assert lines[1] == (4, ['IF', 'i', 'AR', '5'])
+    assert lines[2] == (8, ['SKRIV', 'i'])
     assert lines[3] == (0, ['EXIT'])  # hej då at indent 0 (program exit)
 
 def test_list_len():

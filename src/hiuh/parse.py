@@ -224,7 +224,7 @@ def parse_for(lines, base_indent):
         return ('FOR', var, start, end, []), 1
     
     next_indent, next_tokens = lines[1]
-    if next_indent <= base_indent:
+    if next_indent < base_indent:
         # No body (dedent after FOR line)
         return ('FOR', var, start, end, []), 1
     
@@ -233,7 +233,7 @@ def parse_for(lines, base_indent):
     i = 1  # Start after FOR line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        if child_indent <= base_indent:
+        if child_indent < base_indent:
             # Dedent - body is done
             break
         # Parse the body line
@@ -274,7 +274,7 @@ def parse_if(lines, base_indent):
         return ('IF', (var, op, val), [], []), 1
     
     next_indent, next_tokens = lines[1]
-    if next_indent <= base_indent:
+    if next_indent < base_indent:
         # No body (dedent after IF line)
         return ('IF', (var, op, val), [], []), 1
     
@@ -292,7 +292,7 @@ def parse_if(lines, base_indent):
             i += 1
             continue
         
-        if child_indent <= base_indent:
+        if child_indent < base_indent:
             # Dedent - we're done with the IF statement
             break
         
@@ -319,7 +319,7 @@ def parse_while(lines, base_indent):
         return ('WHILE', (var, op, val), []), 1
     
     next_indent, next_tokens = lines[1]
-    if next_indent <= base_indent:
+    if next_indent < base_indent:
         # No body (dedent after WHILE line)
         return ('WHILE', (var, op, val), []), 1
     
@@ -328,7 +328,7 @@ def parse_while(lines, base_indent):
     i = 1  # Start after WHILE line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        if child_indent <= base_indent:
+        if child_indent < base_indent:
             # Dedent - body is done
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
@@ -355,7 +355,7 @@ def parse_grej(lines, base_indent):
         return ('FUNC_DEF', func_name, params, []), 1
     
     next_indent, next_tokens = lines[1]
-    if next_indent <= base_indent:
+    if next_indent < base_indent:
         # No body (dedent after GREJ line)
         return ('FUNC_DEF', func_name, params, []), 1
     
@@ -364,7 +364,7 @@ def parse_grej(lines, base_indent):
     i = 1  # Start after GREJ line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        if child_indent <= base_indent:
+        if child_indent < base_indent:
             # Dedent - body is done
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)

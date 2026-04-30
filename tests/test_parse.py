@@ -421,3 +421,41 @@ def test_call_kalla():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert ir[0] == ('SET', 'resultat', ('CALL', 'hej', ['1'])), f"Got {ir}"
+
+def test_list_get():
+    """element X ur lst → LIST_GET"""
+    lines = list(tokenize("element 0 ur lst"))
+    ir = parse_tokens(lines)
+    assert ir == [('LIST_GET', 'lst', 0)], f"Got {ir}"  # idx converted to int
+
+def test_list_get_in_set():
+    """sätt x till element 0 ur lst → SET with LIST_GET"""
+    src = """sätt x till element 0 ur lst"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir == [('SET', 'x', ('LIST_GET', 'lst', 0))], f"Got {ir}"  # idx converted to int
+
+def test_ta_bort_index():
+    """ta bort element 0 från lst → TA_BORT_INDEX"""
+    lines = list(tokenize("ta bort element 0 från lst"))
+    ir = parse_tokens(lines)
+    assert ir == [('TA_BORT_INDEX', 'lst', 0)], f"Got {ir}"
+
+def test_byt_ut():
+    """byt ut element 0 i lst mot 99 → BYT_UT"""
+    lines = list(tokenize("byt ut element 0 i lst mot 99"))
+    ir = parse_tokens(lines)
+    assert ir == [('BYT_UT', 'lst', 0, '99')], f"Got {ir}"
+
+def test_ge():
+    """ge x → RETURN x"""
+    lines = list(tokenize("ge x"))
+    ir = parse_tokens(lines)
+    assert ir == [('RETURN', 'x')], f"Got {ir}"
+
+def test_ge_expression():
+    """ge x pluss 1 → RETURN with expression"""
+    lines = list(tokenize("ge x pluss 1"))
+    ir = parse_tokens(lines)
+    # Should parse as PLUSS expression
+    assert ir[0][0] == 'RETURN', f"Got {ir}"

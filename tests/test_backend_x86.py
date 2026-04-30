@@ -392,3 +392,37 @@ def test_func_def_and_call():
     ])
     assert 'func_dubbla:' in asm
     assert 'call func_dubbla' in asm
+
+def test_list_get():
+    """LIST_GET: load element at index from list"""
+    asm = capture_asm([('LIST_GET', 'lst', 0)])
+    assert 'LIST_GET' in asm
+    assert '%rax' in asm  # loads into %rax
+
+def test_list_get_with_idx_var():
+    """LIST_GET with variable index"""
+    asm = capture_asm([('LIST_GET', 'lst', 'i')])
+    assert 'LIST_GET' in asm
+
+def test_set_list_get():
+    """SET x = LIST_GET lst 0 → load element into register"""
+    asm = capture_asm([('SET', 'x', ('LIST_GET', 'lst', 0))])
+    assert 'LIST_GET' in asm
+    assert 'mov' in asm
+
+def test_byt_ut():
+    """BYT_UT: replace element at index"""
+    asm = capture_asm([('BYT_UT', 'lst', 0, '99')])
+    assert 'BYT_UT' in asm
+    assert 'mov' in asm
+
+def test_byt_ut_with_var_index():
+    """BYT_UT with variable index"""
+    asm = capture_asm([('BYT_UT', 'lst', 'i', '42')])
+    assert 'BYT_UT' in asm
+
+def test_ta_bort_index():
+    """TA_BORT_INDEX: remove element at index"""
+    asm = capture_asm([('TA_BORT_INDEX', 'lst', 0)])
+    assert 'TA_BORT_INDEX' in asm
+    assert 'mov' in asm

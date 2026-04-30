@@ -131,6 +131,22 @@ def tokenize(src):
                         i += 6
                         continue
             
+            # Handle "byt ut element X i Y mot Z" → BYT_UT Y X Z
+            if word == 'byt' and i + 7 < len(words):
+                if words[i+1].lower() == 'ut' and words[i+2].lower() == 'element':
+                    idx = words[i+3]
+                    if words[i+4].lower() == 'i':
+                        list_name = words[i+5]
+                        if words[i+6].lower() == 'mot':
+                            new_val = words[i+7] if i + 7 < len(words) else ''
+                            tokens.append('BYT_UT')
+                            tokens.append(list_name)
+                            tokens.append(idx)
+                            tokens.append(new_val)
+                            last_token = 'BYT_UT'
+                            i += 8
+                            continue
+            
             # Handle "antal element i X" → LIST_LEN X
             if word == 'antal' and i + 3 < len(words):
                 if words[i+1].lower() == 'element' and words[i+2].lower() == 'i':

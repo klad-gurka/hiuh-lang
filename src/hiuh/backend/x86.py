@@ -282,6 +282,20 @@ def compile_stmt(stmt, target):
             list_reg = alloc_reg(list_name)
             emit(f"    # SET n = LIST_LEN {list_name}")
             emit(f"    mov 4({list_reg}), {reg}")
+        elif isinstance(val, tuple) and val[0] == 'LIST_GET':
+            _, list_name, idx = val
+            list_reg = alloc_reg(list_name)
+            emit(f"    # SET x = LIST_GET {list_name}[{idx}]")
+            # Get index
+            if isinstance(idx, int):
+                emit(f"    mov ${idx}, %rcx")
+            else:
+                idx_reg = alloc_reg(idx)
+                emit(f"    mov {idx_reg}, %rcx")
+            # Load element (elements at offset 8+idx*8)
+            emit(f"    lea 8({list_reg}), %rax")
+            emit(f"    mov (%rax, %rcx, 8), %rax")
+            emit(f"    mov %rax, {reg}")
         else:
             reg_v = alloc_reg(val)
             emit(f"    mov {reg_v}, {reg}")
@@ -729,8 +743,8 @@ def compile_stmt(stmt, target):
         list_name, item = stmt[1], stmt[2]
         list_reg = alloc_reg(list_name)
         emit(f"    # LIST_APPEND {item} -> {list_name}")
-        # Get length from offset 4
-        emit(f"    mov 4({list_reg}), %rcx  # length")
+        # Get length from offset 4 (stored as 32-bit with movl)
+        emit(f"    movl 4({list_reg}), %ecx  # length (zero-extended to rcx)")
         # Compute item value - try as integer first
         try:
             item_val = int(item)
@@ -743,7 +757,7 @@ def compile_stmt(stmt, target):
         emit(f"    mov %rbx, (%rax, %rcx, 8)")
         # Increment length
         emit(f"    inc %rcx")
-        emit(f"    mov %rcx, 4({list_reg})")
+        emit(f"    movl %ecx, 4({list_reg})  # store 32-bit length")
 
     elif op == 'LIST_GET':
         list_name, idx = stmt[1], stmt[2]
@@ -772,7 +786,7 @@ def compile_stmt(stmt, target):
         lbl_done = new_label()
         emit(f"    # TA_BORT_INDEX {list_name}[{idx}]")
         # Get length
-        emit(f"    mov 4({list_reg}), %rcx  # length")
+        emit(f"    movl 4({list_reg}), %ecx  # length (zero-extended to rcx)")
         # Check bounds: if idx >= length, skip
         if isinstance(idx, int):
             emit(f"    cmp ${idx}, %rcx")
@@ -793,11 +807,13 @@ def compile_stmt(stmt, target):
             emit(f"    add %r9, %rax  # address of element[{idx}]")
         # Shift elements down: for i = idx+1 to length-1: element[i-1] = element[i]
         emit(f"    # Shift elements down")
-        emit(f"    mov %rcx, %r10  # length - 1 (last index)")
-        emit(f"    dec %r10")
+        emit(f"    mov %rcx, %r10  # length")
+        emit(f"    dec %r10  # length - 1 (last index)")
+        emit(f"    shl $3, %r10  # (length-1) * 8")
         emit(f"    lea 8({list_reg}), %r11  # base of elements")
+        emit(f"    add %r10, %r11  # address of last element")
         emit(f".L{lbl_done}_shift:")
-        emit(f"    cmp %r10, %rax  # current >= last?")
+        emit(f"    cmp %r11, %rax  # current >= last?")
         emit(f"    jge .L{lbl_done}_shift_end")
         emit(f"    mov 8(%rax), %rbx  # next element")
         emit(f"    mov %rbx, (%rax)  # copy to current")
@@ -806,8 +822,32 @@ def compile_stmt(stmt, target):
         emit(f".L{lbl_done}_shift_end:")
         # Decrement length
         emit(f"    dec %rcx")
-        emit(f"    mov %rcx, 4({list_reg})")
+        emit(f"    movl %ecx, 4({list_reg})  # store 32-bit length")
         emit(f".L{lbl_skip}:")
+
+    elif op == 'BYT_UT':
+        list_name, idx, new_val = stmt[1], stmt[2], stmt[3]
+        list_reg = alloc_reg(list_name)
+        emit(f"    # BYT_UT {list_name}[{idx}] = {new_val}")
+        # Get index
+        if isinstance(idx, int):
+            emit(f"    mov ${idx}, %rcx")
+        else:
+            idx_reg = alloc_reg(idx)
+            emit(f"    mov {idx_reg}, %rcx")
+        # Compute address of element at index: 8 + idx * 8
+        emit(f"    lea 8({list_reg}), %rax")
+        emit(f"    shl $3, %rcx  # idx * 8")
+        emit(f"    add %rcx, %rax  # address of element[{idx}]")
+        # Compute new value
+        try:
+            val_int = int(new_val)
+            emit(f"    mov ${val_int}, %rbx")
+        except (ValueError, TypeError):
+            val_reg = alloc_reg(new_val)
+            emit(f"    mov {val_reg}, %rbx")
+        # Store new value at element address
+        emit(f"    mov %rbx, (%rax)")
 
     elif op == 'FILE_OPEN':
         filename, mode = stmt[1], stmt[2]

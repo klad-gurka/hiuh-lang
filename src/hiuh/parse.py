@@ -162,7 +162,8 @@ def parse_block(lines, base_indent, out):
         elif tok == 'LIST_GET':
             # element i ur lst → LIST_GET lst i
             list_name = tokens[1] if len(tokens) > 1 else ''
-            idx = tokens[2] if len(tokens) > 2 else ''
+            idx_str = tokens[2] if len(tokens) > 2 else ''
+            idx = int(idx_str) if idx_str.isdigit() else idx_str
             out.append(('LIST_GET', list_name, idx))
             i += 1
         elif tok == 'LIST_LEN':
@@ -176,6 +177,14 @@ def parse_block(lines, base_indent, out):
             idx_str = tokens[2] if len(tokens) > 2 else ''
             idx = int(idx_str) if idx_str.isdigit() else idx_str
             out.append(('TA_BORT_INDEX', list_name, idx))
+            i += 1
+        elif tok == 'BYT_UT':
+            # byt ut element X i lst mot Z → BYT_UT lst X Z
+            list_name = tokens[1] if len(tokens) > 1 else ''
+            idx_str = tokens[2] if len(tokens) > 2 else ''
+            idx = int(idx_str) if idx_str.isdigit() else idx_str
+            new_val = tokens[3] if len(tokens) > 3 else ''
+            out.append(('BYT_UT', list_name, idx, new_val))
             i += 1
         elif tok == 'FILE_OPEN':
             # öppna X för läsning → FILE_OPEN X mode
@@ -234,6 +243,12 @@ def parse_value(tokens):
     if tok == 'LIST_LEN' and len(tokens) >= 2:
         list_name = tokens[1]
         return ('LIST_LEN', list_name)
+    # Check for LIST_GET: LIST_GET list_name idx (bare LIST_GET tokens from tokenizer)
+    if tok == 'LIST_GET' and len(tokens) >= 3:
+        list_name = tokens[1]
+        idx_str = tokens[2]
+        idx = int(idx_str) if idx_str.isdigit() else idx_str
+        return ('LIST_GET', list_name, idx)
     # Check for LIST_GET: CHAR IN UR list [idx] → ('LIST_GET', list, idx)
     if tok == 'CHAR' and len(tokens) >= 4 and tokens[1] == 'IN' and tokens[2] == 'UR':
         list_name = tokens[3]
@@ -560,7 +575,8 @@ def parse_single_line(lines, base_indent, body):
         return None, 1
     elif tok == 'LIST_GET':
         list_name = tokens[1] if len(tokens) > 1 else ''
-        idx = tokens[2] if len(tokens) > 2 else ''
+        idx_str = tokens[2] if len(tokens) > 2 else ''
+        idx = int(idx_str) if idx_str.isdigit() else idx_str
         body.append(('LIST_GET', list_name, idx))
         return None, 1
     elif tok == 'LIST_LEN':
@@ -572,6 +588,13 @@ def parse_single_line(lines, base_indent, body):
         idx_str = tokens[2] if len(tokens) > 2 else ''
         idx = int(idx_str) if idx_str.isdigit() else idx_str
         body.append(('TA_BORT_INDEX', list_name, idx))
+        return None, 1
+    elif tok == 'BYT_UT':
+        list_name = tokens[1] if len(tokens) > 1 else ''
+        idx_str = tokens[2] if len(tokens) > 2 else ''
+        idx = int(idx_str) if idx_str.isdigit() else idx_str
+        new_val = tokens[3] if len(tokens) > 3 else ''
+        body.append(('BYT_UT', list_name, idx, new_val))
         return None, 1
     elif tok == 'FILE_OPEN':
         filename = tokens[1] if len(tokens) > 1 else ''

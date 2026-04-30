@@ -404,6 +404,56 @@ medan x är mindre än 1000
 
 
 # ─────────────────────────────────────────────
+# LIST_GET (HÄMTA_INDEX)
+# ─────────────────────────────────────────────
+
+def test_list_get_from_new_list():
+    """Hämta element ur lista med NY_LISTA + sätt x till element"""
+    src = '''sätt lst till lista av 10, 20, 30
+sätt x till element 0 ur lst
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '10', f"Fick: {stdout!r}"
+
+
+def test_list_get_index_1():
+    """Hämta element vid index 1"""
+    src = '''sätt lst till lista av 10, 20, 30
+sätt x till element 1 ur lst
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '20', f"Fick: {stdout!r}"
+
+
+# ─────────────────────────────────────────────
+# TA_BORT_INDEX
+# ─────────────────────────────────────────────
+
+def test_ta_bort_index_basic():
+    """Ta bort element vid index 0"""
+    src = '''sätt lst till lista av 10, 20, 30
+ta bort element 0 från lst
+sätt x till element 0 ur lst
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '20', f"Fick: {stdout!r}"
+
+
+# ─────────────────────────────────────────────
+# BYT_UT
+# ─────────────────────────────────────────────
+
+def test_byt_ut_basic():
+    """Byt ut element i lista"""
+    src = '''sätt lst till lista av 10, 20, 30
+byt ut element 0 i lst mot 99
+sätt x till element 0 ur lst
+skriv värdet av x'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '99', f"Fick: {stdout!r}"
+
+
+# ─────────────────────────────────────────────
 # RUN ALL
 # ─────────────────────────────────────────────
 

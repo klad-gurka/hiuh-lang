@@ -75,7 +75,7 @@ def compile_ir(ir, target='linux'):
     # First pass: collect function definitions
     func_defs = []
     for stmt in ir:
-        if stmt[0] == 'FUNC_DEF':
+        if stmt[0] == 'GREJ':
             func_defs.append(stmt)
         else:
             compile_stmt(stmt, target)
@@ -203,12 +203,12 @@ def compile_call(func_name, args, target_reg):
 def compile_stmt(stmt, target):
     global LABEL_CNT, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
     op = stmt[0]
-    if op == 'SET':
+    if op == 'SÄTT':
         name, val = stmt[1], stmt[2]
         reg = alloc_reg(name)
         
         # Handle function call as value
-        if isinstance(val, tuple) and val[0] == 'CALL':
+        if isinstance(val, tuple) and val[0] == 'ANROPA':
             _, func_name, args = val
             compile_call(func_name, args, reg)
             return
@@ -277,15 +277,15 @@ def compile_stmt(stmt, target):
                 emit(f"    mov {reg_b}, %rcx")
             emit(f"    idiv %rcx")
             emit(f"    mov %rax, {reg}")
-        elif isinstance(val, tuple) and val[0] == 'LIST_LEN':
+        elif isinstance(val, tuple) and val[0] == 'ANTAL':
             _, list_name = val
             list_reg = alloc_reg(list_name)
-            emit(f"    # SET n = LIST_LEN {list_name}")
+            emit(f"    # SET n = ANTAL {list_name}")
             emit(f"    mov 4({list_reg}), {reg}")
-        elif isinstance(val, tuple) and val[0] == 'LIST_GET':
+        elif isinstance(val, tuple) and val[0] == 'HÄMTA_INDEX':
             _, list_name, idx = val
             list_reg = alloc_reg(list_name)
-            emit(f"    # SET x = LIST_GET {list_name}[{idx}]")
+            emit(f"    # SET x = HÄMTA_INDEX {list_name}[{idx}]")
             # Get index
             if isinstance(idx, int):
                 emit(f"    mov ${idx}, %rcx")
@@ -299,7 +299,7 @@ def compile_stmt(stmt, target):
         else:
             reg_v = alloc_reg(val)
             emit(f"    mov {reg_v}, {reg}")
-    elif op == 'FOR':
+    elif op == 'FÖR':
         var, start, end, body = stmt[1], stmt[2], stmt[3], stmt[4]
         reg = alloc_reg(var)
         start_lbl = new_label()
@@ -315,7 +315,7 @@ def compile_stmt(stmt, target):
         emit(f"    jmp .L{start_lbl}")
         emit(f".L{end_lbl}:")
         BREAK_STACK.pop()
-    elif op == 'IF':
+    elif op == 'OM':
         cmp, body = stmt[1], stmt[2]
         false_body = stmt[3] if len(stmt) > 3 else []
         var, op, val = cmp
@@ -354,7 +354,7 @@ def compile_stmt(stmt, target):
             emit(f".L{end_label}:")
         else:
             emit(f".L{skip_label}:")
-    elif op == 'WHILE':
+    elif op == 'MEDAN':
         cmp, body = stmt[1], stmt[2]
         var, op, val = cmp
         reg = alloc_reg(var)
@@ -389,14 +389,14 @@ def compile_stmt(stmt, target):
         emit(f"    jmp .L{start_lbl}")
         emit(f".L{end_lbl}:")
         BREAK_STACK.pop()
-    elif op == 'BREAK':
+    elif op == 'BRYT':
         end_lbl = BREAK_STACK[-1] if BREAK_STACK else 'end'
         emit(f"    jmp .L{end_lbl}")
-    elif op == 'EXIT':
+    elif op == 'HEJDÅ':
         emit("    xor %edi, %edi")
         emit("    mov $60, %rax")
         emit("    syscall")
-    elif op == 'FUNC_DEF':
+    elif op == 'GREJ':
         func_name, params, body = stmt[1], stmt[2], stmt[3]
         func_lbl = f"func_{func_name}"
         epilog_lbl = new_label()
@@ -438,11 +438,11 @@ def compile_stmt(stmt, target):
         REG_MAP.clear()
         REG_MAP.update(saved_reg_map)
         NEXT_REG = saved_next_reg
-    elif op == 'CALL':
+    elif op == 'ANROPA':
         func_name, args = stmt[1], stmt[2]
         # Compile call as statement (result in rax, discarded)
         compile_call(func_name, args, '%rax')
-    elif op == 'RETURN':
+    elif op == 'GE':
         val = stmt[1]
         # Compile expression into rax
         if isinstance(val, int):
@@ -450,7 +450,7 @@ def compile_stmt(stmt, target):
         elif isinstance(val, str):
             ret_reg = alloc_reg(val)
             emit(f"    mov {ret_reg}, %rax")
-        elif isinstance(val, tuple) and val[0] == 'CALL':
+        elif isinstance(val, tuple) and val[0] == 'ANROPA':
             _, func_name, args = val
             compile_call(func_name, args, '%rax')
         else:
@@ -702,7 +702,7 @@ def compile_stmt(stmt, target):
         reg = alloc_reg(var_name)
         emit(f"    mov %rax, {reg}  # store result in {var_name}")
 
-    elif op == 'LIST_CREATE':
+    elif op == 'SKAPA_LISTA':
         list_name = stmt[1]
         # Allocate list: store pointer to list buffer and length=0
         reg = alloc_reg(list_name)
@@ -739,7 +739,7 @@ def compile_stmt(stmt, target):
                 emit(f"    mov {item_reg}, %rbx")
                 emit(f"    mov %rbx, {off}(%rax)  # item {j}")
 
-    elif op == 'LIST_APPEND':
+    elif op == 'LÄGG_TILL':
         list_name, item = stmt[1], stmt[2]
         list_reg = alloc_reg(list_name)
         emit(f"    # LIST_APPEND {item} -> {list_name}")
@@ -759,10 +759,10 @@ def compile_stmt(stmt, target):
         emit(f"    inc %rcx")
         emit(f"    movl %ecx, 4({list_reg})  # store 32-bit length")
 
-    elif op == 'LIST_GET':
+    elif op == 'HÄMTA_INDEX':
         list_name, idx = stmt[1], stmt[2]
         list_reg = alloc_reg(list_name)
-        emit(f"    # LIST_GET {list_name}[{idx}]")
+        emit(f"    # HÄMTA_INDEX {list_name}[{idx}]")
         # Get index
         if isinstance(idx, int):
             emit(f"    mov ${idx}, %rcx")
@@ -773,7 +773,7 @@ def compile_stmt(stmt, target):
         emit(f"    lea 8({list_reg}), %rax")
         emit(f"    mov (%rax, %rcx, 8), %rax")
 
-    elif op == 'LIST_LEN':
+    elif op == 'ANTAL':
         list_name = stmt[1]
         list_reg = alloc_reg(list_name)
         emit(f"    # LIST_LEN {list_name}")
@@ -849,7 +849,7 @@ def compile_stmt(stmt, target):
         # Store new value at element address
         emit(f"    mov %rbx, (%rax)")
 
-    elif op == 'FILE_OPEN':
+    elif op == 'ÖPPNA_FIL':
         filename, mode = stmt[1], stmt[2]
         emit(f"    # FILE_OPEN {filename} mode={mode}")
         # Create filename string label
@@ -866,7 +866,7 @@ def compile_stmt(stmt, target):
         emit(f"    syscall")
         emit(f"    # file descriptor now in %rax")
 
-    elif op == 'FILE_WRITE':
+    elif op == 'SKRIV_FIL':
         filename, data = stmt[1], stmt[2]
         emit(f"    # FILE_WRITE {filename} data={data}")
         # For now, write a hardcoded string or variable value

@@ -11,37 +11,37 @@ def test_set_integer():
     """sätt x till 5 → SET"""
     lines = list(tokenize("sätt x till 5"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', 5)], f"Got {ir}"
+    assert ir == [('SÄTT', 'x', 5)], f"Got {ir}"
 
 def test_set_plus():
     """sätt x till a pluss 3 → SET with expression"""
     lines = list(tokenize("sätt x till a pluss 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('PLUSS', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', 'x', ('PLUSS', 'a', 3))], f"Got {ir}"
 
 def test_set_minus():
     """sätt x till a minus 3 → SET with expression"""
     lines = list(tokenize("sätt x till a minus 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('MINUS', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', 'x', ('MINUS', 'a', 3))], f"Got {ir}"
 
 def test_set_times():
     """sätt x till a gånger 3 → SET with expression"""
     lines = list(tokenize("sätt x till a gånger 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('GÅNGER', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', 'x', ('GÅNGER', 'a', 3))], f"Got {ir}"
 
 def test_set_div():
     """sätt x till a delat 3 → SET with expression"""
     lines = list(tokenize("sätt x till a delat 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('DELA', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', 'x', ('DELA', 'a', 3))], f"Got {ir}"
 
 def test_set_number_plus():
     """sätt x till 5 pluss 3 → SET with number + number"""
     lines = list(tokenize("sätt x till 5 pluss 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('PLUSS', 5, 3))], f"Got {ir}"
+    assert ir == [('SÄTT', 'x', ('PLUSS', 5, 3))], f"Got {ir}"
 
 def test_for_loop():
     """för x från 0 till 10"""
@@ -50,7 +50,7 @@ def test_for_loop():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert len(ir) == 1
-    assert ir[0][0] == 'FOR'
+    assert ir[0][0] == 'FÖR'
     assert ir[0][1] == 'x'
     assert ir[0][2] == 0
     assert ir[0][3] == 10
@@ -63,7 +63,7 @@ def test_if_statement():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert len(ir) == 1
-    assert ir[0][0] == 'IF'
+    assert ir[0][0] == 'OM'
     assert ir[0][1] == ('x', 'likaMed', '0')
 
 def test_if_less():
@@ -112,13 +112,13 @@ def test_break():
     bryt"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][2][0] == ('BREAK',)
+    assert ir[0][2][0] == ('BRYT',)
 
 def test_exit():
     """jag gå nu"""
     lines = list(tokenize("jag gå nu"))
     ir = parse_tokens(lines)
-    assert ir == [('EXIT', 0)]
+    assert ir == [('HEJDÅ',)]
 
 def test_read():
     """läs"""
@@ -149,16 +149,16 @@ för i från 0 till 5
 """
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SET', 'x', 0)
-    assert ir[1] == ('SET', 'y', 10)
-    assert ir[2][0] == 'FOR'
-    assert ir[2][4][0][0] == 'IF'
+    assert ir[0] == ('SÄTT', 'x', 0)
+    assert ir[1] == ('SÄTT', 'y', 10)
+    assert ir[2][0] == 'FÖR'
+    assert ir[2][4][0][0] == 'OM'
 
 def test_list_create():
     """sätt x till lista → LIST_CREATE"""
     lines = list(tokenize("sätt x till lista"))
     ir = parse_tokens(lines)
-    assert ir == [('LIST_CREATE', 'x')], f"Got {ir}"
+    assert ir == [('SKAPA_LISTA', 'x')], f"Got {ir}"
 
 def test_for_body_with_arithmetic():
     """för i från 0 till 3\n    sätt x till x pluss 1"""
@@ -166,8 +166,8 @@ def test_for_body_with_arithmetic():
     sätt x till x pluss 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][0] == 'FOR'
-    assert ir[0][4][0] == ('SET', 'x', ('PLUSS', 'x', 1)), f"Got {ir[0][4][0]}"
+    assert ir[0][0] == 'FÖR'
+    assert ir[0][4][0] == ('SÄTT', 'x', ('PLUSS', 'x', 1)), f"Got {ir[0][4][0]}"
 
 
 def test_list_init():
@@ -180,37 +180,37 @@ def test_list_append():
     """lägg till 1 till x → LIST_APPEND"""
     lines = list(tokenize("lägg till 1 till x"))
     ir = parse_tokens(lines)
-    assert ir == [('LIST_APPEND', 'x', '1')], f"Got {ir}"
+    assert ir == [('LÄGG_TILL', 'x', '1')], f"Got {ir}"
 
 def test_list_len():
     """antal element i x → LIST_LEN"""
     lines = list(tokenize("antal element i x"))
     ir = parse_tokens(lines)
-    assert ir == [('LIST_LEN', 'x')], f"Got {ir}"
+    assert ir == [('ANTAL', 'x')], f"Got {ir}"
 
 def test_set_list_len():
     """sätt n till antal element i x → SET with LIST_LEN value"""
     lines = list(tokenize("sätt n till antal element i x"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'n', ('LIST_LEN', 'x'))], f"Got {ir}"
+    assert ir == [('SÄTT', 'n', ('ANTAL', 'x'))], f"Got {ir}"
 
 def test_file_open():
     """öppna X för läsning → FILE_OPEN"""
     lines = list(tokenize("öppna data.txt för läsning"))
     ir = parse_tokens(lines)
-    assert ir == [('FILE_OPEN', 'data.txt', 'r')], f"Got {ir}"
+    assert ir == [('ÖPPNA_FIL', 'data.txt', 'r')], f"Got {ir}"
 
 def test_file_open_write():
     """öppna X för skrivning → FILE_OPEN"""
     lines = list(tokenize("öppna output.txt för skrivning"))
     ir = parse_tokens(lines)
-    assert ir == [('FILE_OPEN', 'output.txt', 'w')], f"Got {ir}"
+    assert ir == [('ÖPPNA_FIL', 'output.txt', 'w')], f"Got {ir}"
 
 def test_file_write():
     """skriv till fil X → FILE_WRITE"""
     lines = list(tokenize("skriv till fil resultat.txt"))
     ir = parse_tokens(lines)
-    assert ir == [('FILE_WRITE', 'resultat.txt', '')], f"Got {ir}"
+    assert ir == [('SKRIV_FIL', 'resultat.txt', '')], f"Got {ir}"
 
 def test_if_else():
     """om x är 5
@@ -225,7 +225,7 @@ annars
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert len(ir) == 1
-    assert ir[0][0] == 'IF'
+    assert ir[0][0] == 'OM'
     assert ir[0][1] == ('x', 'likaMed', '5')  # value is string, not int
     assert len(ir[0][2]) == 1      # true body has 1 statement
     assert ir[0][2][0] == ('SKRIV', 'hej')
@@ -246,8 +246,8 @@ annars
     skriv fallback"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][0] == 'IF'
-    assert ir[0][2][0][0] == 'FOR'  # true body: FOR loop
+    assert ir[0][0] == 'OM'
+    assert ir[0][2][0][0] == 'FÖR'  # true body: FOR loop
     assert ir[0][3][0] == ('SKRIV', 'fallback')  # false body
 
 if __name__ == '__main__':
@@ -319,7 +319,7 @@ def test_while_basic():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][0] == 'WHILE'
+    assert ir[0][0] == 'MEDAN'
     assert ir[0][1] == ('x', 'mindre', '5')
     assert len(ir[0][2]) == 1  # body has 1 statement
 
@@ -330,7 +330,7 @@ def test_while_body():
     skriv x"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][0] == 'WHILE'
+    assert ir[0][0] == 'MEDAN'
     assert len(ir[0][2]) == 2
 
 def test_while_break():
@@ -342,8 +342,8 @@ def test_while_break():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     while_stmt = ir[0]
-    assert while_stmt[0] == 'WHILE'
-    assert while_stmt[2][0] == ('IF', ('x', 'likaMed', '5'), [('BREAK',), ('SET', 'x', ('PLUSS', 'x', 1))], [])
+    assert while_stmt[0] == 'MEDAN'
+    assert while_stmt[2][0] == ('OM', ('x', 'likaMed', '5'), [('BRYT',), ('SÄTT', 'x', ('PLUSS', 'x', 1))], [])
 
 def test_while_greater():
     """medan x är större än 0"""
@@ -384,21 +384,21 @@ def test_grej_simple():
 slut"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('FUNC_DEF', 'hej', ['världen'], [('SKRIV', 'hello')]), f"Got {ir}"
+    assert ir[0] == ('GREJ', 'hej', ['världen'], [('SKRIV', 'hello')]), f"Got {ir}"
 
 def test_call_anropa():
     """anropa func med 1 → CALL"""
     src = """anropa hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('CALL', 'hej', ['1']), f"Got {ir}"
+    assert ir[0] == ('ANROPA', 'hej', ['1']), f"Got {ir}"
 
 def test_call_in_set():
     """sätt resultat till anropa func med 1 → SET with CALL"""
     src = """sätt resultat till anropa hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SET', 'resultat', ('CALL', 'hej', ['1'])), f"Got {ir}"
+    assert ir[0] == ('SÄTT', 'resultat', ('ANROPA', 'hej', ['1'])), f"Got {ir}"
 
 def test_call_with_func_def():
     """Full GREJ def + CALL: grej dubbla x ... sätt b till dubbla a"""
@@ -411,29 +411,29 @@ sätt a till 5
 sätt b till dubbla a"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('FUNC_DEF', 'dubbla', ['x'], [('SET', 'resultat', ('GÅNGER', 'x', 2)), ('RETURN', 'resultat')]), f"Got {ir[0]}"
-    assert ir[1] == ('SET', 'a', 5), f"Got {ir[1]}"
-    assert ir[2] == ('SET', 'b', ('CALL', 'dubbla', ['a'])), f"Got {ir[2]}"
+    assert ir[0] == ('GREJ', 'dubbla', ['x'], [('SÄTT', 'resultat', ('GÅNGER', 'x', 2)), ('GE', 'resultat')]), f"Got {ir[0]}"
+    assert ir[1] == ('SÄTT', 'a', 5), f"Got {ir[1]}"
+    assert ir[2] == ('SÄTT', 'b', ('ANROPA', 'dubbla', ['a'])), f"Got {ir[2]}"
 
 def test_call_kalla():
     """sätt resultat till kalla func med 1 → SET with CALL"""
     src = """sätt resultat till kalla hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SET', 'resultat', ('CALL', 'hej', ['1'])), f"Got {ir}"
+    assert ir[0] == ('SÄTT', 'resultat', ('ANROPA', 'hej', ['1'])), f"Got {ir}"
 
 def test_list_get():
     """element X ur lst → LIST_GET"""
     lines = list(tokenize("element 0 ur lst"))
     ir = parse_tokens(lines)
-    assert ir == [('LIST_GET', 'lst', 0)], f"Got {ir}"  # idx converted to int
+    assert ir == [('HÄMTA_INDEX', 'lst', 0)], f"Got {ir}"  # idx converted to int
 
 def test_list_get_in_set():
     """sätt x till element 0 ur lst → SET with LIST_GET"""
     src = """sätt x till element 0 ur lst"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('LIST_GET', 'lst', 0))], f"Got {ir}"  # idx converted to int
+    assert ir == [('SÄTT', 'x', ('HÄMTA_INDEX', 'lst', 0))], f"Got {ir}"  # idx converted to int
 
 def test_ta_bort_index():
     """ta bort element 0 från lst → TA_BORT_INDEX"""
@@ -451,11 +451,11 @@ def test_ge():
     """ge x → RETURN x"""
     lines = list(tokenize("ge x"))
     ir = parse_tokens(lines)
-    assert ir == [('RETURN', 'x')], f"Got {ir}"
+    assert ir == [('GE', 'x')], f"Got {ir}"
 
 def test_ge_expression():
     """ge x pluss 1 → RETURN with expression"""
     lines = list(tokenize("ge x pluss 1"))
     ir = parse_tokens(lines)
     # Should parse as PLUSS expression
-    assert ir[0][0] == 'RETURN', f"Got {ir}"
+    assert ir[0][0] == 'GE', f"Got {ir}"

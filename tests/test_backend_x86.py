@@ -27,24 +27,24 @@ def capture_asm(ir):
 
 def test_set_integer():
     """SET x 5 → mov $5, %r12"""
-    asm = capture_asm([('SET', 'x', 5)])
+    asm = capture_asm([('SÄTT', 'x', 5)])
     assert 'mov $5, %r12' in asm, f"Got: {asm}"
 
 def test_set_multiple_vars():
     """Multiple SET statements"""
-    asm = capture_asm([('SET', 'x', 5), ('SET', 'y', 10)])
+    asm = capture_asm([('SÄTT', 'x', 5), ('SÄTT', 'y', 10)])
     assert 'mov $5, %r12' in asm
     assert 'mov $10, %r13' in asm
 
 def test_set_plus():
-    """SET x ('+', 'a', 3) → mov a; add $3"""
-    asm = capture_asm([('SET', 'x', ('+', 'a', 3))])
+    """SET x ('PLUSS', 'a', 3) → mov a; add $3"""
+    asm = capture_asm([('SÄTT', 'x', ('PLUSS', 'a', 3))])
     assert 'mov' in asm
     assert 'add $3' in asm
 
 def test_for_loop():
     """FOR i 0 10 body → loop with labels"""
-    asm = capture_asm([('FOR', 'i', 0, 10, [])])
+    asm = capture_asm([('FÖR', 'i', 0, 10, [])])
     assert '.L1:' in asm  # start label
     assert '.L2:' in asm  # end label
     assert 'mov $0' in asm  # init
@@ -54,54 +54,54 @@ def test_for_loop():
 
 def test_for_with_body():
     """FOR with SET in body"""
-    asm = capture_asm([('FOR', 'i', 0, 3, [('SET', 'x', 5)])])
+    asm = capture_asm([('FÖR', 'i', 0, 3, [('SÄTT', 'x', 5)])])
     assert '.L1:' in asm
     assert 'mov $5' in asm
 
 def test_if_eq():
     """IF (x, 'likaMed', 0) → cmp + jne"""
-    asm = capture_asm([('IF', ('x', 'likaMed', '0'), [('SET', 'y', 1)])])
+    asm = capture_asm([('OM', ('x', 'likaMed', '0'), [('SÄTT', 'y', 1)])])
     assert 'cmp $0' in asm
     assert 'jne' in asm  # jump if NOT equal
 
 def test_if_less():
     """IF (x, 'mindre', 5)"""
-    asm = capture_asm([('IF', ('x', 'mindre', 5), [])])
+    asm = capture_asm([('OM', ('x', 'mindre', 5), [])])
     assert 'cmp $5' in asm
 
 def test_if_greater():
     """IF (x, 'större', 0)"""
-    asm = capture_asm([('IF', ('x', 'större', 0), [])])
+    asm = capture_asm([('OM', ('x', 'större', 0), [])])
     assert 'cmp $0' in asm
 
 def test_exit():
     """EXIT → syscall"""
-    asm = capture_asm([('EXIT', 0)])
+    asm = capture_asm([('HEJDÅ',)])
     assert 'mov $60, %rax' in asm
     assert 'syscall' in asm
 
 def test_break():
     """BREAK → jmp"""
-    asm = capture_asm([('BREAK',)])
+    asm = capture_asm([('BRYT',)])
     assert 'jmp' in asm
 
 def test_prologue():
     """Verify function prologue"""
-    asm = capture_asm([('SET', 'x', 1)])
+    asm = capture_asm([('SÄTT', 'x', 1)])
     assert 'push %r12' in asm
     assert 'push %r13' in asm
     assert 'push %rbp' in asm
 
 def test_epilogue():
     """Verify function epilogue"""
-    asm = capture_asm([('SET', 'x', 1)])
+    asm = capture_asm([('SÄTT', 'x', 1)])
     assert 'xor %eax, %eax' in asm
     assert 'pop %rbp' in asm
     assert 'ret' in asm
 
 def test_data_section():
     """Verify data section is generated"""
-    asm = capture_asm([('SET', 'x', 1)])
+    asm = capture_asm([('SÄTT', 'x', 1)])
     assert '.data' in asm
     assert '.bss' in asm
     assert 'input_buf: .skip 256' in asm
@@ -109,8 +109,8 @@ def test_data_section():
 def test_multiple_for_loops():
     """Two FOR loops get different labels"""
     asm = capture_asm([
-        ('FOR', 'i', 0, 5, []),
-        ('FOR', 'j', 0, 10, [])
+        ('FÖR', 'i', 0, 5, []),
+        ('FÖR', 'j', 0, 10, [])
     ])
     # Should have 4 labels (2 starts, 2 ends)
     assert asm.count('.L') >= 4
@@ -118,8 +118,8 @@ def test_multiple_for_loops():
 def test_nested_if_in_for():
     """IF inside FOR"""
     asm = capture_asm([
-        ('FOR', 'i', 0, 5, [
-            ('IF', ('i', 'likaMed', 3), [('EXIT', 0)])
+        ('FÖR', 'i', 0, 5, [
+            ('OM', ('i', 'likaMed', 3), [('HEJDÅ',)])
         ])
     ])
     # FOR generates loop with labels
@@ -147,24 +147,24 @@ def test_alloc_reg_same_var():
 
 def test_if_not_eq():
     """IF (x, 'inteLikaMed', 0)"""
-    asm = capture_asm([('IF', ('x', 'inteLikaMed', 0), [])])
+    asm = capture_asm([('OM', ('x', 'inteLikaMed', 0), [])])
     assert 'cmp $0' in asm
     assert 'je' in asm  # jump if equal (condition failed)
 
 def test_if_less_or_eq():
     """IF (x, 'mindreLikaMed', 5)"""
-    asm = capture_asm([('IF', ('x', 'mindreLikaMed', 5), [])])
+    asm = capture_asm([('OM', ('x', 'mindreLikaMed', 5), [])])
     assert 'cmp $5' in asm
     assert 'jg' in asm  # jump if greater → exit condition if NOT <=
 
 def test_if_greater_or_eq():
     """IF (x, 'störreLikaMed', 0)"""
-    asm = capture_asm([('IF', ('x', 'störreLikaMed', 0), [])])
+    asm = capture_asm([('OM', ('x', 'störreLikaMed', 0), [])])
     assert 'cmp $0' in asm
     assert 'jl' in asm  # jump if less → exit condition if NOT >=
 
 def test_set_minus():
-    """SET x ('-', 'a', 3) → mov a; sub $3"""
+    """SET x ('MINUS', 'a', 3) → mov a; sub $3"""
     from hiuh.backend import x86
     x86.REG_MAP.clear()
     x86.STRINGS.clear()
@@ -172,12 +172,12 @@ def test_set_minus():
     x86.NEXT_REG = 0
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
-        compile_ir([('SET', 'x', ('-', 'a', 3))])
+        compile_ir([('SÄTT', 'x', ('MINUS', 'a', 3))])
     asm = output.getvalue()
     assert 'sub $3' in asm, f"Got: {asm}"
 
 def test_set_times():
-    """SET x ('*', 'a', 2) → mov a; imul"""
+    """SET x ('GÅNGER', 'a', 2) → mov a; imul"""
     from hiuh.backend import x86
     x86.REG_MAP.clear()
     x86.STRINGS.clear()
@@ -185,12 +185,12 @@ def test_set_times():
     x86.NEXT_REG = 0
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
-        compile_ir([('SET', 'x', ('*', 'a', 2))])
+        compile_ir([('SÄTT', 'x', ('GÅNGER', 'a', 2))])
     asm = output.getvalue()
     assert 'imul' in asm, f"Got: {asm}"
 
 def test_set_div():
-    """SET x ('/', 'a', 4) → mov a; idiv"""
+    """SET x ('DELA', 'a', 4) → mov a; idiv"""
     from hiuh.backend import x86
     x86.REG_MAP.clear()
     x86.STRINGS.clear()
@@ -198,18 +198,18 @@ def test_set_div():
     x86.NEXT_REG = 0
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
-        compile_ir([('SET', 'x', ('/', 'a', 4))])
+        compile_ir([('SÄTT', 'x', ('DELA', 'a', 4))])
     asm = output.getvalue()
     assert 'idiv' in asm, f"Got: {asm}"
 
 def test_file_open():
     """FILE_OPEN filename 'r' → sys_open call"""
-    asm = capture_asm([('FILE_OPEN', 'data.txt', 'r')])
+    asm = capture_asm([('ÖPPNA_FIL', 'data.txt', 'r')])
     assert 'sys_open' in asm or 'mov $2, %rax' in asm, f"Got: {asm}"
 
 def test_file_write():
     """FILE_WRITE filename data → sys_write call"""
-    asm = capture_asm([('FILE_WRITE', 'resultat.txt', '')])
+    asm = capture_asm([('SKRIV_FIL', 'resultat.txt', '')])
     assert 'sys_write' in asm or 'mov $1, %rax' in asm, f"Got: {asm}"
 
 def test_skriv_radbryt():
@@ -271,7 +271,7 @@ def test_skriv_radbryt_only():
 def test_skriv_text_with_expr():
     """Multiple SKRIV statements with different expr types"""
     asm = capture_asm([
-        ('SET', 'x', 5),
+        ('SÄTT', 'x', 5),
         ('SKRIV', ('VARIABEL', 'x')),
         ('SKRIV', ('TEXT', 'hej')),
         ('SKRIV', ('RADBRYT',)),
@@ -318,7 +318,7 @@ if __name__ == '__main__':
 
 def test_while_basic():
     """WHILE (x, 'mindre', 5) → loop with cmp + jge"""
-    asm = capture_asm([('WHILE', ('x', 'mindre', 5), [])])
+    asm = capture_asm([('MEDAN', ('x', 'mindre', 5), [])])
     assert '.L1:' in asm  # start label
     assert '.L2:' in asm  # end label
     assert 'cmp $5' in asm
@@ -326,7 +326,7 @@ def test_while_basic():
 
 def test_while_with_body():
     """WHILE with SET in body"""
-    asm = capture_asm([('WHILE', ('x', 'mindre', 3), [('SET', 'x', ('+', 'x', 1))])])
+    asm = capture_asm([('MEDAN', ('x', 'mindre', 3), [('SÄTT', 'x', ('+', 'x', 1))])])
     assert '.L1:' in asm
     assert '.L2:' in asm
     assert 'add $1' in asm
@@ -342,15 +342,15 @@ def test_while_break():
     x86.BREAK_STACK.clear()
     output = io.StringIO()
     with contextlib.redirect_stdout(output):
-        x86.compile_ir([('WHILE', ('x', 'mindre', 10), [('BREAK',)])])
+        x86.compile_ir([('MEDAN', ('x', 'mindre', 10), [('BRYT',)])])
     asm = output.getvalue()
     assert 'jmp .L2' in asm  # BREAK jumps to end label
 
 def test_while_nested_if():
     """WHILE with IF+BREAK inside"""
     asm = capture_asm([
-        ('WHILE', ('x', 'mindre', 10), [
-            ('IF', ('x', 'likaMed', 5), [('BREAK',)])
+        ('MEDAN', ('x', 'mindre', 10), [
+            ('OM', ('x', 'likaMed', 5), [('BRYT',)])
         ])
     ])
     assert '.L1:' in asm
@@ -358,16 +358,16 @@ def test_while_nested_if():
 
 def test_while_eq():
     """WHILE (x, 'likaMed', 0)"""
-    asm = capture_asm([('WHILE', ('x', 'likaMed', 0), [])])
+    asm = capture_asm([('MEDAN', ('x', 'likaMed', 0), [])])
     assert 'cmp $0' in asm
     assert 'jne .L' in asm
 
 def test_func_def_basic():
     """FUNC_DEF: function definition generates function label"""
     asm = capture_asm([
-        ('FUNC_DEF', 'dubbla', ['x'], [
-            ('SET', 'resultat', ('*', 'x', 2)),
-            ('RETURN', 'resultat')
+        ('GREJ', 'dubbla', ['x'], [
+            ('SÄTT', 'resultat', ('*', 'x', 2)),
+            ('GE', 'resultat')
         ])
     ])
     assert 'func_dubbla:' in asm
@@ -376,38 +376,38 @@ def test_func_def_basic():
 def test_call_basic():
     """CALL: function call generates call instruction"""
     asm = capture_asm([
-        ('SET', 'b', ('CALL', 'dubbla', ['a']))
+        ('SÄTT', 'b', ('ANROPA', 'dubbla', ['a']))
     ])
     assert 'call func_dubbla' in asm
 
 def test_func_def_and_call():
     """FUNC_DEF + CALL end-to-end"""
     asm = capture_asm([
-        ('FUNC_DEF', 'dubbla', ['x'], [
-            ('SET', 'resultat', ('*', 'x', 2)),
-            ('RETURN', 'resultat')
+        ('GREJ', 'dubbla', ['x'], [
+            ('SÄTT', 'resultat', ('*', 'x', 2)),
+            ('GE', 'resultat')
         ]),
-        ('SET', 'a', 5),
-        ('SET', 'b', ('CALL', 'dubbla', ['a']))
+        ('SÄTT', 'a', 5),
+        ('SÄTT', 'b', ('ANROPA', 'dubbla', ['a']))
     ])
     assert 'func_dubbla:' in asm
     assert 'call func_dubbla' in asm
 
 def test_list_get():
     """LIST_GET: load element at index from list"""
-    asm = capture_asm([('LIST_GET', 'lst', 0)])
-    assert 'LIST_GET' in asm
+    asm = capture_asm([('HÄMTA_INDEX', 'lst', 0)])
+    assert 'HÄMTA_INDEX' in asm
     assert '%rax' in asm  # loads into %rax
 
 def test_list_get_with_idx_var():
     """LIST_GET with variable index"""
-    asm = capture_asm([('LIST_GET', 'lst', 'i')])
-    assert 'LIST_GET' in asm
+    asm = capture_asm([('HÄMTA_INDEX', 'lst', 'i')])
+    assert 'HÄMTA_INDEX' in asm
 
 def test_set_list_get():
     """SET x = LIST_GET lst 0 → load element into register"""
-    asm = capture_asm([('SET', 'x', ('LIST_GET', 'lst', 0))])
-    assert 'LIST_GET' in asm
+    asm = capture_asm([('SÄTT', 'x', ('HÄMTA_INDEX', 'lst', 0))])
+    assert 'HÄMTA_INDEX' in asm
     assert 'mov' in asm
 
 def test_byt_ut():

@@ -6,11 +6,11 @@ import sys
 # Keywords (lowercase for case-insensitive matching)
 KEYWORDS = {
     # Core keywords
-    'sätt': 'SET', 'för': 'FOR', 'om': 'IF', 'hejdå': 'EXIT',
+    'sätt': 'SÄTT', 'för': 'FÖR', 'om': 'OM', 'hejdå': 'HEJDÅ',
     'annars': 'ELSE', 'läs': 'READ', 'skriv': 'SKRIV', 'skrivnyrad': 'SKRIV_NL',
     'lagra': 'STORE', 'jämför': 'CMP',
-    'jämförbuffer': 'CMP_BUF', 'jagmåstegånu': 'EXIT',
-    'bryt': 'BREAK', 'till': 'TILL', 'från': 'FRAN',
+    'jämförbuffer': 'CMP_BUF', 'jagmåstegånu': 'HEJDÅ',
+    'bryt': 'BRYT', 'till': 'TILL', 'från': 'FRAN',
     'är': 'AR', 'pluss': 'PLUSS', 'minus': 'MINUS',
     'gånger': 'GÅNGER', 'delat': 'DELA',
     'ur': 'UR', 'vid': 'VID', 'med': 'MED',
@@ -18,27 +18,27 @@ KEYWORDS = {
     'inte': 'INTE', 'eller': 'OR',
     'större': 'STÖRRE', 'värdet': 'VAL', 'av': 'OF',
     'text': 'TEXT', 'i': 'IN', 'ge': 'GE',
-    'medan': 'WHILE',
+    'medan': 'MEDAN',
     # Function keywords
     'grej': 'GREJ',     # function definition
-    'anropa': 'CALL',   # function call
-    'kalla': 'CALL',    # alias for anropa
+    'anropa': 'ANROPA',   # function call
+    'kalla': 'ANROPA',    # alias for anropa
     # List keywords
     'lista': 'LIST',    # list type
-    'lägg': 'LIST_APPEND',  # append to list (handled specially)
-    'antal': 'LIST_LEN',   # list length
-    'element': 'LIST_GET', # get element at index
-    'skapa': 'LIST_CREATE', # create list
+    'lägg': 'LÄGG_TILL',  # append to list (handled specially)
+    'antal': 'ANTAL',   # list length
+    'element': 'HÄMTA_INDEX', # get element at index
+    'skapa': 'SKAPA_LISTA', # create list
     # File I/O keywords
-    'öppna': 'FILE_OPEN',  # open file
-    'fil': 'FILE',         # file keyword
-    'läsning': 'READ_MODE',  # read mode
-    'skrivning': 'WRITE_MODE',  # write mode
+    'öppna': 'ÖPPNA_FIL',  # open file
+    'fil': 'FIL',         # file keyword
+    'läsning': 'LÄSNING',  # read mode
+    'skrivning': 'SKRIVNING',  # write mode
     # Space-friendly compound keywords
     'ny': 'SKRIV_NL',  # "skriv ny rad" = SKRIV + SKRIV_NL
     'rad': 'SKRIV_NL',
-    'gå': 'EXIT',  # "jag gå nu" = EXIT
-    'nu': 'EXIT',
+    'gå': 'HEJDÅ',  # "jag gå nu" = EXIT
+    'nu': 'HEJDÅ',
 }
 
 def tokenize(src):
@@ -65,7 +65,7 @@ def tokenize(src):
             if word == 'antal' and i + 3 <= len(words) and prev_word != 'sätt':
                 if words[i+1].lower() == 'element' and words[i+2].lower() == 'i':
                     list_name = words[i+3]
-                    tokens.append('LIST_LEN')
+                    tokens.append('ANTAL')
                     tokens.append(list_name)
                     last_token = 'LIST_LEN'
                     i += 4
@@ -77,7 +77,7 @@ def tokenize(src):
                 rest_words = words[i + 3:]
                 rest_lower = ' '.join(rest_words).lower()
                 if rest_lower == 'lista':
-                    tokens.append('LIST_CREATE')
+                    tokens.append('SKAPA_LISTA')
                     tokens.append(var_name)
                     last_token = 'LIST_CREATE'
                     i += 4
@@ -99,7 +99,7 @@ def tokenize(src):
                 if words[i+1].lower() == 'till' and words[i+3].lower() == 'till':
                     item = words[i+2]
                     target = words[i+4]
-                    tokens.append('LIST_APPEND')
+                    tokens.append('LÄGG_TILL')
                     tokens.append(target)
                     tokens.append(item)
                     last_token = 'LIST_APPEND'
@@ -111,7 +111,7 @@ def tokenize(src):
                 if words[i+2].lower() == 'ur':
                     idx = words[i+1]
                     list_name = words[i+3]
-                    tokens.append('LIST_GET')
+                    tokens.append('HÄMTA_INDEX')
                     tokens.append(list_name)
                     tokens.append(idx)
                     last_token = 'LIST_GET'
@@ -151,7 +151,7 @@ def tokenize(src):
             if word == 'antal' and i + 3 < len(words):
                 if words[i+1].lower() == 'element' and words[i+2].lower() == 'i':
                     list_name = words[i+3]
-                    tokens.append('LIST_LEN')
+                    tokens.append('ANTAL')
                     tokens.append(list_name)
                     last_token = 'LIST_LEN'
                     i += 4
@@ -185,7 +185,7 @@ def tokenize(src):
             # Handle "jag gå nu" → EXIT (space-friendly for JagMåsteGåNu)
             if word == 'jag' and i + 2 < len(words):
                 if words[i+1].lower() == 'gå' and words[i+2].lower() == 'nu':
-                    tokens.append('EXIT')
+                    tokens.append('HEJDÅ')
                     last_token = 'EXIT'
                     i += 3
                     continue
@@ -193,7 +193,7 @@ def tokenize(src):
             # Handle "hej då" → EXIT (program exit)
             if word == 'hej' and i + 1 < len(words):
                 if words[i+1].lower() == 'då':
-                    tokens.append('EXIT')
+                    tokens.append('HEJDÅ')
                     last_token = 'EXIT'
                     i += 2
                     continue
@@ -202,7 +202,7 @@ def tokenize(src):
             if word == 'öppna' and i + 3 < len(words):
                 filename = words[i+1]
                 if words[i+2].lower() == 'för' and words[i+3].lower() == 'läsning':
-                    tokens.append('FILE_OPEN')
+                    tokens.append('ÖPPNA_FIL')
                     tokens.append(filename)
                     tokens.append('r')
                     last_token = 'FILE_OPEN'
@@ -213,7 +213,7 @@ def tokenize(src):
             if word == 'öppna' and i + 3 < len(words):
                 filename = words[i+1]
                 if words[i+2].lower() == 'för' and words[i+3].lower() == 'skrivning':
-                    tokens.append('FILE_OPEN')
+                    tokens.append('ÖPPNA_FIL')
                     tokens.append(filename)
                     tokens.append('w')
                     last_token = 'FILE_OPEN'
@@ -224,7 +224,7 @@ def tokenize(src):
             if word == 'skriv' and i + 3 < len(words):
                 if words[i+1].lower() == 'till' and words[i+2].lower() == 'fil':
                     filename = words[i+3]
-                    tokens.append('FILE_WRITE')
+                    tokens.append('SKRIV_FIL')
                     tokens.append(filename)
                     last_token = 'FILE_WRITE'
                     i += 4

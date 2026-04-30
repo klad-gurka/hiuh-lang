@@ -90,27 +90,27 @@ def parse_block(lines, base_indent, out):
 
         tok = tokens[0]
 
-        if tok == 'SET':
+        if tok == 'SÄTT':
             consumed = parse_set(tokens)
             out.extend(consumed)
             i += 1
-        elif tok == 'FOR':
+        elif tok == 'FÖR':
             consumed, body_len = parse_for(lines[i:], base_indent)
             out.append(consumed)
             i += body_len
-        elif tok == 'IF':
+        elif tok == 'OM':
             consumed, body_len = parse_if(lines[i:], base_indent)
             out.append(consumed)
             i += body_len
-        elif tok == 'WHILE':
+        elif tok == 'MEDAN':
             consumed, body_len = parse_while(lines[i:], base_indent)
             out.append(consumed)
             i += body_len
-        elif tok == 'EXIT':
-            out.append(('EXIT', 0))
+        elif tok == 'HEJDÅ':
+            out.append(('HEJDÅ',))
             i += 1
-        elif tok == 'BREAK':
-            out.append(('BREAK',))
+        elif tok == 'BRYT':
+            out.append(('BRYT',))
             i += 1
         elif tok == 'SKRIV':
             # Parse SKRIV expression
@@ -134,7 +134,7 @@ def parse_block(lines, base_indent, out):
             consumed, body_len = parse_grej(lines[i:], base_indent)
             out.append(consumed)
             i += body_len
-        elif tok == 'CALL':
+        elif tok == 'ANROPA':
             consumed = parse_call(tokens)
             out.append(consumed)
             i += 1
@@ -142,10 +142,10 @@ def parse_block(lines, base_indent, out):
             consumed = parse_ret(tokens)
             out.append(consumed)
             i += 1
-        elif tok == 'LIST_CREATE':
+        elif tok == 'SKAPA_LISTA':
             # sätt x till lista → LIST_CREATE x
             name = tokens[1] if len(tokens) > 1 else ''
-            out.append(('LIST_CREATE', name))
+            out.append(('SKAPA_LISTA', name))
             i += 1
         elif tok == 'NY_LISTA':
             # sätt x till lista av 1, 2, 3 → NY_LISTA x 1 2 3
@@ -153,23 +153,23 @@ def parse_block(lines, base_indent, out):
             items = tokens[2:] if len(tokens) > 2 else []
             out.append(('NY_LISTA', name, items))
             i += 1
-        elif tok == 'LIST_APPEND':
+        elif tok == 'LÄGG_TILL':
             # lägg till x till y → LIST_APPEND y x
             list_name = tokens[1] if len(tokens) > 1 else ''
             item = tokens[2] if len(tokens) > 2 else ''
-            out.append(('LIST_APPEND', list_name, item))
+            out.append(('LÄGG_TILL', list_name, item))
             i += 1
-        elif tok == 'LIST_GET':
+        elif tok == 'HÄMTA_INDEX':
             # element i ur lst → LIST_GET lst i
             list_name = tokens[1] if len(tokens) > 1 else ''
             idx_str = tokens[2] if len(tokens) > 2 else ''
             idx = int(idx_str) if idx_str.isdigit() else idx_str
-            out.append(('LIST_GET', list_name, idx))
+            out.append(('HÄMTA_INDEX', list_name, idx))
             i += 1
-        elif tok == 'LIST_LEN':
+        elif tok == 'ANTAL':
             # antal element i lst → LIST_LEN lst
             list_name = tokens[1] if len(tokens) > 1 else ''
-            out.append(('LIST_LEN', list_name))
+            out.append(('ANTAL', list_name))
             i += 1
         elif tok == 'TA_BORT_INDEX':
             # ta bort element X från lst → TA_BORT_INDEX lst X
@@ -186,17 +186,17 @@ def parse_block(lines, base_indent, out):
             new_val = tokens[3] if len(tokens) > 3 else ''
             out.append(('BYT_UT', list_name, idx, new_val))
             i += 1
-        elif tok == 'FILE_OPEN':
+        elif tok == 'ÖPPNA_FIL':
             # öppna X för läsning → FILE_OPEN X mode
             filename = tokens[1] if len(tokens) > 1 else ''
             mode = tokens[2] if len(tokens) > 2 else 'r'
-            out.append(('FILE_OPEN', filename, mode))
+            out.append(('ÖPPNA_FIL', filename, mode))
             i += 1
-        elif tok == 'FILE_WRITE':
+        elif tok == 'SKRIV_FIL':
             # skriv till fil X → FILE_WRITE X data
             filename = tokens[1] if len(tokens) > 1 else ''
             data = tokens[2] if len(tokens) > 2 else ''
-            out.append(('FILE_WRITE', filename, data))
+            out.append(('SKRIV_FIL', filename, data))
             i += 1
         else:
             # Unknown token, skip
@@ -215,7 +215,7 @@ def parse_set(tokens):
         val_tokens.append(tokens[j])
         j += 1
     val = parse_value(val_tokens)
-    ir.append(('SET', name, val))
+    ir.append(('SÄTT', name, val))
     return ir
 
 def parse_value(tokens):
@@ -238,27 +238,27 @@ def parse_value(tokens):
             func_name = tokens[2] if len(tokens) > 2 else func_name
         # Strip commas from args (e.g. '1,' -> '1')
         args = [t.rstrip(',') for t in tokens[2:] if t not in ('MED',)]
-        return ('CALL', func_name, args)
+        return ('ANROPA', func_name, args)
     # Check for LIST_LEN: LIST_LEN list_name
-    if tok == 'LIST_LEN' and len(tokens) >= 2:
+    if tok == 'ANTAL' and len(tokens) >= 2:
         list_name = tokens[1]
-        return ('LIST_LEN', list_name)
+        return ('ANTAL', list_name)
     # Check for LIST_GET: LIST_GET list_name idx (bare LIST_GET tokens from tokenizer)
-    if tok == 'LIST_GET' and len(tokens) >= 3:
+    if tok == 'HÄMTA_INDEX' and len(tokens) >= 3:
         list_name = tokens[1]
         idx_str = tokens[2]
         idx = int(idx_str) if idx_str.isdigit() else idx_str
-        return ('LIST_GET', list_name, idx)
+        return ('HÄMTA_INDEX', list_name, idx)
     # Check for LIST_GET: CHAR IN UR list [idx] → ('LIST_GET', list, idx)
     if tok == 'CHAR' and len(tokens) >= 4 and tokens[1] == 'IN' and tokens[2] == 'UR':
         list_name = tokens[3]
         idx = tokens[4] if len(tokens) >= 5 else '0'
-        return ('LIST_GET', list_name, idx)
+        return ('HÄMTA_INDEX', list_name, idx)
     # Check for VAR IN UR list [idx] → ('LIST_GET', list, idx) - variable as source
     if len(tokens) >= 4 and tokens[1] == 'IN' and tokens[2] == 'UR':
         list_name = tokens[3]
         idx = tokens[4] if len(tokens) >= 5 else '0'
-        return ('LIST_GET', list_name, idx)
+        return ('HÄMTA_INDEX', list_name, idx)
     # Check for binary expressions: a PLUSS/MINUS/GÅNGER/DELA b
     if len(tokens) >= 3 and tokens[1] in ('PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
         op_sym = {'PLUSS': 'PLUSS', 'MINUS': 'MINUS', 'GÅNGER': 'GÅNGER', 'DELA': 'DELA'}[tokens[1]]
@@ -268,11 +268,11 @@ def parse_value(tokens):
         return (op_sym, first_val, second_val)
     # Check for function call via known function name (after SET/TILL, anropa/kalla passed as VAR)
     # e.g. "sätt b till dubbla a" where 'dubbla' is a known function
-    if tok not in ('SET', 'TILL', 'GREJ', 'FOR', 'IF', 'WHILE', 'BREAK', 'SKRIV',
-                  'GE', 'FUNC_DEF') and tok in FUNC_NAMES and len(tokens) >= 2:
+    if tok not in ('SÄTT', 'TILL', 'GREJ', 'FÖR', 'OM', 'MEDAN', 'BRYT', 'SKRIV',
+                  'GE', 'GREJ') and tok in FUNC_NAMES and len(tokens) >= 2:
         func_name = tok
         args = [t.rstrip(',') for t in tokens[1:] if t not in ('MED',)]
-        return ('CALL', func_name, args)
+        return ('ANROPA', func_name, args)
     # Plain number or identifier (including CHAR, LIST_LEN, etc.)
     if tok.isdigit():
         return int(tok)
@@ -302,12 +302,12 @@ def parse_for(lines, base_indent):
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
         # No body
-        return ('FOR', var, start, end, []), 1
+        return ('FÖR', var, start, end, []), 1
 
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after FOR line)
-        return ('FOR', var, start, end, []), 1
+        return ('FÖR', var, start, end, []), 1
 
     # Multi-line FOR with body at next_indent
     body = []
@@ -326,7 +326,7 @@ def parse_for(lines, base_indent):
         else:
             i += body_len
 
-    ir = ('FOR', var, start, end, body)
+    ir = ('FÖR', var, start, end, body)
     return ir, i
 
 def parse_for_single(tokens):
@@ -341,7 +341,7 @@ def parse_for_single(tokens):
     if tokens[j] == 'TILL':
         j += 1
     end = int(tokens[j])
-    return ('FOR', var, start, end, [])
+    return ('FÖR', var, start, end, [])
 
 def parse_if(lines, base_indent):
     """
@@ -357,12 +357,12 @@ def parse_if(lines, base_indent):
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
-        return ('IF', (var, op, val), [], []), 1
+        return ('OM', (var, op, val), [], []), 1
 
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after IF line)
-        return ('IF', (var, op, val), [], []), 1
+        return ('OM', (var, op, val), [], []), 1
 
     # Multi-line IF with body at next_indent
     true_body = []
@@ -396,7 +396,7 @@ def parse_if(lines, base_indent):
             else:
                 i += body_len
 
-    ir = ('IF', (var, op, val), true_body, false_body)
+    ir = ('OM', (var, op, val), true_body, false_body)
     return ir, i
 
 def parse_while(lines, base_indent):
@@ -412,12 +412,12 @@ def parse_while(lines, base_indent):
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
-        return ('WHILE', (var, op, val), []), 1
+        return ('MEDAN', (var, op, val), []), 1
 
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after WHILE line)
-        return ('WHILE', (var, op, val), []), 1
+        return ('MEDAN', (var, op, val), []), 1
 
     # Multi-line WHILE with body at next_indent
     body = []
@@ -436,7 +436,7 @@ def parse_while(lines, base_indent):
         else:
             i += body_len
 
-    ir = ('WHILE', (var, op, val), body)
+    ir = ('MEDAN', (var, op, val), body)
     return ir, i
 
 def parse_grej(lines, base_indent):
@@ -454,12 +454,12 @@ def parse_grej(lines, base_indent):
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
-        return ('FUNC_DEF', func_name, params, []), 1
+        return ('GREJ', func_name, params, []), 1
 
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after GREJ line)
-        return ('FUNC_DEF', func_name, params, []), 1
+        return ('GREJ', func_name, params, []), 1
 
     # Multi-line GREJ with body at next_indent
     body = []
@@ -472,7 +472,7 @@ def parse_grej(lines, base_indent):
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
         i += body_len
 
-    ir = ('FUNC_DEF', func_name, params, body)
+    ir = ('GREJ', func_name, params, body)
     return ir, i
 
 def parse_call(tokens):
@@ -485,16 +485,15 @@ def parse_call(tokens):
         if tokens[j] != 'MED':
             args.append(tokens[j])
         j += 1
-    return ('CALL', func_name, args)
+    return ('ANROPA', func_name, args)
 
 def parse_ret(tokens):
     """Parse RETURN statement: ge expr"""
     if len(tokens) >= 2:
-        val = tokens[1]
-        # Try to parse as expression
-        val_expr = parse_value([val])
-        return ('RETURN', val_expr)
-    return ('RETURN', 0)
+        val_tokens = tokens[1:]
+        val_expr = parse_value(val_tokens)
+        return ('GE', val_expr)
+    return ('GE', 0)
 
 def parse_single_line(lines, base_indent, body):
     """Parse a single line into body list, returns (ir, lines_consumed)"""
@@ -510,15 +509,15 @@ def parse_single_line(lines, base_indent, body):
 
     tok = tokens[0]
 
-    if tok == 'SET':
+    if tok == 'SÄTT':
         consumed = parse_set(tokens)
         body.extend(consumed)
         return None, 1
-    elif tok == 'EXIT':
-        body.append(('EXIT', 0))
+    elif tok == 'HEJDÅ':
+        body.append(('HEJDÅ',))
         return None, 1
-    elif tok == 'BREAK':
-        body.append(('BREAK',))
+    elif tok == 'BRYT':
+        body.append(('BRYT',))
         return None, 1
     elif tok == 'SKRIV':
         # Parse SKRIV expression
@@ -535,15 +534,15 @@ def parse_single_line(lines, base_indent, body):
         name = tokens[1] if len(tokens) > 1 else ''
         body.append(('SKRIV', ('VARIABEL', name)))
         return None, 1
-    elif tok == 'FOR':
+    elif tok == 'FÖR':
         consumed = parse_for_single(tokens)
         body.append(consumed)
         return None, 1
-    elif tok == 'IF':
+    elif tok == 'OM':
         consumed, body_len = parse_if(lines, base_indent)
         body.append(consumed)
         return None, body_len
-    elif tok == 'WHILE':
+    elif tok == 'MEDAN':
         consumed, body_len = parse_while(lines, base_indent)
         body.append(consumed)
         return None, body_len
@@ -551,7 +550,7 @@ def parse_single_line(lines, base_indent, body):
         consumed, body_len = parse_grej(lines, base_indent)
         body.append(consumed)
         return None, body_len
-    elif tok == 'CALL':
+    elif tok == 'ANROPA':
         consumed = parse_call(tokens)
         body.append(consumed)
         return None, 1
@@ -559,29 +558,29 @@ def parse_single_line(lines, base_indent, body):
         consumed = parse_ret(tokens)
         body.append(consumed)
         return None, 1
-    elif tok == 'LIST_CREATE':
+    elif tok == 'SKAPA_LISTA':
         name = tokens[1] if len(tokens) > 1 else ''
-        body.append(('LIST_CREATE', name))
+        body.append(('SKAPA_LISTA', name))
         return None, 1
     elif tok == 'NY_LISTA':
         name = tokens[1] if len(tokens) > 1 else ''
         items = tokens[2:] if len(tokens) > 2 else []
         body.append(('NY_LISTA', name, items))
         return None, 1
-    elif tok == 'LIST_APPEND':
+    elif tok == 'LÄGG_TILL':
         list_name = tokens[1] if len(tokens) > 1 else ''
         item = tokens[2] if len(tokens) > 2 else ''
-        body.append(('LIST_APPEND', list_name, item))
+        body.append(('LÄGG_TILL', list_name, item))
         return None, 1
-    elif tok == 'LIST_GET':
+    elif tok == 'HÄMTA_INDEX':
         list_name = tokens[1] if len(tokens) > 1 else ''
         idx_str = tokens[2] if len(tokens) > 2 else ''
         idx = int(idx_str) if idx_str.isdigit() else idx_str
-        body.append(('LIST_GET', list_name, idx))
+        body.append(('HÄMTA_INDEX', list_name, idx))
         return None, 1
-    elif tok == 'LIST_LEN':
+    elif tok == 'ANTAL':
         list_name = tokens[1] if len(tokens) > 1 else ''
-        body.append(('LIST_LEN', list_name))
+        body.append(('ANTAL', list_name))
         return None, 1
     elif tok == 'TA_BORT_INDEX':
         list_name = tokens[1] if len(tokens) > 1 else ''
@@ -596,15 +595,15 @@ def parse_single_line(lines, base_indent, body):
         new_val = tokens[3] if len(tokens) > 3 else ''
         body.append(('BYT_UT', list_name, idx, new_val))
         return None, 1
-    elif tok == 'FILE_OPEN':
+    elif tok == 'ÖPPNA_FIL':
         filename = tokens[1] if len(tokens) > 1 else ''
         mode = tokens[2] if len(tokens) > 2 else 'r'
-        body.append(('FILE_OPEN', filename, mode))
+        body.append(('ÖPPNA_FIL', filename, mode))
         return None, 1
-    elif tok == 'FILE_WRITE':
+    elif tok == 'SKRIV_FIL':
         filename = tokens[1] if len(tokens) > 1 else ''
         data = tokens[2] if len(tokens) > 2 else ''
-        body.append(('FILE_WRITE', filename, data))
+        body.append(('SKRIV_FIL', filename, data))
         return None, 1
 
     return None, 1

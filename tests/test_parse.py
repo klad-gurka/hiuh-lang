@@ -366,3 +366,48 @@ def test_while_not_eq():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert ir[0][1] == ('x', 'inteLikaMed', '0')
+
+def test_grej_simple():
+    """grej hello → FUNC_DEF"""
+    src = """grej hej världen
+  skriv hello
+slut"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0] == ('FUNC_DEF', 'hej', ['världen'], [('SKRIV', 'hello')]), f"Got {ir}"
+
+def test_call_anropa():
+    """anropa func med 1 → CALL"""
+    src = """anropa hej med 1"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0] == ('CALL', 'hej', ['1']), f"Got {ir}"
+
+def test_call_in_set():
+    """sätt resultat till anropa func med 1 → SET with CALL"""
+    src = """sätt resultat till anropa hej med 1"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0] == ('SET', 'resultat', ('CALL', 'hej', ['1'])), f"Got {ir}"
+
+def test_call_with_func_def():
+    """Full GREJ def + CALL: grej dubbla x ... sätt b till dubbla a"""
+    src = """grej dubbla x
+  sätt resultat till x gånger 2
+  ge resultat
+slut
+
+sätt a till 5
+sätt b till dubbla a"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0] == ('FUNC_DEF', 'dubbla', ['x'], [('SET', 'resultat', ('*', 'x', 2)), ('RETURN', 'resultat')]), f"Got {ir[0]}"
+    assert ir[1] == ('SET', 'a', 5), f"Got {ir[1]}"
+    assert ir[2] == ('SET', 'b', ('CALL', 'dubbla', ['a'])), f"Got {ir[2]}"
+
+def test_call_kalla():
+    """sätt resultat till kalla func med 1 → SET with CALL"""
+    src = """sätt resultat till kalla hej med 1"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0] == ('SET', 'resultat', ('CALL', 'hej', ['1'])), f"Got {ir}"

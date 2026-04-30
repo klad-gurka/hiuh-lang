@@ -285,3 +285,34 @@ def test_while_eq():
     asm = capture_asm([('WHILE', ('x', 'likaMed', 0), [])])
     assert 'cmp $0' in asm
     assert 'jne .L' in asm
+
+def test_func_def_basic():
+    """FUNC_DEF: function definition generates function label"""
+    asm = capture_asm([
+        ('FUNC_DEF', 'dubbla', ['x'], [
+            ('SET', 'resultat', ('*', 'x', 2)),
+            ('RETURN', 'resultat')
+        ])
+    ])
+    assert 'func_dubbla:' in asm
+    assert 'ret' in asm
+
+def test_call_basic():
+    """CALL: function call generates call instruction"""
+    asm = capture_asm([
+        ('SET', 'b', ('CALL', 'dubbla', ['a']))
+    ])
+    assert 'call func_dubbla' in asm
+
+def test_func_def_and_call():
+    """FUNC_DEF + CALL end-to-end"""
+    asm = capture_asm([
+        ('FUNC_DEF', 'dubbla', ['x'], [
+            ('SET', 'resultat', ('*', 'x', 2)),
+            ('RETURN', 'resultat')
+        ]),
+        ('SET', 'a', 5),
+        ('SET', 'b', ('CALL', 'dubbla', ['a']))
+    ])
+    assert 'func_dubbla:' in asm
+    assert 'call func_dubbla' in asm

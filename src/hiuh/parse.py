@@ -7,6 +7,9 @@ Python-style: blocks are determined by indentation level, not END keywords.
 
 import sys
 
+# Track defined function names (filled in during first pass in parse_tokens)
+FUNC_NAMES = set()
+
 def parse_tokens(tokenized_lines):
     """
     Parse tokenized lines (indent, tokens) to IR
@@ -18,6 +21,13 @@ def parse_tokens(tokenized_lines):
         IR as list of tuples
     """
     ir = []
+    # First pass: collect function definitions
+    FUNC_NAMES.clear()
+    for indent, tokens in tokenized_lines:
+        if tokens and tokens[0] == 'GREJ':
+            func_name = tokens[1]
+            FUNC_NAMES.add(func_name)
+    # Second pass: parse everything
     parse_block(tokenized_lines, 0, ir)
     return ir
 
@@ -174,9 +184,15 @@ def parse_value(tokens):
         return 0
     tok = tokens[0]
     # Check for function call: CALL func_name [MED arg1 [MED arg2 ...]]
-    if tok == 'CALL' and len(tokens) >= 2:
+    # Also handle 'anropa'/'kalla' keywords passed through as variable names
+    # (tokenizer passes them through after SET/TILL, but we need to recognize them)
+    if tok in ('CALL', 'ANROPA', 'KALLA', 'anropa', 'kalla') and len(tokens) >= 2:
         func_name = tokens[1]
-        args = [t for t in tokens[2:] if t != 'MED']
+        # Normalize func_name token too (might be lowercased)
+        if func_name in ('anropa', 'kalla'):
+            func_name = tokens[2] if len(tokens) > 2 else func_name
+        # Strip commas from args (e.g. '1,' -> '1')
+        args = [t.rstrip(',') for t in tokens[2:] if t not in ('MED',)]
         return ('CALL', func_name, args)
     # Check for LIST_LEN: LIST_LEN list_name
     if tok == 'LIST_LEN' and len(tokens) >= 2:
@@ -199,6 +215,13 @@ def parse_value(tokens):
         second_val = int(second) if second.isdigit() else second
         first_val = int(tok) if tok.isdigit() else tok
         return (op_sym, first_val, second_val)
+    # Check for function call via known function name (after SET/TILL, anropa/kalla passed as VAR)
+    # e.g. "sätt b till dubbla a" where 'dubbla' is a known function
+    if tok not in ('SET', 'TILL', 'GREJ', 'FOR', 'IF', 'WHILE', 'BREAK', 'SKRIV',
+                  'RET', 'FUNC_DEF') and tok in FUNC_NAMES and len(tokens) >= 2:
+        func_name = tok
+        args = [t.rstrip(',') for t in tokens[1:] if t not in ('MED',)]
+        return ('CALL', func_name, args)
     # Plain number or identifier (including CHAR, LIST_LEN, etc.)
     if tok.isdigit():
         return int(tok)

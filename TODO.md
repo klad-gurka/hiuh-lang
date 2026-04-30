@@ -9,14 +9,14 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 ### Satser (Statements)
 | IR nod | Parse impl | Parse test | X86 impl | X86 test | Integration |
 |--------------------------------|:---------:|:---------:|:--------:|:--------:|:-----------:|
-| SÄTT | ✅ | ✅ | ✅ | ✅ | ❌ |
+| SÄTT | ✅ | ✅ | ✅ | ✅ | ✅ |
 | FÖR | ✅ | ✅ | ✅ | ✅ | ❌ |
-| MEDAN | ✅ | ✅ | ✅ | ✅ | ❌ |
-| OM | ✅ | ✅ | ✅ | ✅ | ❌ |
-| BRYT | ✅ | ✅ | ❌ | ❌ | ❌ |
+| MEDAN | ✅ | ✅ | ✅ | ✅ | ✅ |
+| OM | ✅ | ✅ | ✅ | ✅ | ✅ |
+| BRYT | ✅ | ✅ | ❌ | ❌ | ✅ |
 | HEJDÅ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SKRIV | ✅ | ✅ | ❌ | ❌ | ❌ |
-| SKRIV_VÄRDE | ✅ | ✅ | ✅ | ❌ | ❌ |
+| SKRIV_VÄRDE | ✅ | ✅ | ✅ | ❌ | ✅ |
 | LÄS_RAD | ✅ | ✅ | ❌ | ❌ | ❌ |
 | GREJ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | ANROPA | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -34,20 +34,20 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 ### Uttryck (Expressions)
 | IR nod | Parse impl | Parse test | X86 impl | X86 test | Integration |
 |------------------------------|:----------:|:----------:|:--------:|:--------:|:-----------:|
-| PLUSS | ✅ | ✅ | ✅ | ✅ | ❌ |
-| MINUS | ✅ | ✅ | ✅ | ✅ | ❌ |
-| DELA | ✅ | ✅ | ✅ | ✅ | ❌ |
-| GÅNGER | ✅ | ✅ | ✅ | ✅ | ❌ |
+| PLUSS | ✅ | ✅ | ✅ | ✅ | ✅ |
+| MINUS | ✅ | ✅ | ✅ | ✅ | ✅ |
+| DELA | ✅ | ✅ | ✅ | ✅ | ✅ |
+| GÅNGER | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Jämförelseoperatorer
 | IR nod | Parse impl | Parse test | X86 impl | X86 test | Integration |
 |----------|:----------:|:----------:|:--------:|:--------:|:-----------:|
-| mindre | ✅ | ✅ | ✅ | ✅ | ❌ |
-| mindreLikaMed | ✅ | ✅ | ✅ | ✅ | ❌ |
-| större | ✅ | ✅ | ✅ | ✅ | ❌ |
-| störreLikaMed | ✅ | ✅ | ✅ | ✅ | ❌ |
-| likaMed | ✅ | ✅ | ✅ | ✅ | ❌ |
-| inteLikaMed | ✅ | ✅ | ✅ | ✅ | ❌ |
+| mindre | ✅ | ✅ | ✅ | ✅ | ✅ |
+| mindreLikaMed | ✅ | ✅ | ✅ | ✅ | ✅ |
+| större | ✅ | ✅ | ✅ | ✅ | ✅ |
+| störreLikaMed | ✅ | ✅ | ✅ | ✅ | ✅ |
+| likaMed | ✅ | ✅ | ✅ | ✅ | ✅ |
+| inteLikaMed | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ## Nästa steg
 
@@ -55,23 +55,17 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 1. [x] IF_ELSE, WHILE, Swedish IR operators, Integration tests, Swedish IR in x86
 
 ### Medel prioritet
-2. [ ] FOR x86 backend
+2. [ ] FOR integrationstest (x86 impl ✅, saknar integrationstest)
 3. [ ] SKRIV text x86 backend
 4. [ ] Parse-tester för TA_BORT_INDEX och GE
 5. [ ] X86-tester för SKRIV_VÄRDE och NY_LISTA
+6. [ ] HEJDÅ x86 backend
 
 ### Låg prioritet
-6. [ ] Självkompilering
-7. [ ] HÄMTA_INDEX
-8. [ ] BYT_UT
+7. [ ] Självkompilering
+8. [ ] HÄMTA_INDEX
+9. [ ] BYT_UT
 
 ## Kända buggar/problem
 
 - `i` är keyword `IN` → kan inte användas som variabelnamn
-
-## Ändringslogg
-
-### 2026-04-30
-- [x] **FIX**: parse.py `parse_for`: body loop använde `child_indent < base_indent` för dedent-check vilket orsakade infinite loop när nästa rad har samma indent som FOR-linjen. Ändrad till `child_indent <= base_indent` (som redan fanns i WHILE och IF). Symptom: `sätt x till x pluss 1` i FOR-body gav `('SET', 'x', 'pluss')` istället för `('SET', 'x', ('PLUSS', 'x', 1))`.
-- [x] **TEST**: Lade till `test_for_body_with_arithmetic` i tests/test_parse.py
-- [x] **TEST**: Fixade `test_list_init` som felaktigt förväntade sig `LIST_INIT` istället för `NY_LISTA`

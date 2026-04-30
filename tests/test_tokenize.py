@@ -41,10 +41,10 @@ def test_if_statement():
     assert lines[1] == (4, ['SKRIV', 'x'])
 
 def test_space_friendly_skriv_ny_rad():
-    """skriv ny rad x"""
-    lines = list(tokenize("skriv ny rad x"))
+    """skriv ny rad → SKRIV RADBRYT (unified SKRIV with RADBRYT)"""
+    lines = list(tokenize("skriv ny rad"))
     indent, tokens = lines[0]
-    assert tokens == ['SKRIV_NL', 'x']
+    assert tokens == ['SKRIV', 'RADBRYT'], f"Got {tokens}"
 
 def test_space_friendly_jag_ga_nu():
     """jag gå nu"""

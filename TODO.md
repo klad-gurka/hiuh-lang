@@ -52,13 +52,11 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 
 ### Hög prioritet
 1. [x] IF_ELSE, WHILE, Swedish IR operators, Integration tests, Swedish IR in x86
-
-### Medel prioritet
-2. [ ] FOR integrationstest (x86 impl ✅, saknar integrationstest)
-3. [ ] SKRIV text x86 backend
-4. [ ] Parse-tester för TA_BORT_INDEX och GE
-5. [ ] X86-tester för SKRIV_VÄRDE och NY_LISTA
-6. [ ] HEJDÅ x86 backend
+2. [x] FOR integrationstest (x86 impl ✅, saknar integrationstest)
+3. [x] SKRIV text x86 backend
+4. [x] Parse-tester för TA_BORT_INDEX och GE
+5. [x] X86-tester för SKRIV_VÄRDE och NY_LISTA
+6. [x] HEJDÅ x86 backend
 
 ### Låg prioritet
 7. [ ] Självkompilering

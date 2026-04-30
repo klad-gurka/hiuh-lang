@@ -47,6 +47,9 @@ def tokenize(src):
     last_token = None  # Track the last token added
     first_indent = None  # Track first non-empty line's indent for normalization
     for line in src.split('\n'):
+        # Reset state for each line - new line means fresh context
+        prev_word = None
+        last_token = None
         # Calculate indentation level
         indent = len(line) - len(line.lstrip())
         stripped = line.strip()

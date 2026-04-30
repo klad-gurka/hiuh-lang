@@ -59,7 +59,7 @@ tests/
 | `sätt a till ny lista med 1, 2, 3` | `('NY_LISTA', args)`                  | `('SÄTT', ('VARIABEL', 'a'), ('NY_LISTA', [('HELTAL', 1), ('HELTAL', 2), ('HELTAL', 3)]))` | ❌   | ❌    |
 | `lägg till x i a`                  | `('LÄGG_TILL', expr, var)`            | `('LÄGG_TILL', ('VARIABEL', x'), 'a')`                                                     | ❌   | ❌    |
 | `ta bort apa från a`               | `('TA_BORT', expr, var)`              | `('TA_BORT', ('TEXT', 'apa'), 'a')`                                                        | ❌   | ❌    |
-| `ta bort element 3 från a`         | `('TA_BORT_INDEX', index, var)`       | `('TA_BORT_INDEX', 3, 'a')`                                                                | ❌   | ❌    |
+| `ta bort element 3 från a`         | `('LIST_REMOVE_INDEX', var, index)`   | `('LIST_REMOVE_INDEX', 'a', 3)`                                                             | ✅   | ❌    |
 | `sätt x till element 3 från a`     | `('HÄMTA_INDEX', index, var)`         | `('SÄTT', 'x', ('HÄMTA_INDEX', 3, 'a'))`                                                   | ❌   | ❌    |
 | `byt ut element 3 från a till b`   | `('BYT_UT', index, var, expr)`        | `('BYT_UT', 3, 'a', ('VARIABEL', 'b'))`                                                    | ❌   | ❌    |
 | `antal element i lst`              | `('ANTAL', var)`                      | `('ANTAL', 'lst')`                                                                         | ❌   | ❌    |

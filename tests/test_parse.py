@@ -160,6 +160,12 @@ def test_list_create():
     ir = parse_tokens(lines)
     assert ir == [('LIST_CREATE', 'x')], f"Got {ir}"
 
+def test_list_init():
+    """sätt x till lista av 1, 2, 3 → LIST_INIT"""
+    lines = list(tokenize("sätt x till lista av 1, 2, 3"))
+    ir = parse_tokens(lines)
+    assert ir == [('LIST_INIT', 'x', ['1', '2', '3'])], f"Got {ir}"
+
 def test_list_append():
     """lägg till 1 till x → LIST_APPEND"""
     lines = list(tokenize("lägg till 1 till x"))

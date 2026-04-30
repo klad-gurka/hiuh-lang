@@ -44,7 +44,7 @@ tests/
 |------------------------------------|---------------------------------------|--------------------------------------------------------------------------------------------|-----|------|
 | `sätt x till 5`                    | `('SÄTT', name, expr)`                | `('SÄTT', 'x', ('HELTAL', 5))`                                                             | ❌   | ❌    |
 | `för x från 0 till 10`             | `('FÖR', var, start, end, body)`      | `('FÖR', 'x', 0, 10, [body])`                                                              | ❌   | ❌    |
-| `medan x är mindre än 5`           | `('MEDAN', expr, body)`               | `('MEDAN', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [body])`                          | ❌   | ❌    |
+| `medan x är mindre än 5`           | `('MEDAN', expr, body)`               | `('MEDAN', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [body])`                          | ✅   | ❌    |
 | `om x är mindre än 5`              | `('OM', expr, true_body, false_body)` | `('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [...], [...])`                       | ✅   | ❌    |
 | `bryt`                             | `('BRYT',)`                           | `('BRYT',)`                                                                                | ❌   | ❌    |
 | `hej då` / `jag gå nu`             | `('HEJDÅ',)`                          | `('HEJDÅ',)`                                                                               | ❌   | ❌    |
@@ -87,7 +87,7 @@ TODO: uppdatera tabell ovan med korrekt x86-status
 
 ### Medel prioritet
 5. [x] **Fixa UT expression i x86 backend** (PLUS/MINUS/TIMES/DIV i SKRIV funkar nu)
-6. [ ] **Implementera WHILE med OM-format** (nuvarande WHILE är annorlunda)
+6. [x] **WHILE** - fungerar med samma struktur som IF (villkor som tuple `('x', 'mindre', '5')`)
 
 ### Låg prioritet
 7. [ ] WASM backend

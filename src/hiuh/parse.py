@@ -134,12 +134,12 @@ def parse_block(lines, base_indent, out):
             list_name = tokens[1] if len(tokens) > 1 else ''
             out.append(('LIST_LEN', list_name))
             i += 1
-        elif tok == 'LIST_REMOVE_INDEX':
-            # ta bort element X från lst → LIST_REMOVE_INDEX lst X
+        elif tok == 'TA_BORT_INDEX':
+            # ta bort element X från lst → TA_BORT_INDEX lst X
             list_name = tokens[1] if len(tokens) > 1 else ''
             idx_str = tokens[2] if len(tokens) > 2 else ''
             idx = int(idx_str) if idx_str.isdigit() else idx_str
-            out.append(('LIST_REMOVE_INDEX', list_name, idx))
+            out.append(('TA_BORT_INDEX', list_name, idx))
             i += 1
         elif tok == 'FILE_OPEN':
             # öppna X för läsning → FILE_OPEN X mode
@@ -509,11 +509,11 @@ def parse_single_line(lines, base_indent, body):
         list_name = tokens[1] if len(tokens) > 1 else ''
         body.append(('LIST_LEN', list_name))
         return None, 1
-    elif tok == 'LIST_REMOVE_INDEX':
+    elif tok == 'TA_BORT_INDEX':
         list_name = tokens[1] if len(tokens) > 1 else ''
         idx_str = tokens[2] if len(tokens) > 2 else ''
         idx = int(idx_str) if idx_str.isdigit() else idx_str
-        body.append(('LIST_REMOVE_INDEX', list_name, idx))
+        body.append(('TA_BORT_INDEX', list_name, idx))
         return None, 1
     elif tok == 'FILE_OPEN':
         filename = tokens[1] if len(tokens) > 1 else ''

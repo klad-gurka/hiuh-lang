@@ -723,12 +723,12 @@ def compile_stmt(stmt, target):
         emit(f"    # LIST_LEN {list_name}")
         emit(f"    mov 4({list_reg}), %rax")
 
-    elif op == 'LIST_REMOVE_INDEX':
+    elif op == 'TA_BORT_INDEX':
         list_name, idx = stmt[1], stmt[2]
         list_reg = alloc_reg(list_name)
         lbl_skip = new_label()
         lbl_done = new_label()
-        emit(f"    # LIST_REMOVE_INDEX {list_name}[{idx}]")
+        emit(f"    # TA_BORT_INDEX {list_name}[{idx}]")
         # Get length
         emit(f"    mov 4({list_reg}), %rcx  # length")
         # Check bounds: if idx >= length, skip

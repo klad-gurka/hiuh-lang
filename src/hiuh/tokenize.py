@@ -115,16 +115,16 @@ def tokenize(src):
                     i += 4
                     continue
             
-            # Handle "ta bort element X från Y" → LIST_REMOVE_INDEX Y X
+            # Handle "ta bort element X från Y" → TA_BORT_INDEX Y X
             if word == 'ta' and i + 5 < len(words):
                 if words[i+1].lower() == 'bort' and words[i+2].lower() == 'element':
                     idx = words[i+3]
                     if words[i+4].lower() == 'från':
                         list_name = words[i+5]
-                        tokens.append('LIST_REMOVE_INDEX')
+                        tokens.append('TA_BORT_INDEX')
                         tokens.append(list_name)
                         tokens.append(idx)
-                        last_token = 'LIST_REMOVE_INDEX'
+                        last_token = 'TA_BORT_INDEX'
                         i += 6
                         continue
             

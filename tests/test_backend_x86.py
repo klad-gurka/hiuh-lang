@@ -212,6 +212,72 @@ def test_file_write():
     asm = capture_asm([('FILE_WRITE', 'resultat.txt', '')])
     assert 'sys_write' in asm or 'mov $1, %rax' in asm, f"Got: {asm}"
 
+def test_skriv_radbryt():
+    """SKRIV ('RADBRYT',) → newline via msg_nl"""
+    asm = capture_asm([('SKRIV', ('RADBRYT',))])
+    assert 'msg_nl' in asm
+    assert 'syscall' in asm
+
+def test_skriv_variabel():
+    """SKRIV ('VARIABEL', 'x') → print variable value"""
+    asm = capture_asm([('SKRIV', ('VARIABEL', 'x'))])
+    assert 'syscall' in asm
+    assert 'num_buf' in asm
+
+def test_skriv_heltal():
+    """SKRIV ('HELTAL', 42) → print integer literal"""
+    asm = capture_asm([('SKRIV', ('HELTAL', 42))])
+    assert 'mov $42, %rax' in asm
+    assert 'syscall' in asm
+
+def test_skriv_text():
+    """SKRIV ('TEXT', 'hej') → print string"""
+    asm = capture_asm([('SKRIV', ('TEXT', 'hej'))])
+    assert 'msg_0' in asm
+    assert 'syscall' in asm
+
+def test_skriv_pluss():
+    """SKRIV ('PLUSS', 'x', 1) → compute and print expression"""
+    asm = capture_asm([('SKRIV', ('PLUSS', 'x', 1))])
+    assert 'add' in asm
+    assert 'syscall' in asm
+
+def test_skriv_minus():
+    """SKRIV ('MINUS', 'x', 1)"""
+    asm = capture_asm([('SKRIV', ('MINUS', 'x', 1))])
+    assert 'sub' in asm
+    assert 'syscall' in asm
+
+def test_skriv_ganger():
+    """SKRIV ('GÅNGER', 'x', 2)"""
+    asm = capture_asm([('SKRIV', ('GÅNGER', 'x', 2))])
+    assert 'imul' in asm
+    assert 'syscall' in asm
+
+def test_skriv_dela():
+    """SKRIV ('DELA', 'x', 2)"""
+    asm = capture_asm([('SKRIV', ('DELA', 'x', 2))])
+    assert 'idiv' in asm
+    assert 'syscall' in asm
+
+def test_skriv_radbryt_only():
+    """SKRIV with RADBRYT generates newline syscall only"""
+    asm = capture_asm([('SKRIV', ('RADBRYT',))])
+    assert 'msg_nl' in asm
+    # RADBRYT does NOT use num_buf - it just prints the newline string
+    # num_buf is for integer printing
+    assert 'lea num_buf(%rip), %rsi' not in asm
+
+def test_skriv_text_with_expr():
+    """Multiple SKRIV statements with different expr types"""
+    asm = capture_asm([
+        ('SET', 'x', 5),
+        ('SKRIV', ('VARIABEL', 'x')),
+        ('SKRIV', ('TEXT', 'hej')),
+        ('SKRIV', ('RADBRYT',)),
+    ])
+    assert 'syscall' in asm
+
 if __name__ == '__main__':
     test_set_integer()
     test_set_multiple_vars()
@@ -238,6 +304,16 @@ if __name__ == '__main__':
     test_alloc_reg_same_var()
     test_file_open()
     test_file_write()
+    test_skriv_radbryt()
+    test_skriv_variabel()
+    test_skriv_heltal()
+    test_skriv_text()
+    test_skriv_pluss()
+    test_skriv_minus()
+    test_skriv_ganger()
+    test_skriv_dela()
+    test_skriv_radbryt_only()
+    test_skriv_text_with_expr()
     print("Alla x86 backend-tester OK!")
 
 def test_while_basic():

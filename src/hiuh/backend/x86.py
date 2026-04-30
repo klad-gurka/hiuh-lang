@@ -449,8 +449,6 @@ def compile_stmt(stmt, target):
             pass
     elif op == 'SKRIV':
         expr = stmt[1] if len(stmt) > 1 else ''
-        lbl_s = new_label()
-        lbl_d = new_label()
         
         # Handle RADBRYT (newline)
         if isinstance(expr, tuple) and expr[0] == 'RADBRYT':
@@ -459,6 +457,7 @@ def compile_stmt(stmt, target):
             emit(f"    mov $1, %edi")
             emit(f"    mov $1, %eax")
             emit(f"    syscall")
+            return  # RADBRYT done, don't fall through
         elif expr:
             # Handle tuple expressions: VARIABEL, TEXT, PLUSS, MINUS, GÅNGER, DELA
             if isinstance(expr, tuple) and len(expr) >= 2:
@@ -469,6 +468,8 @@ def compile_stmt(stmt, target):
                     emit(f"    mov {reg}, %rax")
                     emit(f"    xor %edx, %edx  # clear for div")
                     emit(f"    lea num_buf(%rip), %rsi")
+                    lbl_s = new_label()
+                    lbl_d = new_label()
                     emit(f"    cmp $10, %rax")
                     emit(f"    jb .Ls{lbl_s}")
                     emit(f"    mov $10, %rcx")
@@ -498,6 +499,8 @@ def compile_stmt(stmt, target):
                     emit(f"    mov ${value}, %rax")
                     emit(f"    xor %edx, %edx")
                     emit(f"    lea num_buf(%rip), %rsi")
+                    lbl_s = new_label()
+                    lbl_d = new_label()
                     emit(f"    cmp $10, %rax")
                     emit(f"    jb .Ls{lbl_s}")
                     emit(f"    mov $10, %rcx")
@@ -628,6 +631,8 @@ def compile_stmt(stmt, target):
                 emit(f"    mov ${expr}, %rax")
                 emit(f"    xor %edx, %edx")
                 emit(f"    lea num_buf(%rip), %rsi")
+                lbl_s = new_label()
+                lbl_d = new_label()
                 emit(f"    cmp $10, %rax")
                 emit(f"    jb .Ls{lbl_s}")
                 emit(f"    mov $10, %rcx")
@@ -651,39 +656,6 @@ def compile_stmt(stmt, target):
                 emit(f"    mov $1, %eax")
                 emit(f"    syscall")
                 emit(f".Ld{lbl_d}:")
-    elif op == 'SKRIV_VAR':
-        name = stmt[1]
-        reg = alloc_reg(name)
-        lbl_s = new_label()
-        lbl_d = new_label()
-        emit(f"    # Print variable value: {name}")
-        emit(f"    mov {reg}, %rax")
-        emit(f"    xor %edx, %edx  # clear for div")
-        emit(f"    lea num_buf(%rip), %rsi")
-        emit(f"    cmp $10, %rax")
-        emit(f"    jb .LV{lbl_s}")
-        emit(f"    # >=10: two digits")
-        emit(f"    mov $10, %rcx")
-        emit(f"    div %rcx  # al=quotient, dl=remainder")
-        emit(f"    push %rax  # save quotient")
-        emit(f"    add $48, %dl")
-        emit(f"    movb %dl, 1(%rsi)  # ones digit")
-        emit(f"    pop %rax")
-        emit(f"    add $48, %al  # tens digit")
-        emit(f"    movb %al, (%rsi)")
-        emit(f"    mov $2, %rdx")
-        emit(f"    mov $1, %edi")
-        emit(f"    mov $1, %eax")
-        emit(f"    syscall")
-        emit(f"    jmp .LV{lbl_d}")
-        emit(f".LV{lbl_s}:")
-        emit(f"    add $48, %rax  # single digit")
-        emit(f"    movb %al, (%rsi)")
-        emit(f"    mov $1, %rdx")
-        emit(f"    mov $1, %edi")
-        emit(f"    mov $1, %eax")
-        emit(f"    syscall")
-        emit(f".LV{lbl_d}:")
     elif op == 'READ':
         var_name = stmt[1] if len(stmt) > 1 else 'input_buf'
         lbl_loop = new_label()

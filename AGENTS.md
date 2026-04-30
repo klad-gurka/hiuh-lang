@@ -34,6 +34,19 @@ Kör tester med:
 pytest tests/ -v
 ```
 
+## Versionskontroll
+- **Committa ALDRIG** genererade filer: `.pyc`, `__pycache__/`, `*.egg-info/`, `.h`, `.o`
+- **Committa ALDRIG** binärfiler: `a.out`, `*.exe`, `*.s` (asm output)
+- **Committa ALDRIG** editorfiler: `.vscode/`, `*.swp`, `*~`
+- **Committa ALDRIG** byggresultat: `build/`, `dist/`
+
+Filtyper som ÄR okej att committa:
+- Källkod: `*.py`, `*.hiuh`, `*.h`
+- Konfiguration: `*.md`, `*.sh`, `.gitignore`, `pyproject.toml`
+- Test: `tests/*.py`
+
+**BEFORE ANY COMMIT:** Kör alltid `git status` för att se vad som ska committas.
+
 ## Arkitektur
 - `src/hiuh/tokenize.py` — tokenizer
 - `src/hiuh/parse.py` — parser → IR

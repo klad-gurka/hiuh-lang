@@ -13,10 +13,10 @@ FUNC_NAMES = set()
 def parse_tokens(tokenized_lines):
     """
     Parse tokenized lines (indent, tokens) to IR
-    
+
     Args:
         tokenized_lines: list of (indent_level, tokens) tuples
-    
+
     Returns:
         IR as list of tuples
     """
@@ -34,7 +34,7 @@ def parse_tokens(tokenized_lines):
 def parse_block(lines, base_indent, out):
     """
     Parse a block of lines up to the next dedent.
-    
+
     Args:
         lines: list of (indent, tokens) remaining
         base_indent: indentation level of parent block
@@ -43,18 +43,18 @@ def parse_block(lines, base_indent, out):
     i = 0
     while i < len(lines):
         indent, tokens = lines[i]
-        
+
         # If dedent (less indentation than parent), we're done
         if indent < base_indent:
             return i
-        
+
         # Skip empty lines
         if not tokens:
             i += 1
             continue
-        
+
         tok = tokens[0]
-        
+
         if tok == 'SET':
             consumed = parse_set(tokens)
             out.extend(consumed)
@@ -156,7 +156,7 @@ def parse_block(lines, base_indent, out):
         else:
             # Unknown token, skip
             i += 1
-    
+
     return i
 
 def parse_set(tokens):
@@ -233,7 +233,7 @@ def parse_for(lines, base_indent):
     Returns (ir_statement, lines_consumed)
     """
     indent, tokens = lines[0]
-    
+
     # Parse FOR header
     var = tokens[1]
     start, end = 0, 0
@@ -247,17 +247,17 @@ def parse_for(lines, base_indent):
     if tokens[j] == 'TILL':
         j += 1
     end = int(tokens[j])
-    
+
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
         # No body
         return ('FOR', var, start, end, []), 1
-    
+
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after FOR line)
         return ('FOR', var, start, end, []), 1
-    
+
     # Multi-line FOR with body at next_indent
     body = []
     i = 1  # Start after FOR line
@@ -269,7 +269,7 @@ def parse_for(lines, base_indent):
         # Parse the body line
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
         i += body_len
-    
+
     ir = ('FOR', var, start, end, body)
     return ir, i
 
@@ -294,20 +294,20 @@ def parse_if(lines, base_indent):
     Returns (ir_statement, lines_consumed)
     """
     indent, tokens = lines[0]
-    
+
     # Parse the IF condition
     cmp_result = parse_cmp(tokens[1:])
     var, op, val = cmp_result
-    
+
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
         return ('IF', (var, op, val), [], []), 1
-    
+
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after IF line)
         return ('IF', (var, op, val), [], []), 1
-    
+
     # Multi-line IF with body at next_indent
     true_body = []
     false_body = []
@@ -315,21 +315,31 @@ def parse_if(lines, base_indent):
     i = 1  # Start after IF line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        
+
         # Check for ELSE at same indent level (base_indent)
         if child_indent == base_indent and child_tokens and child_tokens[0] == 'ELSE':
             in_false_body = True
             i += 1
             continue
-        
-        if child_indent <= base_indent:
+
+        if child_indent <= base_indent and not in_false_body:
             # Dedent - we're done with the IF statement
             break
-        
-        consumed, body_len = parse_single_line(lines[i:], base_indent + 1, 
-                                              false_body if in_false_body else true_body)
-        i += body_len
-    
+
+        # For false_body (after ELSE), use parse_block to handle arbitrary nesting
+        if in_false_body:
+            consumed = parse_block(lines[i:], base_indent + 1, false_body)
+            i += consumed
+            break  # parse_block handles dedent detection
+        else:
+            consumed, body_len = parse_single_line(lines[i:], base_indent + 1, true_body)
+            if body_len == 0:
+                # Indentation deeper than base_indent+1 - recurse into parse_block
+                consumed = parse_block(lines[i:], base_indent + 1, true_body)
+                i += consumed
+            else:
+                i += body_len
+
     ir = ('IF', (var, op, val), true_body, false_body)
     return ir, i
 
@@ -339,20 +349,20 @@ def parse_while(lines, base_indent):
     Returns (ir_statement, lines_consumed)
     """
     indent, tokens = lines[0]
-    
+
     # Parse the WHILE condition
     cmp_result = parse_cmp(tokens[1:])
     var, op, val = cmp_result
-    
+
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
         return ('WHILE', (var, op, val), []), 1
-    
+
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after WHILE line)
         return ('WHILE', (var, op, val), []), 1
-    
+
     # Multi-line WHILE with body at next_indent
     body = []
     i = 1  # Start after WHILE line
@@ -363,7 +373,7 @@ def parse_while(lines, base_indent):
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
         i += body_len
-    
+
     ir = ('WHILE', (var, op, val), body)
     return ir, i
 
@@ -373,22 +383,22 @@ def parse_grej(lines, base_indent):
     Returns (ir_statement, lines_consumed)
     """
     indent, tokens = lines[0]
-    
+
     # Parse GREJ header: grej func_name param1 [param2 ...]
     func_name = tokens[1]
     params = tokens[2:]
     # Remove MED keywords from params if any
     params = [p for p in params if p != 'MED']
-    
+
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
         return ('FUNC_DEF', func_name, params, []), 1
-    
+
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after GREJ line)
         return ('FUNC_DEF', func_name, params, []), 1
-    
+
     # Multi-line GREJ with body at next_indent
     body = []
     i = 1  # Start after GREJ line
@@ -399,7 +409,7 @@ def parse_grej(lines, base_indent):
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
         i += body_len
-    
+
     ir = ('FUNC_DEF', func_name, params, body)
     return ir, i
 
@@ -428,16 +438,16 @@ def parse_single_line(lines, base_indent, body):
     """Parse a single line into body list, returns (ir, lines_consumed)"""
     if not lines:
         return None, 0
-    
+
     indent, tokens = lines[0]
     if indent < base_indent:
         return None, 0
-    
+
     if not tokens:
         return None, 1
-    
+
     tok = tokens[0]
-    
+
     if tok == 'SET':
         consumed = parse_set(tokens)
         body.extend(consumed)
@@ -525,7 +535,7 @@ def parse_single_line(lines, base_indent, body):
         data = tokens[2] if len(tokens) > 2 else ''
         body.append(('FILE_WRITE', filename, data))
         return None, 1
-    
+
     return None, 1
 
 def parse_cmp(tokens):
@@ -575,7 +585,7 @@ def parse_stream():
             lines.append((indent, tokens))
         else:
             lines.append((0, line.split()))
-    
+
     ir = parse_tokens(lines)
     for stmt in ir:
         print(stmt)

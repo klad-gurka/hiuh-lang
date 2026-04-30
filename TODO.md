@@ -19,13 +19,13 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 | LÄS_RAD | ✅ | ✅ | ❌ | ❌ | ❌ |
 | GREJ | ✅ | ✅ | ❌ | ❌ | ❌ |
 | ANROPA | ✅ | ✅ | ❌ | ❌ | ❌ |
-| GE | ✅ | ❌ | ❌ | ❌ | ❌ |
+| GE | ✅ | ✅ | ❌ | ❌ | ❌ |
 | NY_LISTA | ✅ | ✅ | ✅ | ❌ | ❌ |
 | LÄGG_TILL | ✅ | ✅ | ❌ | ❌ | ❌ |
 | TA_BORT | ✅ | ✅ | ❌ | ❌ | ❌ |
-| TA_BORT_INDEX | ✅ | ❌ | ✅ | ❌ | ❌ |
-| HÄMTA_INDEX | ❌ | ❌ | ❌ | ❌ | ❌ |
-| BYT_UT | ❌ | ❌ | ❌ | ❌ | ❌ |
+| TA_BORT_INDEX | ✅ | ✅ | ✅ | ✅ | ✅ |  # +x86 test +integration (fix: movl 32-bit length)
+| HÄMTA_INDEX | ✅ | ✅ | ✅ | ✅ | ✅ |  # LIST_GET i SET + integration
+| BYT_UT | ✅ | ✅ | ✅ | ✅ | ✅ |  # Ny: tokenizer + parse + x86 + tester
 | ANTAL | ✅ | ✅ | ❌ | ❌ | ❌ |
 | SKRIV_FIL | ✅ | ✅ | ❌ | ❌ | ❌ |
 | LÄS_FIL | ✅ | ✅ | ❌ | ❌ | ❌ |
@@ -60,8 +60,8 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 
 ### Låg prioritet
 7. [ ] Självkompilering
-8. [ ] HÄMTA_INDEX
-9. [ ] BYT_UT
+8. [x] HÄMTA_INDEX (LIST_GET i SET + TA_BORT_INDEX x86 test + integration)
+9. [x] BYT_UT (ny: tokenizer + parse + x86 + tester)
 
 ## Kända buggar/problem
 

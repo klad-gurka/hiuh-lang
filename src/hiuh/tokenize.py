@@ -138,25 +138,33 @@ def tokenize(src):
                     i += 4
                     continue
             
-            # Handle "skriv värdet av x" → SKRIV_VAR x (print variable value)
+            # Handle "skriv värdet av x" → SKRIV ('VARIABEL', x)
             if word == 'skriv' and i + 3 < len(words):
                 if words[i+1].lower() == 'värdet' and words[i+2].lower() == 'av':
-                    tokens.append('SKRIV_VAR')
+                    tokens.append('SKRIV')
+                    tokens.append('(')
+                    tokens.append('VARIABEL')
+                    tokens.append(',')
                     tokens.append(words[i+3])
-                    last_token = 'SKRIV_VAR'
+                    tokens.append(')')
+                    last_token = 'SKRIV'
                     i += 4
                     continue
             
-            # Handle "skriv ny rad" → SKRIV_NL (space-friendly)
+            # Handle "skriv ny rad" → SKRIV ('RADBRYT',)
             if word == 'skriv' and i + 2 < len(words):
                 if words[i+1].lower() == 'ny' and words[i+2].lower() == 'rad':
-                    tokens.append('SKRIV_NL')
-                    last_token = 'SKRIV_NL'
+                    tokens.append('SKRIV')
+                    tokens.append('(')
+                    tokens.append('RADBRYT')
+                    tokens.append(',')
+                    tokens.append(')')
+                    last_token = 'SKRIV'
                     i += 3
                     continue
             
-            # After SKRIV_NL, next word is an argument (not a keyword)
-            if last_token == 'SKRIV_NL':
+            # After SKRIV, next word may be expression components
+            if last_token == 'SKRIV':
                 tokens.append(words[i])
                 last_token = None
                 i += 1

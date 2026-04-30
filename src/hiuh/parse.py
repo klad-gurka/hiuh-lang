@@ -31,6 +31,45 @@ def parse_tokens(tokenized_lines):
     parse_block(tokenized_lines, 0, ir)
     return ir
 
+
+def parse_skriv_expr(tokens):
+    """
+    Parse SKRIV expression from tokens.
+    
+    Cases:
+    - ('VARIABEL', ',', 'x', ')') → ('VARIABEL', 'x')
+    - ('RADBRYT', ',', ')') → ('RADBRYT',)
+    - ('TEXT', ',', 'hello', ')') → ('TEXT', 'hello')
+    - ('x',) → 'x' (variable name as string)
+    - ('x', 'pluss', '1') → ('PLUSS', 'x', 1)
+    """
+    if not tokens:
+        return ''
+    
+    # Check for tuple syntax: ( VARIABEL , x )
+    if len(tokens) >= 4 and tokens[0] == '(' and tokens[1] == 'VARIABEL' and tokens[2] == ',':
+        # Find closing paren
+        if ')' in tokens:
+            close_idx = tokens.index(')')
+            name = tokens[3] if close_idx >= 4 else ''
+            return ('VARIABEL', name)
+        name = tokens[3] if len(tokens) >= 4 else ''
+        return ('VARIABEL', name)
+    
+    # Check for RADBRYT tuple: ( RADBRYT , )
+    if len(tokens) >= 4 and tokens[0] == '(' and tokens[1] == 'RADBRYT' and tokens[2] == ',':
+        return ('RADBRYT',)
+    
+    # Check for TEXT tuple: ( TEXT , 'hello' )
+    if len(tokens) >= 4 and tokens[0] == '(' and tokens[1] == 'TEXT' and tokens[2] == ',':
+        if ')' in tokens:
+            close_idx = tokens.index(')')
+            text = tokens[3] if close_idx >= 4 else ''
+            return ('TEXT', text)
+    
+    # Otherwise, use parse_value for expressions
+    return parse_value(tokens)
+
 def parse_block(lines, base_indent, out):
     """
     Parse a block of lines up to the next dedent.
@@ -78,18 +117,19 @@ def parse_block(lines, base_indent, out):
             out.append(('BREAK',))
             i += 1
         elif tok == 'SKRIV':
-            # Parse expression after SKRIV: skriv x PLUS/MINUS/TIMES/DIV y
+            # Parse SKRIV expression
             val_tokens = tokens[1:]
-            val = parse_value(val_tokens)
+            val = parse_skriv_expr(val_tokens)
             out.append(('SKRIV', val))
             i += 1
         elif tok == 'SKRIV_NL':
-            expr = tokens[1] if len(tokens) > 1 else ''
-            out.append(('SKRIV_NL', expr))
+            # skriv ny rad → SKRIV ('RADBRYT',)
+            out.append(('SKRIV', ('RADBRYT',)))
             i += 1
         elif tok == 'SKRIV_VAR':
+            # skriv värdet av x → SKRIV ('VARIABEL', x)
             name = tokens[1] if len(tokens) > 1 else ''
-            out.append(('SKRIV_VAR', name))
+            out.append(('SKRIV', ('VARIABEL', name)))
             i += 1
         elif tok == 'READ':
             out.append(('READ', 'input_buf'))
@@ -470,18 +510,19 @@ def parse_single_line(lines, base_indent, body):
         body.append(('BREAK',))
         return None, 1
     elif tok == 'SKRIV':
-        # Parse expression after SKRIV: skriv x PLUS/MINUS/TIMES/DIV y
+        # Parse SKRIV expression
         val_tokens = tokens[1:]
-        val = parse_value(val_tokens)
+        val = parse_skriv_expr(val_tokens)
         body.append(('SKRIV', val))
         return None, 1
     elif tok == 'SKRIV_NL':
-        expr = tokens[1] if len(tokens) > 1 else ''
-        body.append(('SKRIV_NL', expr))
+        # skriv ny rad → SKRIV ('RADBRYT',)
+        body.append(('SKRIV', ('RADBRYT',)))
         return None, 1
     elif tok == 'SKRIV_VAR':
+        # skriv värdet av x → SKRIV ('VARIABEL', x)
         name = tokens[1] if len(tokens) > 1 else ''
-        body.append(('SKRIV_VAR', name))
+        body.append(('SKRIV', ('VARIABEL', name)))
         return None, 1
     elif tok == 'FOR':
         consumed = parse_for_single(tokens)

@@ -133,10 +133,10 @@ def test_skriv():
     assert ir == [('SKRIV', 'x')]
 
 def test_skriv_nl():
-    """skriv ny rad x"""
-    lines = list(tokenize("skriv ny rad x"))
+    """skriv ny rad → SKRIV ('RADBRYT',)"""
+    lines = list(tokenize("skriv ny rad"))
     ir = parse_tokens(lines)
-    assert ir == [('SKRIV_NL', 'x')]
+    assert ir == [('SKRIV', ('RADBRYT',))]
 
 def test_complex_program():
     """Complex program with multiple statements"""

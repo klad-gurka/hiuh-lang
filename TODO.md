@@ -45,7 +45,7 @@ tests/
 | `sätt x till 5`                    | `('SÄTT', name, expr)`                | `('SÄTT', 'x', ('HELTAL', 5))`                                                             | ❌   | ❌    |
 | `för x från 0 till 10`             | `('FÖR', var, start, end, body)`      | `('FÖR', 'x', 0, 10, [body])`                                                              | ❌   | ❌    |
 | `medan x är mindre än 5`           | `('MEDAN', expr, body)`               | `('MEDAN', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [body])`                          | ❌   | ❌    |
-| `om x är mindre än 5`              | `('OM', expr, true_body, false_body)` | `('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [...], [...])`                       | ❌   | ❌    |
+| `om x är mindre än 5`              | `('OM', expr, true_body, false_body)` | `('OM', ('MINDRE', ('VARIABEL', 'x'), ('HELTAL', 5)), [...], [...])`                       | ✅   | ❌    |
 | `bryt`                             | `('BRYT',)`                           | `('BRYT',)`                                                                                | ❌   | ❌    |
 | `hej då` / `jag gå nu`             | `('HEJDÅ',)`                          | `('HEJDÅ',)`                                                                               | ❌   | ❌    |
 | `skriv hello`                      | `('SKRIV', expr)`                     | `('SKRIV', ('TEXT', 'hello'))`                                                             | ❌   | ❌    |
@@ -73,9 +73,9 @@ TODO: uppdatera tabell ovan med korrekt x86-status
 | IR nod             | Språk-konstruktion | IR-exempel           | X86 | WASM |
 |--------------------|--------------------|----------------------|-----|------|
 | `('PLUSS', a, b)`  | `a pluss b`        | `('PLUSS', 'x', 1)`  | ✅ | ❌ |
-| `('MINUS', a, b)`  | `a minus b`        | `('MINUS', 'x', 1)`  | ❌ | ❌ |
-| `('DELA', a, b)`   | `a delat b`        | `('DELA', 'x', 2)`   | ❌ | ❌ |
-| `('GÅNGER', a, b)` | `a gånger b`       | `('GÅNGER', 'x', 2)` | ❌ | ❌ |
+| `('MINUS', a, b)`  | `a minus b`        | `('MINUS', 'x', 1)`  | ✅ | ❌ |
+| `('DELA', a, b)`   | `a delat b`        | `('DELA', 'x', 2)`   | ✅ | ❌ |
+| `('GÅNGER', a, b)` | `a gånger b`       | `('GÅNGER', 'x', 2)` | ✅ | ❌ |
 
 ## Nästa steg
 

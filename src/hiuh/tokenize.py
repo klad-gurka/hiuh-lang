@@ -138,27 +138,20 @@ def tokenize(src):
                     i += 4
                     continue
             
-            # Handle "skriv värdet av x" → SKRIV ('VARIABEL', x)
+            # Handle "skriv värdet av x" → SKRIV x (just pass the variable name)
             if word == 'skriv' and i + 3 < len(words):
                 if words[i+1].lower() == 'värdet' and words[i+2].lower() == 'av':
                     tokens.append('SKRIV')
-                    tokens.append('(')
-                    tokens.append('VARIABEL')
-                    tokens.append(',')
                     tokens.append(words[i+3])
-                    tokens.append(')')
                     last_token = 'SKRIV'
                     i += 4
                     continue
             
-            # Handle "skriv ny rad" → SKRIV ('RADBRYT',)
+            # Handle "skriv ny rad" → SKRIV RADBRYT
             if word == 'skriv' and i + 2 < len(words):
                 if words[i+1].lower() == 'ny' and words[i+2].lower() == 'rad':
                     tokens.append('SKRIV')
-                    tokens.append('(')
                     tokens.append('RADBRYT')
-                    tokens.append(',')
-                    tokens.append(')')
                     last_token = 'SKRIV'
                     i += 3
                     continue

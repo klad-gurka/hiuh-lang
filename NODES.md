@@ -83,20 +83,22 @@ Avsluta programmet.
 ### SKRIV
 Skriv text, variabel, uttryck eller radbrytning.
 
-**Signatur:** `('SKRIV', expr)`
-
-**Expr kan vara:**
-- `('VARIABEL', 'x')` — skriv värdet av x
-- `('TEXT', 'hej')` — skriv text
+**Signatur:** `('SKRIV', expr)` där expr kan vara:
+- `('HELTAL', n)` — skriv heltal
 - `('RADBRYT',)` — skriv radbrytning
+- `('TEXT', 'hej')` — skriv text (inbyggd text)
+- `('VARIABEL', 'x')` — skriv variabels värde (explicit)
 - `('PLUSS', 'x', 1)` — skriv uttryck
+- `'x'` — skriv variabel (backend väljer variabel/text)
 
 **Exempel:**
 ```python
-('SKRIV', ('VARIABEL', 'x'))     # skriv värdet av x
-('SKRIV', ('TEXT', 'hej'))       # skriv hej
-('SKRIV', ('RADBRYT',))          # skriv ny rad
-('SKRIV', ('PLUSS', 'x', 1))    # skriv x + 1
+('SKRIV', ('HELTAL', 42))          # skriv 42
+('SKRIV', ('RADBRYT',))           # skriv ny rad
+('SKRIV', ('TEXT', 'hej'))        # skriv text
+('SKRIV', ('VARIABEL', 'x'))      # skriv variabel
+('SKRIV', ('PLUSS', 'x', 1))      # skriv x + 1
+('SKRIV', 'x')                    # skriv variabel (alternativ)
 ```
 
 ---

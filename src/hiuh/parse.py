@@ -36,38 +36,34 @@ def parse_skriv_expr(tokens):
     """
     Parse SKRIV expression from tokens.
     
-    Cases:
-    - ('VARIABEL', ',', 'x', ')') → ('VARIABEL', 'x')
-    - ('RADBRYT', ',', ')') → ('RADBRYT',)
-    - ('TEXT', ',', 'hello', ')') → ('TEXT', 'hello')
-    - ('x',) → 'x' (variable name as string)
-    - ('x', 'pluss', '1') → ('PLUSS', 'x', 1)
+    Rules (in order):
+    - RADBRYT → ('RADBRYT',)
+    - Number → ('HELTAL', int value)
+    - Otherwise → ('TEXT', text)
+    - Expression (pluss/mindre/etc) → parse_value()
     """
     if not tokens:
         return ''
     
-    # Check for tuple syntax: ( VARIABEL , x )
-    if len(tokens) >= 4 and tokens[0] == '(' and tokens[1] == 'VARIABEL' and tokens[2] == ',':
-        # Find closing paren
-        if ')' in tokens:
-            close_idx = tokens.index(')')
-            name = tokens[3] if close_idx >= 4 else ''
-            return ('VARIABEL', name)
-        name = tokens[3] if len(tokens) >= 4 else ''
-        return ('VARIABEL', name)
+    token = tokens[0]
     
-    # Check for RADBRYT tuple: ( RADBRYT , )
-    if len(tokens) >= 4 and tokens[0] == '(' and tokens[1] == 'RADBRYT' and tokens[2] == ',':
+    # RADBRYT keyword
+    if token == 'RADBRYT':
         return ('RADBRYT',)
     
-    # Check for TEXT tuple: ( TEXT , 'hello' )
-    if len(tokens) >= 4 and tokens[0] == '(' and tokens[1] == 'TEXT' and tokens[2] == ',':
-        if ')' in tokens:
-            close_idx = tokens.index(')')
-            text = tokens[3] if close_idx >= 4 else ''
-            return ('TEXT', text)
+    # Check if it's an arithmetic expression
+    if len(tokens) >= 3 and tokens[1].lower() in ('pluss', 'minus', 'gånger', 'dela'):
+        return parse_value(tokens)
     
-    # Otherwise, use parse_value for expressions
+    # Single token
+    if len(tokens) == 1:
+        # Number?
+        if token.isdigit():
+            return ('HELTAL', int(token))
+        # Otherwise text (bare string - backend interprets as variable name if used as such)
+        return token
+    
+    # For multi-token, fall back to parse_value for expressions
     return parse_value(tokens)
 
 def parse_block(lines, base_indent, out):

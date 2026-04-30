@@ -296,3 +296,67 @@ def test_skriv_expr_with_for():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert ir[0][4][0] == ('SKRIV', ('*', 'i', 2)), f"Got {ir}"
+
+def test_while_basic():
+    """medan x är mindre än 5 → WHILE"""
+    src = """medan x är mindre än 5
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][0] == 'WHILE'
+    assert ir[0][1] == ('x', 'mindre', '5')
+    assert len(ir[0][2]) == 1  # body has 1 statement
+
+def test_while_body():
+    """WHILE with body statements"""
+    src = """medan x är mindre än 5
+    sätt x till x pluss 1
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][0] == 'WHILE'
+    assert len(ir[0][2]) == 2
+
+def test_while_break():
+    """WHILE with BREAK in body"""
+    src = """medan x är mindre än 10
+    om x är 5
+        bryt
+    sätt x till x pluss 1"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    while_stmt = ir[0]
+    assert while_stmt[0] == 'WHILE'
+    assert while_stmt[2][0] == ('IF', ('x', 'likaMed', '5'), [('BREAK',)], [])
+
+def test_while_greater():
+    """medan x är större än 0"""
+    src = """medan x är större än 0
+    sätt x till x minus 1"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', 'större', '0')
+
+def test_while_less_or_eq():
+    """medan x är mindre eller 5"""
+    src = """medan x är mindre eller 5
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', 'mindreLikaMed', '5')
+
+def test_while_greater_or_eq():
+    """medan x är större eller 0"""
+    src = """medan x är större eller 0
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', 'störreLikaMed', '0')
+
+def test_while_not_eq():
+    """medan x är inte 0"""
+    src = """medan x är inte 0
+    skriv x"""
+    lines = list(tokenize(src))
+    ir = parse_tokens(lines)
+    assert ir[0][1] == ('x', 'inteLikaMed', '0')

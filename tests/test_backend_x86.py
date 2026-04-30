@@ -239,3 +239,49 @@ if __name__ == '__main__':
     test_file_open()
     test_file_write()
     print("Alla x86 backend-tester OK!")
+
+def test_while_basic():
+    """WHILE (x, 'mindre', 5) → loop with cmp + jge"""
+    asm = capture_asm([('WHILE', ('x', 'mindre', 5), [])])
+    assert '.L1:' in asm  # start label
+    assert '.L2:' in asm  # end label
+    assert 'cmp $5' in asm
+    assert 'jge .L2' in asm  # exit if >= 5
+
+def test_while_with_body():
+    """WHILE with SET in body"""
+    asm = capture_asm([('WHILE', ('x', 'mindre', 3), [('SET', 'x', ('+', 'x', 1))])])
+    assert '.L1:' in asm
+    assert '.L2:' in asm
+    assert 'add $1' in asm
+
+def test_while_break():
+    """WHILE with BREAK generates BREAK label in stack"""
+    import io, contextlib
+    import hiuh.backend.x86 as x86
+    x86.REG_MAP.clear()
+    x86.STRINGS.clear()
+    x86.LABEL_CNT = 0
+    x86.NEXT_REG = 0
+    x86.BREAK_STACK.clear()
+    output = io.StringIO()
+    with contextlib.redirect_stdout(output):
+        x86.compile_ir([('WHILE', ('x', 'mindre', 10), [('BREAK',)])])
+    asm = output.getvalue()
+    assert 'jmp .L2' in asm  # BREAK jumps to end label
+
+def test_while_nested_if():
+    """WHILE with IF+BREAK inside"""
+    asm = capture_asm([
+        ('WHILE', ('x', 'mindre', 10), [
+            ('IF', ('x', 'likaMed', 5), [('BREAK',)])
+        ])
+    ])
+    assert '.L1:' in asm
+    assert 'jge' in asm
+
+def test_while_eq():
+    """WHILE (x, 'likaMed', 0)"""
+    asm = capture_asm([('WHILE', ('x', 'likaMed', 0), [])])
+    assert 'cmp $0' in asm
+    assert 'jne .L' in asm

@@ -4,6 +4,13 @@
 
 När du testar HIUH-kod (kompilera och köra), använd **ALDRIG** direktkörning av Python eller kompilerade binaries — de kan ha buggar som gör att processen loopar forever.
 
+### Innan du börjar koda: Alltid `git pull` först!
+Innan du börjar jobba på någon uppgift, kör alltid:
+```bash
+git pull origin hiuhpp
+```
+Detta säkerställer att du har den senaste koden och slipper onödiga merge-konflikter.
+
 ### Kör HIUH-program
 ```bash
 ./run-hiuh.sh <fil.hiuh> [timeout-i-sekunder]

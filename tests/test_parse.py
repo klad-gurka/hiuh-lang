@@ -17,31 +17,31 @@ def test_set_plus():
     """sätt x till a pluss 3 → SET with expression"""
     lines = list(tokenize("sätt x till a pluss 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('+', 'a', 3))], f"Got {ir}"
+    assert ir == [('SET', 'x', ('PLUSS', 'a', 3))], f"Got {ir}"
 
 def test_set_minus():
     """sätt x till a minus 3 → SET with expression"""
     lines = list(tokenize("sätt x till a minus 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('-', 'a', 3))], f"Got {ir}"
+    assert ir == [('SET', 'x', ('MINUS', 'a', 3))], f"Got {ir}"
 
 def test_set_times():
     """sätt x till a gånger 3 → SET with expression"""
     lines = list(tokenize("sätt x till a gånger 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('*', 'a', 3))], f"Got {ir}"
+    assert ir == [('SET', 'x', ('GÅNGER', 'a', 3))], f"Got {ir}"
 
 def test_set_div():
     """sätt x till a delat 3 → SET with expression"""
     lines = list(tokenize("sätt x till a delat 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('/', 'a', 3))], f"Got {ir}"
+    assert ir == [('SET', 'x', ('DELA', 'a', 3))], f"Got {ir}"
 
 def test_set_number_plus():
     """sätt x till 5 pluss 3 → SET with number + number"""
     lines = list(tokenize("sätt x till 5 pluss 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SET', 'x', ('+', 5, 3))], f"Got {ir}"
+    assert ir == [('SET', 'x', ('PLUSS', 5, 3))], f"Got {ir}"
 
 def test_for_loop():
     """för x från 0 till 10"""
@@ -275,25 +275,25 @@ def test_skriv_expr_times():
     """skriv a gånger 2 → SKRIV with expression"""
     lines = list(tokenize("skriv a gånger 2"))
     ir = parse_tokens(lines)
-    assert ir == [('SKRIV', ('*', 'a', 2))], f"Got {ir}"
+    assert ir == [('SKRIV', ('GÅNGER', 'a', 2))], f"Got {ir}"
 
 def test_skriv_expr_minus():
     """skriv x minus 3 → SKRIV with expression"""
     lines = list(tokenize("skriv x minus 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SKRIV', ('-', 'x', 3))], f"Got {ir}"
+    assert ir == [('SKRIV', ('MINUS', 'x', 3))], f"Got {ir}"
 
 def test_skriv_expr_plus():
     """skriv a pluss 4 → SKRIV with expression"""
     lines = list(tokenize("skriv a pluss 4"))
     ir = parse_tokens(lines)
-    assert ir == [('SKRIV', ('+', 'a', 4))], f"Got {ir}"
+    assert ir == [('SKRIV', ('PLUSS', 'a', 4))], f"Got {ir}"
 
 def test_skriv_expr_div():
     """skriv b delat 2 → SKRIV with expression"""
     lines = list(tokenize("skriv b delat 2"))
     ir = parse_tokens(lines)
-    assert ir == [('SKRIV', ('/', 'b', 2))], f"Got {ir}"
+    assert ir == [('SKRIV', ('DELA', 'b', 2))], f"Got {ir}"
 
 def test_skriv_expr_with_for():
     """för i från 0 till 3\n    skriv i gånger 2"""
@@ -301,7 +301,7 @@ def test_skriv_expr_with_for():
     skriv i gånger 2"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0][4][0] == ('SKRIV', ('*', 'i', 2)), f"Got {ir}"
+    assert ir[0][4][0] == ('SKRIV', ('GÅNGER', 'i', 2)), f"Got {ir}"
 
 def test_while_basic():
     """medan x är mindre än 5 → WHILE"""
@@ -333,7 +333,7 @@ def test_while_break():
     ir = parse_tokens(lines)
     while_stmt = ir[0]
     assert while_stmt[0] == 'WHILE'
-    assert while_stmt[2][0] == ('IF', ('x', 'likaMed', '5'), [('BREAK',), ('SET', 'x', ('+', 'x', 1))], [])
+    assert while_stmt[2][0] == ('IF', ('x', 'likaMed', '5'), [('BREAK',), ('SET', 'x', ('PLUSS', 'x', 1))], [])
 
 def test_while_greater():
     """medan x är större än 0"""
@@ -401,7 +401,7 @@ sätt a till 5
 sätt b till dubbla a"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('FUNC_DEF', 'dubbla', ['x'], [('SET', 'resultat', ('*', 'x', 2)), ('RETURN', 'resultat')]), f"Got {ir[0]}"
+    assert ir[0] == ('FUNC_DEF', 'dubbla', ['x'], [('SET', 'resultat', ('GÅNGER', 'x', 2)), ('RETURN', 'resultat')]), f"Got {ir[0]}"
     assert ir[1] == ('SET', 'a', 5), f"Got {ir[1]}"
     assert ir[2] == ('SET', 'b', ('CALL', 'dubbla', ['a'])), f"Got {ir[2]}"
 

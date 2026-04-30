@@ -451,7 +451,7 @@ def compile_stmt(stmt, target):
         expr = stmt[1] if len(stmt) > 1 else ''
         if expr:
             # Handle tuple expressions: ('+', a, b), ('-', a, b), ('*', a, b), ('/', a, b)
-            if isinstance(expr, tuple) and len(expr) == 3 and expr[0] in ('+', '-', '*', '/'):
+            if isinstance(expr, tuple) and len(expr) == 3 and expr[0] in ('PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
                 _, a, b = expr
                 op_sym = expr[0]
                 # Compute expression into %rax first
@@ -460,25 +460,25 @@ def compile_stmt(stmt, target):
                 else:
                     reg_a = alloc_reg(a)
                     emit(f"    mov {reg_a}, %rax")
-                if op_sym == '+':
+                if op_sym == 'PLUSS':
                     if isinstance(b, int):
                         emit(f"    add ${b}, %rax")
                     else:
                         reg_b = alloc_reg(b)
                         emit(f"    add {reg_b}, %rax")
-                elif op_sym == '-':
+                elif op_sym == 'MINUS':
                     if isinstance(b, int):
                         emit(f"    sub ${b}, %rax")
                     else:
                         reg_b = alloc_reg(b)
                         emit(f"    sub {reg_b}, %rax")
-                elif op_sym == '*':
+                elif op_sym == 'GÅNGER':
                     if isinstance(b, int):
                         emit(f"    imul ${b}, %rax")
                     else:
                         reg_b = alloc_reg(b)
                         emit(f"    imul {reg_b}, %rax")
-                elif op_sym == '/':
+                elif op_sym == 'DELA':
                     emit(f"    xor %edx, %edx")
                     if isinstance(b, int):
                         emit(f"    mov ${b}, %rcx")

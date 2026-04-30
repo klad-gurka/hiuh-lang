@@ -11,13 +11,13 @@ KEYWORDS = {
     'lagra': 'STORE', 'jämför': 'CMP',
     'jämförbuffer': 'CMP_BUF', 'jagmåstegånu': 'EXIT',
     'bryt': 'BREAK', 'till': 'TILL', 'från': 'FRAN',
-    'är': 'AR', 'pluss': 'PLUS', 'minus': 'MINUS',
-    'gånger': 'TIMES', 'delat': 'DIV',
+    'är': 'AR', 'pluss': 'PLUSS', 'minus': 'MINUS',
+    'gånger': 'GÅNGER', 'delat': 'DELA',
     'ur': 'UR', 'vid': 'VID', 'med': 'MED',
-    'tecken': 'CHAR', 'än': 'THAN', 'mindre': 'LESS',
+    'tecken': 'CHAR', 'än': 'THAN', 'mindre': 'MINDRE',
     'inte': 'INTE', 'eller': 'OR',
-    'större': 'GREATER', 'värdet': 'VAL', 'av': 'OF',
-    'text': 'TEXT', 'i': 'IN', 'ge': 'RET',
+    'större': 'STÖRRE', 'värdet': 'VAL', 'av': 'OF',
+    'text': 'TEXT', 'i': 'IN', 'ge': 'GE',
     'medan': 'WHILE',
     # Function keywords
     'grej': 'GREJ',     # function definition

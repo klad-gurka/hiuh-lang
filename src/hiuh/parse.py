@@ -102,7 +102,7 @@ def parse_block(lines, base_indent, out):
             consumed = parse_call(tokens)
             out.append(consumed)
             i += 1
-        elif tok == 'RET':
+        elif tok == 'GE':
             consumed = parse_ret(tokens)
             out.append(consumed)
             i += 1
@@ -208,9 +208,9 @@ def parse_value(tokens):
         list_name = tokens[3]
         idx = tokens[4] if len(tokens) >= 5 else '0'
         return ('LIST_GET', list_name, idx)
-    # Check for binary expressions: a PLUS/MINUS/TIMES/DIV b
-    if len(tokens) >= 3 and tokens[1] in ('PLUS', 'MINUS', 'TIMES', 'DIV'):
-        op_sym = {'PLUS': '+', 'MINUS': '-', 'TIMES': '*', 'DIV': '/'}[tokens[1]]
+    # Check for binary expressions: a PLUSS/MINUS/GÅNGER/DELA b
+    if len(tokens) >= 3 and tokens[1] in ('PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
+        op_sym = {'PLUSS': 'PLUSS', 'MINUS': 'MINUS', 'GÅNGER': 'GÅNGER', 'DELA': 'DELA'}[tokens[1]]
         second = tokens[2]
         second_val = int(second) if second.isdigit() else second
         first_val = int(tok) if tok.isdigit() else tok
@@ -218,7 +218,7 @@ def parse_value(tokens):
     # Check for function call via known function name (after SET/TILL, anropa/kalla passed as VAR)
     # e.g. "sätt b till dubbla a" where 'dubbla' is a known function
     if tok not in ('SET', 'TILL', 'GREJ', 'FOR', 'IF', 'WHILE', 'BREAK', 'SKRIV',
-                  'RET', 'FUNC_DEF') and tok in FUNC_NAMES and len(tokens) >= 2:
+                  'GE', 'FUNC_DEF') and tok in FUNC_NAMES and len(tokens) >= 2:
         func_name = tok
         args = [t.rstrip(',') for t in tokens[1:] if t not in ('MED',)]
         return ('CALL', func_name, args)
@@ -482,7 +482,7 @@ def parse_single_line(lines, base_indent, body):
         consumed = parse_call(tokens)
         body.append(consumed)
         return None, 1
-    elif tok == 'RET':
+    elif tok == 'GE':
         consumed = parse_ret(tokens)
         body.append(consumed)
         return None, 1
@@ -535,19 +535,19 @@ def parse_cmp(tokens):
     var = tokens[0]
     if len(tokens) >= 3:
         # är mindre än 5 OR mindre än 5 → mindre
-        if tokens[1] == 'LESS' or (tokens[1] == 'AR' and tokens[2] == 'LESS' and tokens[3] != 'OR'):
+        if tokens[1] == 'MINDRE' or (tokens[1] == 'AR' and tokens[2] == 'MINDRE' and tokens[3] != 'OR'):
             val = tokens[4] if tokens[1] == 'AR' else tokens[3]
             return (var, 'mindre', val)
         # är mindre eller (än) → mindreLikaMed
-        if tokens[1] == 'AR' and tokens[2] == 'LESS' and tokens[3] == 'OR':
+        if tokens[1] == 'AR' and tokens[2] == 'MINDRE' and tokens[3] == 'OR':
             val = tokens[5] if len(tokens) > 5 else tokens[4]
             return (var, 'mindreLikaMed', val)
         # är större än 5 OR större än 5 → större
-        elif tokens[1] == 'GREATER' or (tokens[1] == 'AR' and tokens[2] == 'GREATER' and tokens[3] != 'OR'):
+        elif tokens[1] == 'STÖRRE' or (tokens[1] == 'AR' and tokens[2] == 'STÖRRE' and tokens[3] != 'OR'):
             val = tokens[4] if tokens[1] == 'AR' else tokens[3]
             return (var, 'större', val)
         # är större eller (än) → störreLikaMed
-        if tokens[1] == 'AR' and tokens[2] == 'GREATER' and tokens[3] == 'OR':
+        if tokens[1] == 'AR' and tokens[2] == 'STÖRRE' and tokens[3] == 'OR':
             val = tokens[5] if len(tokens) > 5 else tokens[4]
             return (var, 'störreLikaMed', val)
         # är X (equality) → likaMed

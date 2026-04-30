@@ -292,7 +292,7 @@ def parse_if(lines, base_indent):
             i += 1
             continue
         
-        if child_indent < base_indent:
+        if child_indent <= base_indent:
             # Dedent - we're done with the IF statement
             break
         
@@ -328,7 +328,7 @@ def parse_while(lines, base_indent):
     i = 1  # Start after WHILE line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        if child_indent < base_indent:
+        if child_indent <= base_indent:
             # Dedent - body is done
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
@@ -364,7 +364,7 @@ def parse_grej(lines, base_indent):
     i = 1  # Start after GREJ line
     while i < len(lines):
         child_indent, child_tokens = lines[i]
-        if child_indent < base_indent:
+        if child_indent <= base_indent:
             # Dedent - body is done
             break
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)

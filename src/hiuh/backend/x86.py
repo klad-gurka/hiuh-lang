@@ -172,9 +172,9 @@ def compile_call(func_name, args, target_reg):
     """Compile a function call, result goes to target_reg"""
     global REG_MAP, NEXT_REG
     
-    # Save ALL caller-saved registers (r12, r13) before the call
-    # They may contain live values even if not yet assigned to variables
-    for r in ['%r12', '%r13']:
+    # Save ALL caller-saved registers that the compiler uses (r12, r13, r8-r11)
+    # before the call. They may contain live values even if not yet assigned to variables.
+    for r in ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']:
         emit(f"    push {r}   # save caller-saved reg")
     
     # Prepare arguments: first 2 args in rdi, rsi
@@ -210,7 +210,7 @@ def compile_call(func_name, args, target_reg):
     emit(f"    mov %rax, %r14  # temp save return value")
     
     # Restore saved registers (in reverse order)
-    for r in reversed(['%r12', '%r13']):
+    for r in reversed(['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']):
         emit(f"    pop {r}   # restore caller-saved reg")
     
     # Move return value to target (after restores)

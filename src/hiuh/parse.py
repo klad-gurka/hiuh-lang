@@ -265,8 +265,14 @@ def parse_value(tokens):
         # Normalize func_name token too (might be lowercased)
         if func_name in ('anropa', 'kalla'):
             func_name = tokens[2] if len(tokens) > 2 else func_name
-        # Strip commas from args (e.g. '1,' -> '1')
-        args = [t.rstrip(',') for t in tokens[2:] if t not in ('MED', 'TILL', 'GREJ', 'GE')]
+        # Strip commas from args (e.g. '1,' -> '1'), convert numeric strings to int
+        args = []
+        for t in tokens[2:]:
+            if t not in ('MED', 'TILL', 'GREJ', 'GE'):
+                if t.isdigit():
+                    args.append(int(t))
+                else:
+                    args.append(t)
         return ('ANROPA', func_name, args)
     # Check for LIST_LEN: LIST_LEN list_name
     if tok == 'ANTAL' and len(tokens) >= 2:
@@ -489,7 +495,7 @@ def parse_grej(lines, base_indent):
     func_name = tokens[1]
     params = tokens[2:]
     # Remove noise keywords from params
-    params = [p for p in params if p not in ('MED', 'TILL', 'GREJ')]
+    params = [p for p in params if p not in ('MED', 'TILL', 'GREJ', 'grej')]
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
@@ -522,7 +528,11 @@ def parse_call(tokens):
     # Skip MED keywords and collect args
     while j < len(tokens):
         if tokens[j] not in ('MED', 'TILL'):
-            args.append(tokens[j])
+            arg = tokens[j]
+            # Convert numeric strings to integers
+            if arg.isdigit():
+                arg = int(arg)
+            args.append(arg)
         j += 1
     return ('ANROPA', func_name, args)
 

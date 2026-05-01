@@ -285,12 +285,18 @@ def compile_condition(cond, false_label, true_label=None):
         # Simple comparison: (var, op, val)
         var, op, val = cond
         reg = alloc_reg(var)
-        try:
-            val_int = int(val)
-        except (ValueError, TypeError):
-            val_int = 0
-        
-        emit(f"    cmp ${val_int}, {reg}")
+        # Check if val is a string variable (has known type) or a register reference
+        val_is_string = False
+        if isinstance(val, str) and val in VAR_TYPES and VAR_TYPES[val] == 'str':
+            val_reg = alloc_reg(val)
+            emit(f"    cmp {val_reg}, {reg}")
+            val_is_string = True
+        else:
+            try:
+                val_int = int(val)
+            except (ValueError, TypeError):
+                val_int = 0
+            emit(f"    cmp ${val_int}, {reg}")
         
         if op == 'likaMed':
             emit(f"    jne .L{false_label}")

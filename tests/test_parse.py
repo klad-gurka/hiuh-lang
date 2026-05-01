@@ -405,14 +405,14 @@ def test_call_anropa():
     src = """anropa hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('ANROPA', 'hej', ['1']), f"Got {ir}"
+    assert ir[0] == ('ANROPA', 'hej', [1]), f"Got {ir}"
 
 def test_call_in_set():
     """sätt resultat till anropa func med 1 → SET with CALL"""
     src = """sätt resultat till anropa hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SÄTT', ('VARIABEL', 'resultat'), ('ANROPA', 'hej', ['1'])), f"Got {ir}"
+    assert ir[0] == ('SÄTT', ('VARIABEL', 'resultat'), ('ANROPA', 'hej', [1])), f"Got {ir}"
 
 def test_call_with_func_def():
     """Full GREJ def + CALL: grej dubbla x ... sätt b till dubbla a"""
@@ -434,7 +434,7 @@ def test_call_kalla():
     src = """sätt resultat till kalla hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SÄTT', ('VARIABEL', 'resultat'), ('ANROPA', 'hej', ['1'])), f"Got {ir}"
+    assert ir[0] == ('SÄTT', ('VARIABEL', 'resultat'), ('ANROPA', 'hej', [1])), f"Got {ir}"
 
 def test_list_get():
     """element X ur lst → LIST_GET"""

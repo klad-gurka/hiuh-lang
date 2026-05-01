@@ -8,7 +8,10 @@ import sys
 REGISTERS = ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']
 REG_MAP = {}
 NEXT_REG = 0
+VAR_TYPES = {}  # Track variable types: name -> 'int' or 'str'
 STRINGS = []
+STRING_PTRS = {}  # Maps register encoding -> (length, string_index) for string variables
+FUNC_RETURN_TYPES = {}  # Maps func name -> ('str', text) for functions returning strings
 LABEL_CNT = 0
 BREAK_STACK = []  # Stack of end labels for BREAK
 FUNC_LABELS = {}  # Maps func names to labels
@@ -37,17 +40,14 @@ def emit(s):
 
 def compile_ir(ir, target='linux'):
     """Compile IR to x86 assembly"""
-    global REG_MAP, NEXT_REG, STRINGS, LABEL_CNT, BREAK_STACK, FUNC_LABELS, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, LISTS
+    global REG_MAP, NEXT_REG, STRINGS, LABEL_CNT, BREAK_STACK, FUNC_LABELS, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, LISTS, VAR_TYPES, STRING_PTRS, FUNC_RETURN_TYPES
     # Reset state for each compilation
     REG_MAP = {}
     NEXT_REG = 0
     STRINGS = []
-    LABEL_CNT = 0
-    BREAK_STACK = []
-    FUNC_LABELS = {}
-    CURRENT_FUNC = None
-    FUNC_EPILOGUE_LABELS = {}
-    LISTS = {}
+    VAR_TYPES = {}
+    STRING_PTRS = {}
+    FUNC_RETURN_TYPES = {}
 
     emit(".text")
     if target == 'windows':
@@ -69,15 +69,31 @@ def compile_ir(ir, target='linux'):
     
     emit("    push %r12")
     emit("    push %r13")
+    emit("    xor %r12, %r12   # initialize for use as HIUH variable storage")
+    emit("    xor %r13, %r13")
     emit("    push %rbp")
     emit("    lea stack(%rip), %r14")
     
-    # First pass: collect function definitions
+    # Collect function definitions first
     func_defs = []
     for stmt in ir:
         if stmt[0] == 'GREJ':
             func_defs.append(stmt)
-        else:
+    
+    # Pre-scan function bodies to determine return types (strings vs integers)
+    # This populates FUNC_RETURN_TYPES before main IR compilation
+    for func_def in func_defs:
+        func_name = func_def[1]
+        body = func_def[3] if len(func_def) > 3 else []
+        # Check if function body ends with GE TEXT (string return)
+        for stmt in reversed(body) if body else []:
+            if stmt[0] == 'GE' and isinstance(stmt[1], tuple) and stmt[1][0] == 'TEXT':
+                FUNC_RETURN_TYPES[func_name] = ('str', stmt[1][1])
+                break
+    
+    # First pass: compile non-function statements
+    for stmt in ir:
+        if stmt[0] != 'GREJ':
             compile_stmt(stmt, target)
     
     emit("    xor %eax, %eax")
@@ -109,7 +125,7 @@ def compile_ir(ir, target='linux'):
 
 def compile_func_def(stmt, target):
     """Compile a function definition"""
-    global LABEL_CNT, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG, STRINGS
+    global LABEL_CNT, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG, STRINGS, VAR_TYPES, STRING_PTRS
     func_name, params, body = stmt[1], stmt[2], stmt[3]
     func_lbl = f"func_{func_name}"
     epilog_lbl = new_label()
@@ -211,14 +227,33 @@ def compile_stmt(stmt, target):
         if isinstance(val, tuple) and val[0] == 'ANROPA':
             _, func_name, args = val
             compile_call(func_name, args, reg)
+            # If function returns a string, register it so SKRIV VARIABEL can find it.
+            if func_name in FUNC_RETURN_TYPES:
+                ret_type, text = FUNC_RETURN_TYPES[func_name]
+                if ret_type == 'str':
+                    VAR_TYPES[name] = 'str'
+                    # Add to STRINGS if not already present (pre-scan doesn't add to STRINGS)
+                    if text not in STRINGS:
+                        STRINGS.append(text)
+                    str_idx = STRINGS.index(text)
+                    _reg_num = int(reg.replace('%r', ''))
+                    STRING_PTRS[_reg_num] = (len(text), str_idx)
             return
         
         # Handle TEXT: store string pointer
         if isinstance(val, tuple) and val[0] == 'TEXT':
             _, text = val
-            STRINGS.append(text)
-            idx = len(STRINGS) - 1
+            VAR_TYPES[name] = 'str'
+            # Reuse existing string index if already in STRINGS
+            if text in STRINGS:
+                idx = STRINGS.index(text)
+            else:
+                STRINGS.append(text)
+                idx = len(STRINGS) - 1
             emit(f"    lea msg_{idx}(%rip), {reg}")
+            # Register this pointer so SKRIV VARIABEL can print as string
+            _reg_num = int(reg.replace('%r', ''))
+            STRING_PTRS[_reg_num] = (len(text), idx)
             return
         
         if isinstance(val, int):
@@ -473,12 +508,22 @@ def compile_stmt(stmt, target):
                 emit(f"    mov {ret_reg}, %rax")
         elif isinstance(val, tuple) and val[0] == 'TEXT':
             _, text = val
-            STRINGS.append(text)
-            idx = len(STRINGS) - 1
+            # Reuse existing string index if already in STRINGS
+            if text in STRINGS:
+                idx = STRINGS.index(text)
+            else:
+                STRINGS.append(text)
+                idx = len(STRINGS) - 1
             emit(f"    lea msg_{idx}(%rip), %rax")
+            # Register as string pointer for STRING_PTRS tracking
+            _ge_reg_num = 0  # result in rax
+            STRING_PTRS[_ge_reg_num] = (len(text), idx)
         elif isinstance(val, tuple) and val[0] == 'ANROPA':
             _, func_name, args = val
             compile_call(func_name, args, '%rax')
+            # ANROPA returning a string: register rax as string pointer
+            # We need to know the string index - parse from STRINGS after call
+            # Since GE doesn't know the func's return type, we rely on GE TEXT being added first
         elif isinstance(val, tuple) and val[0] in ('PLUSS', '+'):
             _, a, b = val
             if isinstance(a, int):
@@ -554,35 +599,45 @@ def compile_stmt(stmt, target):
                 if expr[0] == 'VARIABEL':
                     name = expr[1]
                     reg = alloc_reg(name)
-                    emit(f"    # Print variable {name}")
-                    emit(f"    mov {reg}, %rax")
-                    emit(f"    xor %edx, %edx  # clear for div")
-                    emit(f"    lea num_buf(%rip), %rsi")
-                    lbl_s = new_label()
-                    lbl_d = new_label()
-                    emit(f"    cmp $10, %rax")
-                    emit(f"    jb .Ls{lbl_s}")
-                    emit(f"    mov $10, %rcx")
-                    emit(f"    div %rcx  # al=quotient, dl=remainder")
-                    emit(f"    push %rax")
-                    emit(f"    add $48, %dl")
-                    emit(f"    movb %dl, 1(%rsi)  # ones digit")
-                    emit(f"    pop %rax")
-                    emit(f"    add $48, %al  # tens digit")
-                    emit(f"    movb %al, (%rsi)")
-                    emit(f"    mov $2, %rdx")
-                    emit(f"    mov $1, %edi")
-                    emit(f"    mov $1, %eax")
-                    emit(f"    syscall")
-                    emit(f"    jmp .Ld{lbl_d}")
-                    emit(f".Ls{lbl_s}:")
-                    emit(f"    add $48, %rax  # single digit")
-                    emit(f"    movb %al, (%rsi)")
-                    emit(f"    mov $1, %rdx")
-                    emit(f"    mov $1, %edi")
-                    emit(f"    mov $1, %eax")
-                    emit(f"    syscall")
-                    emit(f".Ld{lbl_d}:")
+                    ptr = int(reg.replace('%r', '0x').replace('12', 'c').replace('13', 'd').replace('8', '8').replace('9', '9').replace('10', 'a').replace('11', 'b'), 0)
+                    if ptr in STRING_PTRS:
+                        str_len, str_idx = STRING_PTRS[ptr]
+                        emit(f"    # Print string variable {name} (pointer to msg_{str_idx})")
+                        emit(f"    lea msg_{str_idx}(%rip), %rsi")
+                        emit(f"    mov ${str_len}, %rdx")
+                        emit(f"    mov $1, %edi")
+                        emit(f"    mov $1, %eax")
+                        emit(f"    syscall")
+                    else:
+                        emit(f"    # Print variable {name}")
+                        emit(f"    mov {reg}, %rax")
+                        emit(f"    xor %edx, %edx  # clear for div")
+                        emit(f"    lea num_buf(%rip), %rsi")
+                        lbl_s = new_label()
+                        lbl_d = new_label()
+                        emit(f"    cmp $10, %rax")
+                        emit(f"    jb .Ls{lbl_s}")
+                        emit(f"    mov $10, %rcx")
+                        emit(f"    div %rcx  # al=quotient, dl=remainder")
+                        emit(f"    push %rax")
+                        emit(f"    add $48, %dl")
+                        emit(f"    movb %dl, 1(%rsi)  # ones digit")
+                        emit(f"    pop %rax")
+                        emit(f"    add $48, %al  # tens digit")
+                        emit(f"    movb %al, (%rsi)")
+                        emit(f"    mov $2, %rdx")
+                        emit(f"    mov $1, %edi")
+                        emit(f"    mov $1, %eax")
+                        emit(f"    syscall")
+                        emit(f"    jmp .Ld{lbl_d}")
+                        emit(f".Ls{lbl_s}:")
+                        emit(f"    add $48, %rax  # single digit")
+                        emit(f"    movb %al, (%rsi)")
+                        emit(f"    mov $1, %rdx")
+                        emit(f"    mov $1, %edi")
+                        emit(f"    mov $1, %eax")
+                        emit(f"    syscall")
+                        emit(f".Ld{lbl_d}:")
                 elif expr[0] == 'HELTAL':
                     value = expr[1]
                     emit(f"    # Print integer literal {value}")
@@ -616,8 +671,12 @@ def compile_stmt(stmt, target):
                     emit(f".Ld{lbl_d}:")
                 elif expr[0] == 'TEXT':
                     text = expr[1] + '\n'  # Add newline to text
-                    STRINGS.append(text)
-                    idx = len(STRINGS) - 1
+                    # Reuse existing string index if already in STRINGS
+                    if text in STRINGS:
+                        idx = STRINGS.index(text)
+                    else:
+                        STRINGS.append(text)
+                        idx = len(STRINGS) - 1
                     emit(f"    lea msg_{idx}(%rip), %rsi")
                     emit(f"    mov ${len(text)}, %rdx")
                     emit(f"    mov $1, %edi")

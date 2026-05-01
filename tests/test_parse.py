@@ -11,37 +11,37 @@ def test_set_integer():
     """sätt x till 5 → SET"""
     lines = list(tokenize("sätt x till 5"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', 5)], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), 5)], f"Got {ir}"
 
 def test_set_plus():
     """sätt x till a pluss 3 → SET with expression"""
     lines = list(tokenize("sätt x till a pluss 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', ('PLUSS', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), ('PLUSS', 'a', 3))], f"Got {ir}"
 
 def test_set_minus():
     """sätt x till a minus 3 → SET with expression"""
     lines = list(tokenize("sätt x till a minus 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', ('MINUS', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), ('MINUS', 'a', 3))], f"Got {ir}"
 
 def test_set_times():
     """sätt x till a gånger 3 → SET with expression"""
     lines = list(tokenize("sätt x till a gånger 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', ('GÅNGER', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), ('GÅNGER', 'a', 3))], f"Got {ir}"
 
 def test_set_div():
     """sätt x till a delat 3 → SET with expression"""
     lines = list(tokenize("sätt x till a delat 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', ('DELA', 'a', 3))], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), ('DELA', 'a', 3))], f"Got {ir}"
 
 def test_set_number_plus():
     """sätt x till 5 pluss 3 → SET with number + number"""
     lines = list(tokenize("sätt x till 5 pluss 3"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', ('PLUSS', 5, 3))], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), ('PLUSS', 5, 3))], f"Got {ir}"
 
 def test_for_loop():
     """för x från 0 till 10"""
@@ -149,8 +149,8 @@ för i från 0 till 5
 """
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SÄTT', 'x', 0)
-    assert ir[1] == ('SÄTT', 'y', 10)
+    assert ir[0] == ('SÄTT', ('VARIABEL', 'x'), 0)
+    assert ir[1] == ('SÄTT', ('VARIABEL', 'y'), 10)
     assert ir[2][0] == 'FÖR'
     assert ir[2][4][0][0] == 'OM'
 
@@ -167,7 +167,7 @@ def test_for_body_with_arithmetic():
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
     assert ir[0][0] == 'FÖR'
-    assert ir[0][4][0] == ('SÄTT', 'x', ('PLUSS', 'x', 1)), f"Got {ir[0][4][0]}"
+    assert ir[0][4][0] == ('SÄTT', ('VARIABEL', 'x'), ('PLUSS', 'x', 1)), f"Got {ir[0][4][0]}"
 
 
 def test_list_init():
@@ -192,7 +192,7 @@ def test_set_list_len():
     """sätt n till antal element i x → SET with LIST_LEN value"""
     lines = list(tokenize("sätt n till antal element i x"))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'n', ('ANTAL', 'x'))], f"Got {ir}"
+    assert ir == [('SÄTT', ('VARIABEL', 'n'), ('ANTAL', 'x'))], f"Got {ir}"
 
 def test_file_open():
     """öppna X för läsning → FILE_OPEN"""
@@ -357,7 +357,7 @@ def test_while_break():
     ir = parse_tokens(lines)
     while_stmt = ir[0]
     assert while_stmt[0] == 'MEDAN'
-    assert while_stmt[2][0] == ('OM', ('x', 'likaMed', '5'), [('BRYT',), ('SÄTT', 'x', ('PLUSS', 'x', 1))], [])
+    assert while_stmt[2][0] == ('OM', ('x', 'likaMed', '5'), [('BRYT',), ('SÄTT', ('VARIABEL', 'x'), ('PLUSS', 'x', 1))], [])
 
 def test_while_greater():
     """medan x är större än 0"""
@@ -412,7 +412,7 @@ def test_call_in_set():
     src = """sätt resultat till anropa hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SÄTT', 'resultat', ('ANROPA', 'hej', ['1'])), f"Got {ir}"
+    assert ir[0] == ('SÄTT', ('VARIABEL', 'resultat'), ('ANROPA', 'hej', ['1'])), f"Got {ir}"
 
 def test_call_with_func_def():
     """Full GREJ def + CALL: grej dubbla x ... sätt b till dubbla a"""
@@ -425,16 +425,16 @@ sätt a till 5
 sätt b till dubbla a"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('GREJ', 'dubbla', ['x'], [('SÄTT', 'resultat', ('GÅNGER', 'x', 2)), ('GE', 'resultat')]), f"Got {ir[0]}"
-    assert ir[1] == ('SÄTT', 'a', 5), f"Got {ir[1]}"
-    assert ir[2] == ('SÄTT', 'b', ('ANROPA', 'dubbla', ['a'])), f"Got {ir[2]}"
+    assert ir[0] == ('GREJ', 'dubbla', ['x'], [('SÄTT', ('VARIABEL', 'resultat'), ('GÅNGER', 'x', 2)), ('GE', 'resultat')]), f"Got {ir[0]}"
+    assert ir[1] == ('SÄTT', ('VARIABEL', 'a'), 5), f"Got {ir[1]}"
+    assert ir[2] == ('SÄTT', ('VARIABEL', 'b'), ('ANROPA', 'dubbla', ['a'])), f"Got {ir[2]}"
 
 def test_call_kalla():
     """sätt resultat till kalla func med 1 → SET with CALL"""
     src = """sätt resultat till kalla hej med 1"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir[0] == ('SÄTT', 'resultat', ('ANROPA', 'hej', ['1'])), f"Got {ir}"
+    assert ir[0] == ('SÄTT', ('VARIABEL', 'resultat'), ('ANROPA', 'hej', ['1'])), f"Got {ir}"
 
 def test_list_get():
     """element X ur lst → LIST_GET"""
@@ -447,7 +447,7 @@ def test_list_get_in_set():
     src = """sätt x till element 0 ur lst"""
     lines = list(tokenize(src))
     ir = parse_tokens(lines)
-    assert ir == [('SÄTT', 'x', ('HÄMTA_INDEX', 'lst', 0))], f"Got {ir}"  # idx converted to int
+    assert ir == [('SÄTT', ('VARIABEL', 'x'), ('HÄMTA_INDEX', 'lst', 0))], f"Got {ir}"  # idx converted to int
 
 def test_ta_bort_index():
     """ta bort element 0 från lst → TA_BORT_INDEX"""

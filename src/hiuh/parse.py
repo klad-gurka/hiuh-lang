@@ -243,7 +243,8 @@ def parse_set(tokens):
         val_tokens.append(tokens[j])
         j += 1
     val = parse_value(val_tokens)
-    ir.append(('SÄTT', name, val))
+    # Normalize variable name to VARIABEL tuple for consistency with other IR nodes
+    ir.append(('SÄTT', ('VARIABEL', name), val))
     return ir
 
 def parse_value(tokens):

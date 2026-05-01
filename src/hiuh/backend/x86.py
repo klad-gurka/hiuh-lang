@@ -312,7 +312,12 @@ def compile_stmt(stmt, target):
     global LABEL_CNT, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
     op = stmt[0]
     if op == 'SÄTT':
-        name, val = stmt[1], stmt[2]
+        name_expr, val = stmt[1], stmt[2]
+        # Normalize: name may be raw string or ('VARIABEL', name_str)
+        if isinstance(name_expr, tuple) and name_expr[0] == 'VARIABEL':
+            name = name_expr[1]
+        else:
+            name = name_expr
         reg = alloc_reg(name)
         
         # Handle function call as value

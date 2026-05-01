@@ -388,9 +388,11 @@ def parse_if(lines, base_indent):
     """
     indent, tokens = lines[0]
 
-    # Parse the IF condition
-    cmp_result = parse_cmp(tokens[1:])
-    var, op, val = cmp_result
+    # Parse the IF condition (may include AND/OR)
+    cond_result = parse_conditions(tokens[1:])
+    # cond_result is either:
+    # - a simple comparison: (var, op, val)
+    # - a compound condition: ('AND', cond1, cond2, ...) or ('OR', cond1, cond2, ...)
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
@@ -433,7 +435,7 @@ def parse_if(lines, base_indent):
             else:
                 i += body_len
 
-    ir = ('OM', (var, op, val), true_body, false_body)
+    ir = ('OM', cond_result, true_body, false_body)
     return ir, i
 
 def parse_while(lines, base_indent):
@@ -443,18 +445,17 @@ def parse_while(lines, base_indent):
     """
     indent, tokens = lines[0]
 
-    # Parse the WHILE condition
-    cmp_result = parse_cmp(tokens[1:])
-    var, op, val = cmp_result
+    # Parse the WHILE condition (may include AND/OR)
+    cond_result = parse_conditions(tokens[1:])
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
-        return ('MEDAN', (var, op, val), []), 1
+        return ('MEDAN', cond_result, []), 1
 
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after WHILE line)
-        return ('MEDAN', (var, op, val), []), 1
+        return ('MEDAN', cond_result, []), 1
 
     # Multi-line WHILE with body at next_indent
     body = []
@@ -473,7 +474,7 @@ def parse_while(lines, base_indent):
         else:
             i += body_len
 
-    ir = ('MEDAN', (var, op, val), body)
+    ir = ('MEDAN', cond_result, body)
     return ir, i
 
 def parse_grej(lines, base_indent):
@@ -657,10 +658,74 @@ def parse_single_line(lines, base_indent, body):
 
     return None, 1
 
+def parse_conditions(tokens):
+    """
+    Parse conditions with AND/OR (OCH/ELLER).
+    Handles: VAR OP VAL [OCH|ELLER VAR OP VAL ...]
+    Returns condition tree: ('AND', cond1, cond2, ...) or ('OR', cond1, cond2, ...)
+    Each cond is (var, op, val) - same as parse_cmp result.
+    """
+    # Split into top-level conjuncts/disjuncts
+    conjuncts = []  # list of condition groups (each may be AND)
+    current = []    # tokens for current condition group
+    depth = 0       # Track nesting
+    
+    for tok in tokens:
+        if tok in ('OCH', 'ELLER'):
+            if depth == 0 and current:
+                conjuncts.append(current)
+                current = []
+        else:
+            current.append(tok)
+    
+    if current:
+        conjuncts.append(current)
+    
+    if not conjuncts:
+        return None
+    
+    # If only one condition, parse it directly
+    if len(conjuncts) == 1:
+        return parse_cmp(conjuncts[0])
+    
+    # Multiple conditions: check top-level operator
+    # Find which operator is at top level
+    top_level_op = 'OCH'  # default
+    for tok in tokens:
+        if tok == 'ELLER':
+            top_level_op = 'ELLER'
+            break
+    
+    # Parse each conjunct into a condition
+    parsed = []
+    for group in conjuncts:
+        cond = parse_cmp(group)
+        parsed.append(cond)
+    
+    if top_level_op == 'ELLER':
+        if len(parsed) == 2:
+            return ('OR', parsed[0], parsed[1])
+        # Multiple OR: fold left
+        result = parsed[0]
+        for p in parsed[1:]:
+            result = ('OR', result, p)
+        return result
+    else:
+        if len(parsed) == 2:
+            return ('AND', parsed[0], parsed[1])
+        # Multiple AND: fold left
+        result = parsed[0]
+        for p in parsed[1:]:
+            result = ('AND', result, p)
+        return result
+
+
 def parse_cmp(tokens):
     """Parse comparison: VAR [är [inte]] [mindre/större [eller]] än VALUE
     Returns IR with Swedish operator names: mindre, mindreLikaMed, större, störreLikaMed, likaMed, inteLikaMed
     """
+    if not tokens:
+        return ('', 'likaMed', 0)
     var = tokens[0]
     if len(tokens) >= 3:
         # är mindre än 5 OR mindre än 5 → mindre

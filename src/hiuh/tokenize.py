@@ -15,7 +15,7 @@ KEYWORDS = {
     'gånger': 'GÅNGER', 'delat': 'DELA',
     'ur': 'UR', 'vid': 'VID', 'med': 'MED',
     'tecken': 'CHAR', 'än': 'THAN', 'mindre': 'MINDRE',
-    'inte': 'INTE', 'eller': 'OR',
+    'inte': 'INTE', 'eller': 'OR', 'och': 'OCH',
     'större': 'STÖRRE', 'värdet': 'VAL', 'av': 'OF',
     'text': 'TEXT', 'i': 'IN', 'ge': 'GE',
     'medan': 'MEDAN',

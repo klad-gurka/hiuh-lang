@@ -216,6 +216,128 @@ def compile_call(func_name, args, target_reg):
     # Move return value to target (after restores)
     emit(f"    mov %r14, {target_reg}")
 
+
+def compile_condition(cond, false_label):
+    """
+    Compile a condition (simple or compound AND/OR) to assembly.
+    Returns the false_label (unchanged - for compatibility).
+    
+    cond can be:
+    - Simple comparison tuple: (var, op, val)
+    - AND compound: ('AND', cond1, cond2, ...)
+    - OR compound: ('OR', cond1, cond2, ...)
+    """
+    if isinstance(cond, tuple) and cond[0] in ('AND', 'OR'):
+        # Compound condition
+        op = cond[0]
+        sub_conds = cond[1:]
+        if op == 'AND':
+            # AND: short-circuit - jump to false if ANY sub-condition is false
+            # Evaluate each sub-condition; if any is false, jump to false_label
+            for sub in sub_conds:
+                compile_condition(sub, false_label)
+        else:  # OR
+            # OR: short-circuit - jump to false only if ALL sub-conditions are false
+            # For OR, we need to track if ANY is true
+            # Strategy: jump to false only if ALL are false
+            # Generate skip labels for each sub-condition
+            skip_labels = [new_label() for _ in sub_conds[:-1]]
+            
+            # For each sub-condition except the last:
+            # - Evaluate condition
+            # - If condition is FALSE (op-specific check), jump to skip label (next sub-condition)
+            # At the last sub-condition: if false, jump to false_label
+            for i, sub in enumerate(sub_conds):
+                if i < len(sub_conds) - 1:
+                    # Not last: evaluate, if false jump to next skip label
+                    # We need to evaluate sub, and on false jump to skip_labels[i]
+                    # But compile_condition doesn't emit jumps - it emits the cmp
+                    # We need a different approach for OR
+                    pass
+            # Simpler OR approach:
+            # For OR (a OR b): if !a and !b → false
+            # Equivalently: if !a then check b; if !b then jump to false
+            # Generate separate code for each sub-condition that sets a temp reg
+            for i, sub in enumerate(sub_conds):
+                var, sub_op, sub_val = sub
+                reg = alloc_reg(var)
+                try:
+                    val_int = int(sub_val)
+                except (ValueError, TypeError):
+                    val_int = 0
+                
+                emit(f"    # OR sub-condition {i+1}/{len(sub_conds)}")
+                emit(f"    cmp ${val_int}, {reg}")
+                
+                if sub_op == 'likaMed':
+                    emit(f"    jne .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                elif sub_op == 'inteLikaMed':
+                    emit(f"    je .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                elif sub_op == 'mindre':
+                    emit(f"    jge .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                elif sub_op == 'större':
+                    emit(f"    jle .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                elif sub_op == 'mindreLikaMed':
+                    emit(f"    jg .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                elif sub_op == 'störreLikaMed':
+                    emit(f"    jl .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                
+                if i < len(skip_labels):
+                    emit(f".L{skip_labels[i]}:")
+            
+            # Last sub-condition falls through - it IS the final check
+            # Re-evaluate last sub-condition to false_label
+            last_sub = sub_conds[-1]
+            var, sub_op, sub_val = last_sub
+            reg = alloc_reg(var)
+            try:
+                val_int = int(sub_val)
+            except (ValueError, TypeError):
+                val_int = 0
+            
+            emit(f"    # OR last sub-condition")
+            emit(f"    cmp ${val_int}, {reg}")
+            
+            if sub_op == 'likaMed':
+                emit(f"    jne .L{false_label}")
+            elif sub_op == 'inteLikaMed':
+                emit(f"    je .L{false_label}")
+            elif sub_op == 'mindre':
+                emit(f"    jge .L{false_label}")
+            elif sub_op == 'större':
+                emit(f"    jle .L{false_label}")
+            elif sub_op == 'mindreLikaMed':
+                emit(f"    jg .L{false_label}")
+            elif sub_op == 'störreLikaMed':
+                emit(f"    jl .L{false_label}")
+        return false_label
+    else:
+        # Simple comparison: (var, op, val)
+        var, op, val = cond
+        reg = alloc_reg(var)
+        try:
+            val_int = int(val)
+        except (ValueError, TypeError):
+            val_int = 0
+        
+        emit(f"    cmp ${val_int}, {reg}")
+        
+        if op == 'likaMed':
+            emit(f"    jne .L{false_label}")
+        elif op == 'inteLikaMed':
+            emit(f"    je .L{false_label}")
+        elif op == 'mindre':
+            emit(f"    jge .L{false_label}")
+        elif op == 'större':
+            emit(f"    jle .L{false_label}")
+        elif op == 'mindreLikaMed':
+            emit(f"    jg .L{false_label}")
+        elif op == 'störreLikaMed':
+            emit(f"    jl .L{false_label}")
+        
+        return false_label
+
+
 def compile_stmt(stmt, target):
     global LABEL_CNT, CURRENT_FUNC, FUNC_EPILOGUE_LABELS, REG_MAP, NEXT_REG
     op = stmt[0]
@@ -359,34 +481,15 @@ def compile_stmt(stmt, target):
         emit(f".L{end_lbl}:")
         BREAK_STACK.pop()
     elif op == 'OM':
-        cmp, body = stmt[1], stmt[2]
+        cond, body = stmt[1], stmt[2]
         false_body = stmt[3] if len(stmt) > 3 else []
-        var, op, val = cmp
-        reg = alloc_reg(var)
         skip_label = new_label()  # skip false body
         end_label = new_label()   # merge point after entire IF
-        try:
-            val_int = int(val)
-        except (ValueError, TypeError):
-            val_int = 0
-        if op == 'likaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jne .L{skip_label}")
-        elif op == 'inteLikaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    je .L{skip_label}")
-        elif op == 'mindre':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jge .L{skip_label}")
-        elif op == 'större':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jle .L{skip_label}")
-        elif op == 'mindreLikaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jg .L{skip_label}")
-        elif op == 'störreLikaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jl .L{skip_label}")
+        
+        # Evaluate condition (may be simple or compound AND/OR)
+        # Returns label to jump to if condition is FALSE
+        false_jump_target = compile_condition(cond, skip_label)
+        
         for s in body:
             compile_stmt(s, target)
         if false_body:
@@ -398,35 +501,16 @@ def compile_stmt(stmt, target):
         else:
             emit(f".L{skip_label}:")
     elif op == 'MEDAN':
-        cmp, body = stmt[1], stmt[2]
-        var, op, val = cmp
-        reg = alloc_reg(var)
+        cond, body = stmt[1], stmt[2]
         start_lbl = new_label()
         end_lbl = new_label()
         BREAK_STACK.append(end_lbl)
         emit(f".L{start_lbl}:")
-        try:
-            val_int = int(val)
-        except (ValueError, TypeError):
-            val_int = 0
-        if op == 'likaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jne .L{end_lbl}")
-        elif op == 'inteLikaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    je .L{end_lbl}")
-        elif op == 'mindre':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jge .L{end_lbl}")
-        elif op == 'större':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jle .L{end_lbl}")
-        elif op == 'mindreLikaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jg .L{end_lbl}")
-        elif op == 'störreLikaMed':
-            emit(f"    cmp ${val_int}, {reg}")
-            emit(f"    jl .L{end_lbl}")
+        
+        # Evaluate condition (may be simple or compound AND/OR)
+        # Returns label to jump to if condition is FALSE
+        false_jump_target = compile_condition(cond, end_lbl)
+        
         for s in body:
             compile_stmt(s, target)
         emit(f"    jmp .L{start_lbl}")

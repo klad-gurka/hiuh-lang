@@ -396,12 +396,12 @@ def parse_if(lines, base_indent):
 
     # Check if there's a body (next line at higher indent)
     if len(lines) < 2:
-        return ('OM', (var, op, val), [], []), 1
+        return ('OM', cond_result, [], []), 1
 
     next_indent, next_tokens = lines[1]
     if next_indent < base_indent:
         # No body (dedent after IF line)
-        return ('OM', (var, op, val), [], []), 1
+        return ('OM', cond_result, [], []), 1
 
     # Multi-line IF with body at next_indent
     true_body = []
@@ -660,21 +660,37 @@ def parse_single_line(lines, base_indent, body):
 
 def parse_conditions(tokens):
     """
-    Parse conditions with AND/OR (OCH/ELLER).
+    Parse conditions with AND/OR (OCH/ELLER/OR).
     Handles: VAR OP VAL [OCH|ELLER VAR OP VAL ...]
     Returns condition tree: ('AND', cond1, cond2, ...) or ('OR', cond1, cond2, ...)
     Each cond is (var, op, val) - same as parse_cmp result.
+    
+    Note: tokenizer converts 'och' -> OCH, 'eller' -> OR (from KEYWORDS mapping).
+    
+    Distinguishes "comparison OR" (e.g., "är mindre eller 5" → mindreLikaMed)
+    from "logical OR" (e.g., "x är 1 eller y är 2" → OR condition):
+    - OR after MINDRE/STÖRRE (comparison keyword) → comparison phrase, not logical
     """
+    # Check if the OR/ELLER is part of a comparison phrase
+    # Pattern: VAR [AR] MINDRE|STÖRRE OR|ELLER VALUE → mindreLikaMed/störreLikaMed
+    if len(tokens) >= 4 and tokens[1] in ('AR',) and tokens[2] in ('MINDRE', 'STÖRRE') and tokens[3] in ('OR', 'ELLER'):
+        # This is a comparison phrase with OR, not a logical OR
+        # Pass all tokens to parse_cmp which handles mindreLikaMed/störreLikaMed
+        return parse_cmp(tokens)
+    
+    # Check for simpler pattern: VAR MINDRE|STÖRRE OR|ELLER VALUE (without AR)
+    if len(tokens) >= 3 and tokens[1] in ('MINDRE', 'STÖRRE') and tokens[2] in ('OR', 'ELLER'):
+        return parse_cmp(tokens)
+    
     # Split into top-level conjuncts/disjuncts
     conjuncts = []  # list of condition groups (each may be AND)
     current = []    # tokens for current condition group
-    depth = 0       # Track nesting
     
     for tok in tokens:
-        if tok in ('OCH', 'ELLER'):
-            if depth == 0 and current:
-                conjuncts.append(current)
-                current = []
+        if tok in ('OCH', 'OR'):
+            # Top-level AND/OR separator
+            conjuncts.append(current)
+            current = []
         else:
             current.append(tok)
     
@@ -692,8 +708,8 @@ def parse_conditions(tokens):
     # Find which operator is at top level
     top_level_op = 'OCH'  # default
     for tok in tokens:
-        if tok == 'ELLER':
-            top_level_op = 'ELLER'
+        if tok == 'OR':
+            top_level_op = 'OR'
             break
     
     # Parse each conjunct into a condition
@@ -702,7 +718,7 @@ def parse_conditions(tokens):
         cond = parse_cmp(group)
         parsed.append(cond)
     
-    if top_level_op == 'ELLER':
+    if top_level_op == 'OR':
         if len(parsed) == 2:
             return ('OR', parsed[0], parsed[1])
         # Multiple OR: fold left

@@ -217,47 +217,36 @@ def compile_call(func_name, args, target_reg):
     emit(f"    mov %r14, {target_reg}")
 
 
-def compile_condition(cond, false_label):
+def compile_condition(cond, false_label, true_label=None):
     """
     Compile a condition (simple or compound AND/OR) to assembly.
-    Returns the false_label (unchanged - for compatibility).
+    
+    Args:
+        cond: condition to compile (may be simple or compound AND/OR)
+        false_label: label to jump to when condition is FALSE
+        true_label: for OR conditions, label to jump to when TRUE (optional)
     
     cond can be:
     - Simple comparison tuple: (var, op, val)
     - AND compound: ('AND', cond1, cond2, ...)
     - OR compound: ('OR', cond1, cond2, ...)
     """
+    if true_label is None:
+        true_label = false_label  # backward compatibility
     if isinstance(cond, tuple) and cond[0] in ('AND', 'OR'):
         # Compound condition
         op = cond[0]
         sub_conds = cond[1:]
         if op == 'AND':
-            # AND: short-circuit - jump to false if ANY sub-condition is false
-            # Evaluate each sub-condition; if any is false, jump to false_label
+            # AND: if ANY sub-condition is FALSE, jump to false_label
             for sub in sub_conds:
                 compile_condition(sub, false_label)
         else:  # OR
-            # OR: short-circuit - jump to false only if ALL sub-conditions are false
-            # For OR, we need to track if ANY is true
-            # Strategy: jump to false only if ALL are false
-            # Generate skip labels for each sub-condition
+            # OR: if ANY sub-condition is TRUE, we take the TRUE path
+            # If ALL sub-conditions are FALSE, we take the FALSE path
             skip_labels = [new_label() for _ in sub_conds[:-1]]
+            true_lbl = true_label  # use the passed true_label for OR
             
-            # For each sub-condition except the last:
-            # - Evaluate condition
-            # - If condition is FALSE (op-specific check), jump to skip label (next sub-condition)
-            # At the last sub-condition: if false, jump to false_label
-            for i, sub in enumerate(sub_conds):
-                if i < len(sub_conds) - 1:
-                    # Not last: evaluate, if false jump to next skip label
-                    # We need to evaluate sub, and on false jump to skip_labels[i]
-                    # But compile_condition doesn't emit jumps - it emits the cmp
-                    # We need a different approach for OR
-                    pass
-            # Simpler OR approach:
-            # For OR (a OR b): if !a and !b → false
-            # Equivalently: if !a then check b; if !b then jump to false
-            # Generate separate code for each sub-condition that sets a temp reg
             for i, sub in enumerate(sub_conds):
                 var, sub_op, sub_val = sub
                 reg = alloc_reg(var)
@@ -269,47 +258,28 @@ def compile_condition(cond, false_label):
                 emit(f"    # OR sub-condition {i+1}/{len(sub_conds)}")
                 emit(f"    cmp ${val_int}, {reg}")
                 
+                # If this sub-condition is TRUE, jump to TRUE body
+                # If FALSE, fall through to check next condition (or to false_label if last)
                 if sub_op == 'likaMed':
-                    emit(f"    jne .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                    emit(f"    je .L{true_lbl}    # true, take TRUE path")
                 elif sub_op == 'inteLikaMed':
-                    emit(f"    je .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                    emit(f"    jne .L{true_lbl}   # true, take TRUE path")
                 elif sub_op == 'mindre':
-                    emit(f"    jge .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                    emit(f"    jl .L{true_lbl}    # true, take TRUE path")
                 elif sub_op == 'större':
-                    emit(f"    jle .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                    emit(f"    jg .L{true_lbl}    # true, take TRUE path")
                 elif sub_op == 'mindreLikaMed':
-                    emit(f"    jg .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                    emit(f"    jle .L{true_lbl}    # true, take TRUE path")
                 elif sub_op == 'störreLikaMed':
-                    emit(f"    jl .L{skip_labels[i] if i < len(skip_labels) else false_label}")
+                    emit(f"    jge .L{true_lbl}    # true, take TRUE path")
                 
+                # If FALSE for non-last, fall through to next condition check
                 if i < len(skip_labels):
                     emit(f".L{skip_labels[i]}:")
             
-            # Last sub-condition falls through - it IS the final check
-            # Re-evaluate last sub-condition to false_label
-            last_sub = sub_conds[-1]
-            var, sub_op, sub_val = last_sub
-            reg = alloc_reg(var)
-            try:
-                val_int = int(sub_val)
-            except (ValueError, TypeError):
-                val_int = 0
-            
-            emit(f"    # OR last sub-condition")
-            emit(f"    cmp ${val_int}, {reg}")
-            
-            if sub_op == 'likaMed':
-                emit(f"    jne .L{false_label}")
-            elif sub_op == 'inteLikaMed':
-                emit(f"    je .L{false_label}")
-            elif sub_op == 'mindre':
-                emit(f"    jge .L{false_label}")
-            elif sub_op == 'större':
-                emit(f"    jle .L{false_label}")
-            elif sub_op == 'mindreLikaMed':
-                emit(f"    jg .L{false_label}")
-            elif sub_op == 'störreLikaMed':
-                emit(f"    jl .L{false_label}")
+            # All sub-conditions were FALSE → jump to false_label
+            emit(f"    jmp .L{false_label}")
+        
         return false_label
     else:
         # Simple comparison: (var, op, val)
@@ -485,21 +455,24 @@ def compile_stmt(stmt, target):
         false_body = stmt[3] if len(stmt) > 3 else []
         skip_label = new_label()  # skip false body
         end_label = new_label()   # merge point after entire IF
+        true_label = new_label()  # TRUE body for OR short-circuit
         
         # Evaluate condition (may be simple or compound AND/OR)
-        # Returns label to jump to if condition is FALSE
-        false_jump_target = compile_condition(cond, skip_label)
+        compile_condition(cond, skip_label, true_label)
         
+        # TRUE body - only reached if condition is TRUE
+        emit(f".L{true_label}:")
         for s in body:
             compile_stmt(s, target)
+        # Always skip FALSE body after TRUE body
+        emit(f"    jmp .L{end_label}")
+        
+        # FALSE body
+        emit(f".L{skip_label}:")
         if false_body:
-            emit(f"    jmp .L{end_label}")
-            emit(f".L{skip_label}:")
             for s in false_body:
                 compile_stmt(s, target)
-            emit(f".L{end_label}:")
-        else:
-            emit(f".L{skip_label}:")
+        emit(f".L{end_label}:")
     elif op == 'MEDAN':
         cond, body = stmt[1], stmt[2]
         start_lbl = new_label()

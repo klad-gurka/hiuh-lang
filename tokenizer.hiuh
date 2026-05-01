@@ -1,0 +1,162 @@
+# HIUH tokenizer written in HIUH
+# Self-hosting tokenizer for HIUH source code
+
+# Character classification functions
+grej är_siffra till grej
+  sätt c till arg0
+  sätt result till 0
+  om c är större än "/"
+    om c är mindre än ":"
+      sätt result till 1
+    slut
+  slut
+  ge result
+slut
+
+grej är_alfabet till grej
+  sätt c till arg0
+  om c är större än "`"
+    om c är mindre än "{"
+      ge 1
+    annars
+      ge 0
+    slut
+  annars
+    ge 0
+  slut
+slut
+
+grej är_alnum till grej
+  sätt c till arg0
+  sätt issifra till är_siffra c
+  om issifra är lika med 1
+    ge 1
+  annars
+    sätt isalf till är_alfabet c
+    ge isalf
+  slit
+slut
+
+grej är_whitespace till grej
+  sätt c till arg0
+  om c är lika med " "
+    ge 1
+  annars
+    om c är lika med "\t"
+      ge 1
+    annars
+      om c är lika med "\n"
+        ge 1
+      annars
+        ge 0
+      slut
+    slut
+  slut
+slut
+
+# String operations
+grej str_lika till grej
+  sätt a till arg0
+  sätt b till arg1
+  om a är lika med b
+    ge 1
+  slit
+  ge 0
+slut
+
+grej str_length till grej
+  sätt s till arg0
+  sätt n till antal element i s
+  ge n
+slut
+
+grej char_at till grej
+  sätt s till arg0
+  sätt i till arg1
+  sätt n till str_length s
+  om i är mindre än n
+    ge element i ur s
+  slit
+  ge ""
+slut
+
+# Keyword lookup
+grej tokenisa_ord till grej
+  sätt ord till arg0
+  
+  # Check if number
+  sätt n till str_length ord
+  om n är större än 0
+    sätt first till element 0 ur ord
+    sätt issifra till är_siffra first
+    om issifra är lika med 1
+      ge "SIFFRA"
+    slut
+  slit
+  
+  # Keyword check
+  om str_lika ord "sätt"
+    ge "SÄTT"
+  annars
+    om str_lika ord "skriv"
+      ge "SKRIV"
+    annars
+      om str_lika ord "grej"
+        ge "GREJ"
+      annars
+        om str_lika ord "till"
+          ge "TILL"
+      annars
+        om str_lika ord "ge"
+          ge "GE"
+      annars
+        om str_lika ord "för"
+          ge "FÖR"
+      annars
+        om str_lika ord "från"
+          ge "FRÅN"
+      annars
+        om str_lika ord "om"
+          ge "OM"
+      annars
+        om str_lika ord "annars"
+          ge "ANNARS"
+      annars
+        om str_lika ord "slut"
+          ge "SLUT"
+      annars
+        om str_lika ord "med"
+          ge "MED"
+      annars
+        om str_lika ord "anropa"
+          ge "ANROPA"
+      annars
+        ge "IDENT"
+      slut
+    slut
+  slit
+slut
+
+# Test tokenizer
+sätt t1 till anropa tokenisa_ord med "sätt"
+skriv t1
+
+sätt t2 till anropa tokenisa_ord med "x"
+skriv t2
+
+sätt t3 till anropa tokenisa_ord med "42"
+skriv t3
+
+sätt t4 till anropa är_siffra med "5"
+skriv värdet av t4
+
+sätt t5 till anropa är_whitespace med " "
+skriv värdet av t5
+
+sätt t6 till str_length "hej"
+skriv värdet av t6
+
+sätt t7 till anropa char_at med "hej", 1
+skriv t7
+
+hejdå

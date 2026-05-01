@@ -454,6 +454,21 @@ skriv värdet av x'''
     stdout, _, _ = run_hiuh(src)
     assert stdout == '99', f"Fick: {stdout!r}"
 
+def test_skriv_antal():
+    """SKRIV ANTAL: skriv ut antalet element i en lista"""
+    src = '''sätt lst till lista av 1, 2, 3
+skriv antal element i lst'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '3', f"Fick: {stdout!r}"
+
+def test_set_antal():
+    """SET n = ANTAL: sätt variabel till listlängd"""
+    src = '''sätt lst till lista av 5, 10, 15, 20
+sätt n till antal element i lst
+skriv värdet av n'''
+    stdout, _, _ = run_hiuh(src)
+    assert stdout == '4', f"Fick: {stdout!r}"
+
 def test_skriv_fil_basic():
     """SKRIV_FIL: skriv till fil → skapar fil"""
     import tempfile

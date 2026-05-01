@@ -441,3 +441,16 @@ def test_ta_bort_index():
     asm = capture_asm([('TA_BORT_INDEX', 'lst', 0)])
     assert 'TA_BORT_INDEX' in asm
     assert 'mov' in asm
+
+def test_skriv_antal():
+    """SKRIV ANTAL lst → load 32-bit length and print"""
+    asm = capture_asm([('SKRIV', ('ANTAL', 'lst'))])
+    assert 'ANTAL' in asm
+    assert 'movl 4(%r12), %eax' in asm or 'movl 4(%r12)' in asm
+
+def test_set_antal():
+    """SET n = ANTAL lst → load 32-bit length into variable register"""
+    asm = capture_asm([('SÄTT', 'n', ('ANTAL', 'lst'))])
+    assert 'ANTAL' in asm
+    # 32-bit load with movl, then zero-extension
+    assert 'movl 4(%r' in asm and ', %r12d' in asm

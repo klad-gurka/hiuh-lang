@@ -324,7 +324,7 @@ def compile_stmt(stmt, target):
             _, list_name = val
             list_reg = alloc_reg(list_name)
             emit(f"    # SET n = ANTAL {list_name}")
-            emit(f"    mov 4({list_reg}), {reg}")
+            emit(f"    movl 4({list_reg}), {reg}d  # 32-bit length, zero-extended to full reg")
         elif isinstance(val, tuple) and val[0] == 'HÄMTA_INDEX':
             _, list_name, idx = val
             list_reg = alloc_reg(list_name)
@@ -682,6 +682,40 @@ def compile_stmt(stmt, target):
                     emit(f"    mov $1, %edi")
                     emit(f"    mov $1, %eax")
                     emit(f"    syscall")
+                elif expr[0] == 'ANTAL':
+                    # SKRIV ANTAL lst → print list length
+                    list_name = expr[1]
+                    list_reg = alloc_reg(list_name)
+                    emit(f"    # SKRIV ANTAL {list_name}")
+                    emit(f"    movl 4({list_reg}), %eax  # 32-bit length")
+                    # Now print %rax (same as HELTAL path)
+                    lbl_s = new_label()
+                    lbl_d = new_label()
+                    emit(f"    xor %edx, %edx")
+                    emit(f"    lea num_buf(%rip), %rsi")
+                    emit(f"    cmp $10, %rax")
+                    emit(f"    jb .Ls{lbl_s}")
+                    emit(f"    mov $10, %rcx")
+                    emit(f"    div %rcx")
+                    emit(f"    push %rax")
+                    emit(f"    add $48, %dl")
+                    emit(f"    movb %dl, 1(%rsi)")
+                    emit(f"    pop %rax")
+                    emit(f"    add $48, %al")
+                    emit(f"    movb %al, (%rsi)")
+                    emit(f"    mov $2, %rdx")
+                    emit(f"    mov $1, %edi")
+                    emit(f"    mov $1, %eax")
+                    emit(f"    syscall")
+                    emit(f"    jmp .Ld{lbl_d}")
+                    emit(f".Ls{lbl_s}:")
+                    emit(f"    add $48, %rax")
+                    emit(f"    movb %al, (%rsi)")
+                    emit(f"    mov $1, %rdx")
+                    emit(f"    mov $1, %edi")
+                    emit(f"    mov $1, %eax")
+                    emit(f"    syscall")
+                    emit(f".Ld{lbl_d}:")
                 elif expr[0] in ('PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
                     _, a, b = expr
                     op_sym = expr[0]

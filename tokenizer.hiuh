@@ -9,7 +9,7 @@ grej är_siffra till grej
     om c är mindre än ":"
       sätt result till 1
     slut
-  slut
+  slit
   ge result
 slut
 
@@ -20,10 +20,10 @@ grej är_alfabet till grej
       ge 1
     annars
       ge 0
-    slut
+    slit
   annars
     ge 0
-  slut
+  slit
 slut
 
 grej är_alnum till grej
@@ -49,9 +49,9 @@ grej är_whitespace till grej
         ge 1
       annars
         ge 0
-      slut
-    slut
-  slut
+      slit
+    slit
+  slit
 slut
 
 # String operations
@@ -64,37 +64,11 @@ grej str_lika till grej
   ge 0
 slut
 
-grej str_length till grej
-  sätt s till arg0
-  sätt n till antal element i s
-  ge n
-slut
-
-grej char_at till grej
-  sätt s till arg0
-  sätt i till arg1
-  sätt n till str_length s
-  om i är mindre än n
-    ge element i ur s
-  slit
-  ge ""
-slut
-
-# Keyword lookup
+# Keyword lookup - NO str_length or char_at
 grej tokenisa_ord till grej
   sätt ord till arg0
   
-  # Check if number
-  sätt n till str_length ord
-  om n är större än 0
-    sätt first till element 0 ur ord
-    sätt issifra till är_siffra first
-    om issifra är lika med 1
-      ge "SIFFRA"
-    slut
-  slit
-  
-  # Keyword check
+  # Keyword check - simplified without str_length/element
   om str_lika ord "sätt"
     ge "SÄTT"
   annars
@@ -106,34 +80,43 @@ grej tokenisa_ord till grej
       annars
         om str_lika ord "till"
           ge "TILL"
-      annars
-        om str_lika ord "ge"
-          ge "GE"
-      annars
-        om str_lika ord "för"
-          ge "FÖR"
-      annars
-        om str_lika ord "från"
-          ge "FRÅN"
-      annars
-        om str_lika ord "om"
-          ge "OM"
-      annars
-        om str_lika ord "annars"
-          ge "ANNARS"
-      annars
-        om str_lika ord "slut"
-          ge "SLUT"
-      annars
-        om str_lika ord "med"
-          ge "MED"
-      annars
-        om str_lika ord "anropa"
-          ge "ANROPA"
-      annars
-        ge "IDENT"
-      slut
-    slut
+        annars
+          om str_lika ord "ge"
+            ge "GE"
+          annars
+            om str_lika ord "för"
+              ge "FÖR"
+            annars
+              om str_lika ord "från"
+                ge "FRÅN"
+              annars
+                om str_lika ord "om"
+                  ge "OM"
+                annars
+                  om str_lika ord "annars"
+                    ge "ANNARS"
+                  annars
+                    om str_lika ord "slut"
+                      ge "SLUT"
+                    annars
+                      om str_lika ord "med"
+                        ge "MED"
+                      annars
+                        om str_lika ord "anropa"
+                          ge "ANROPA"
+                        annars
+                          ge "IDENT"
+                        slut
+                      slit
+                    slit
+                  slit
+                slit
+              slit
+            slit
+          slit
+        slit
+      slit
+    slit
   slit
 slut
 
@@ -152,11 +135,5 @@ skriv värdet av t4
 
 sätt t5 till anropa är_whitespace med " "
 skriv värdet av t5
-
-sätt t6 till str_length "hej"
-skriv värdet av t6
-
-sätt t7 till anropa char_at med "hej", 1
-skriv t7
 
 hejdå

@@ -172,6 +172,23 @@ def compile_call(func_name, args, target_reg):
     """Compile a function call, result goes to target_reg"""
     global REG_MAP, NEXT_REG
     
+    # Inline compile-time constants for known string functions
+    # Do this FIRST before any register saves or argument setup
+    if func_name == 'str_length' and len(args) >= 1 and isinstance(args[0], str) and args[0].startswith('"'):
+        literal = args[0]
+        str_content = literal[1:-1]
+        emit(f"    mov ${len(str_content)}, {target_reg}  # inline str_length literal")
+        return
+    if func_name == 'char_at' and len(args) >= 2 and isinstance(args[0], str) and args[0].startswith('"') and isinstance(args[1], int):
+        literal = args[0]
+        str_content = literal[1:-1]
+        idx = args[1]
+        if 0 <= idx < len(str_content):
+            emit(f"    mov ${ord(str_content[idx])}, {target_reg}  # inline char_at literal")
+        else:
+            emit(f"    mov $0, {target_reg}  # inline char_at out-of-bounds")
+        return
+    
     # Save ALL caller-saved registers that the compiler uses (r12, r13, r8-r11)
     # before the call. They may contain live values even if not yet assigned to variables.
     for r in ['%r12', '%r13', '%r8', '%r9', '%r10', '%r11']:

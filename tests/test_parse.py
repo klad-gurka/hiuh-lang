@@ -357,7 +357,8 @@ def test_while_break():
     ir = parse_tokens(lines)
     while_stmt = ir[0]
     assert while_stmt[0] == 'MEDAN'
-    assert while_stmt[2][0] == ('OM', ('x', 'likaMed', '5'), [('BRYT',), ('SÄTT', ('VARIABEL', 'x'), ('PLUSS', 'x', 1))], [])
+    assert while_stmt[2][0] == ('OM', ('x', 'likaMed', '5'), [('BRYT',)], [])
+    assert while_stmt[2][1] == ('SÄTT', ('VARIABEL', 'x'), ('PLUSS', 'x', 1))
 
 def test_while_greater():
     """medan x är större än 0"""

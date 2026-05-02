@@ -418,26 +418,33 @@ def parse_if(lines, base_indent):
     while i < len(lines):
         child_indent, child_tokens = lines[i]
 
-        # Check for ELSE at same indent level (base_indent)
-        if child_indent == base_indent and child_tokens and child_tokens[0] == 'ELSE':
+        # Check for ELSE at same indent level (the IF statement's level, not base_indent)
+        # This is critical when IF is nested inside FOR/MEDAN/etc - base_indent is the
+        # container's level, not the IF's level
+        if child_indent == indent and child_tokens and child_tokens[0] == 'ELSE':
             in_false_body = True
             i += 1
             continue
 
-        if child_indent <= base_indent and not in_false_body:
+        if child_indent <= indent and not in_false_body:
             # Dedent - we're done with the IF statement
+            # Consume the SLUT/ELSE line if it's at our indent level
+            # so that the outer loop (FOR/MEDAN) can process subsequent lines
+            if child_tokens and child_tokens[0] in ('SLUT', 'ELSE', 'slut', 'SLUT'):
+                i += 1
             break
 
         # For false_body (after ELSE), use parse_block to handle arbitrary nesting
+        # This handles the case where false_body has multi-level indented content
         if in_false_body:
-            consumed = parse_block(lines[i:], base_indent + 1, false_body)
+            consumed = parse_block(lines[i:], indent + 1, false_body)
             i += consumed
             break  # parse_block handles dedent detection
         else:
-            consumed, body_len = parse_single_line(lines[i:], base_indent + 1, true_body)
+            consumed, body_len = parse_single_line(lines[i:], indent + 1, true_body)
             if body_len == 0:
-                # Indentation deeper than base_indent+1 - recurse into parse_block
-                consumed = parse_block(lines[i:], base_indent + 1, true_body)
+                # Indentation deeper than indent+1 - recurse into parse_block
+                consumed = parse_block(lines[i:], indent + 1, true_body)
                 i += consumed
             else:
                 i += body_len

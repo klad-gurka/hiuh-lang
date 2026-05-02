@@ -524,6 +524,21 @@ def parse_grej(lines, base_indent):
         consumed, body_len = parse_single_line(lines[i:], base_indent + 1, body)
         i += body_len
 
+    # Add implicit params if arg0/arg1 used in body
+    implicit = set()
+    def find_args(stmts):
+        for s in stmts:
+            if isinstance(s, tuple):
+                for item in s:
+                    if isinstance(item, str) and item in ('arg0', 'arg1'):
+                        implicit.add(item)
+                    elif isinstance(item, (list, tuple)):
+                        find_args([item])
+    find_args(body)
+    for p in implicit:
+        if p not in params:
+            params.append(p)
+
     ir = ('GREJ', func_name, params, body)
     return ir, i
 

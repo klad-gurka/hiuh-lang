@@ -194,6 +194,10 @@ def compile_call(func_name, args, target_reg):
     for j, arg in enumerate(args[:2]):
         if isinstance(arg, int):
             emit(f"    mov ${arg}, {arg_regs[j]}")
+        elif isinstance(arg, str) and arg.startswith('"') and len(arg[1:-1]) == 1:
+            # Single-character string: convert to ASCII code
+            ascii_val = ord(arg[1:-1])
+            emit(f"    mov ${ascii_val}, {arg_regs[j]}")
         else:
             arg_reg = alloc_reg(arg)
             emit(f"    mov {arg_reg}, {arg_regs[j]}")
@@ -291,6 +295,21 @@ def compile_condition(cond, false_label, true_label=None):
             val_reg = alloc_reg(val)
             emit(f"    cmp {val_reg}, {reg}")
             val_is_string = True
+        elif isinstance(val, str) and val.startswith('"'):
+            # String literal in condition: if single char, get ASCII code
+            text = val[1:-1]  # strip quotes
+            if len(text) == 1:
+                # Single character: use ASCII code
+                val_int = ord(text)
+                emit(f"    cmp ${val_int}, {reg}")
+            else:
+                # Multi-char string: compare pointers
+                if text not in STRINGS:
+                    STRINGS.append(text)
+                idx = STRINGS.index(text)
+                emit(f"    lea msg_{idx}(%rip), %r14")
+                emit(f"    cmp %r14, {reg}")
+                val_is_string = True
         else:
             try:
                 val_int = int(val)

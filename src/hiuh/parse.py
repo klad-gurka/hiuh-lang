@@ -806,6 +806,12 @@ def parse_cmp(tokens):
             # är lika med X → likaMed X
             val = tokens[4] if len(tokens) > 4 and tokens[3] == 'MED' else tokens[2]
             return (var, 'likaMed', val)
+    # If first token is a known function name and there are more args, treat as implicit call
+    # Pattern: FUNC_NAME ARG1 ARG2 → implicit call for truthiness
+    # This handles "om str_lika ord \"sätt\"" where str_lika is called with ord and \"sätt\"
+    if var in FUNC_NAMES and len(tokens) >= 2:
+        args = tokens[1:]
+        return (('ANROPA', var, args), 'inteLikaMed', 0)
     return (var, 'inteLikaMed', 0)
 
 def parse_stream():

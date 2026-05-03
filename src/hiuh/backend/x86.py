@@ -305,6 +305,29 @@ def compile_condition(cond, false_label, true_label=None):
     else:
         # Simple comparison: (var, op, val)
         var, op, val = cond
+        
+        # Handle implicit function call: (('ANROPA', func, args), op, 0)
+        # When var itself is a function call result used as condition
+        if isinstance(var, tuple) and var[0] == 'ANROPA':
+            _, func_name, args = var
+            # Compile the function call first, result in %rax
+            compile_call(func_name, args, '%rax')
+            # Compare %rax against 0
+            emit(f"    cmp $0, %rax")
+            if op == 'inteLikaMed':
+                emit(f"    je .L{false_label}   # call result != 0 → true")
+            elif op == 'likaMed':
+                emit(f"    jne .L{false_label}  # call result == 0 → true")
+            elif op == 'mindre':
+                emit(f"    jge .L{false_label}  # call result >= 0")
+            elif op == 'större':
+                emit(f"    jle .L{false_label}  # call result <= 0")
+            elif op == 'mindreLikaMed':
+                emit(f"    jg .L{false_label}   # call result > 0")
+            elif op == 'störreLikaMed':
+                emit(f"    jl .L{false_label}   # call result < 0")
+            return false_label
+        
         reg = alloc_reg(var)
         # Check if val is a string variable (has known type) or a register reference
         val_is_string = False

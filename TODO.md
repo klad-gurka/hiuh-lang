@@ -203,4 +203,18 @@ För detaljer om varje nod (signatur, parametrar, exempel), se [NODES.md](NODES.
 
 ## Kända buggar/problem
 
-- `i` är keyword `IN` → kan inte användas som variabelnamn
+- `i` är keyword `IN` → kan inte användas som variabelnamn (DELVIS FIXAT: `i` efter operatorer som `FÖR`, `PLUSS`, etc. behandlas nu som variabel, men `i` som variabel i andra sammanhang kan fortfarande kollidera med `IN`-nyckelordet)
+
+- **UTF-8 byte-räkning**: `Skriv`-satser med svenska tecken (t.ex. `ö`) kan producera trasig output eftersom `len(text)` returnerar Unicode-tecken-antal istället för byte-antal. Backend använder `len(text)` men x86 syscalls behöver byte-count. (Ej fixat ännu.)
+
+## Fixade buggar (2026-05-03)
+
+- **IF-ELSE-i-FOR bug**: `Sätt i till i + 1` (med `+`) producerade `Sätt i till i` (ingen inkrementering) eftersom `+` inte var i KEYWORDS. Fix: lade till `'+': 'PLUSS'` etc. i tokenizer KEYWORDS.
+  - Commit: `81936d6` fixade redan parse_if som använde `base_indent` istället för `indent` vid ELSE-detektering
+  - Tokenizer-fix: `+`, `-`, `*`, `/` → PLUSS, MINUS, GÅNGER, DELA
+
+- **`Skriv <bare_word>` som text literal**: `Skriv Större` behandlades som variabel-referens (`VARIABEL`) istället för text. Fix: `parse_skriv_expr` returnerar nu `('TEXT', token)` för bare words. `Skriv värdet av x` ger variabel-värde.
+
+- **`i` efter operatorer**: `i` efter `FÖR`, `PLUSS`, `MINUS`, etc. behandlades som `IN`-keyword istället för variabel. Fix: uppdaterade tokenizer-logiken för `i`-efter-operator-kontroll med `prev_word.lower()` och lagt till `+`, `-`, `*`, `/` i tuple.
+
+- **`skriv värdet av x`**: tokenizer producerade `SKRIV` + variabel istället för `SKRIV_VAR`. Fix: ändrade till `SKRIV_VAR`-token som explicit markerar variabel-värde-utskrift.

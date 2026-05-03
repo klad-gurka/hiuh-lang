@@ -542,7 +542,7 @@ def test_grej_ge_text():
 slut
 
 sätt msg till anropa hämta_hälsning till grej
-skriv msg'''
+skriv värdet av msg'''
 
     stdout, _, _ = run_hiuh(src)
     assert stdout == 'hej', f"Fick: {stdout!r}"

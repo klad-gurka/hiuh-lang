@@ -74,13 +74,17 @@ def parse_skriv_expr(tokens):
         # Number?
         if token.isdigit():
             return ('HELTAL', int(token))
-        # String literal?
+        # String literal (quoted)?
         if token.startswith('"') and token.endswith('"'):
             return ('TEXT', token[1:-1])
-        # Otherwise it's a variable reference
-        return ('VARIABEL', token)
+        # Otherwise it's TEXT (bare word = string literal, NOT variable)
+        # Use 'värdet av x' to explicitly print a variable's value
+        return ('TEXT', token)
     
-    # For multi-token, fall back to parse_value for expressions
+    # Multi-token: treat as text concatenation (words joined by space)
+    # This handles "Skriv hello world" → TEXT "hello world"
+    # For arithmetic expressions (handled above), parse_value returns expression tuple
+    # For non-expression multi-token, treat all as text
     return parse_value(tokens)
 
 def parse_block(lines, base_indent, out):

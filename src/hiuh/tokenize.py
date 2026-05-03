@@ -13,6 +13,7 @@ KEYWORDS = {
     'bryt': 'BRYT', 'till': 'TILL', 'från': 'FRAN',
     'är': 'AR', 'pluss': 'PLUSS', 'minus': 'MINUS',
     'gånger': 'GÅNGER', 'delat': 'DELA',
+    '+': 'PLUSS', '-': 'MINUS', '*': 'GÅNGER', '/': 'DELA',
     'ur': 'UR', 'vid': 'VID', 'med': 'MED',
     'tecken': 'CHAR', 'än': 'THAN', 'mindre': 'MINDRE',
     'inte': 'INTE', 'eller': 'OR', 'och': 'OCH',
@@ -157,12 +158,12 @@ def tokenize(src):
                     i += 4
                     continue
             
-            # Handle "skriv värdet av x" → SKRIV x (just pass the variable name)
+            # Handle "skriv värdet av x" → SKRIV_VAR x (variable value)
             if word == 'skriv' and i + 3 < len(words):
                 if words[i+1].lower() == 'värdet' and words[i+2].lower() == 'av':
-                    tokens.append('SKRIV')
+                    tokens.append('SKRIV_VAR')
                     tokens.append(words[i+3])
-                    last_token = 'SKRIV'
+                    last_token = 'SKRIV_VAR'
                     i += 4
                     continue
             
@@ -254,11 +255,11 @@ def tokenize(src):
                     continue
             
             # 'i' after variable-taking keywords/operators is a variable name, not IN keyword
-            if word == 'i' and prev_word in ('för', 'sätt', 'om', 'skriv', 'lagra', 'av', 'är', 'medan', 'WHILE', 'IF', 'FOR', 'SET', 'pluss', 'minus', 'gånger', 'delat', 'PLUSS', 'MINUS', 'GÅNGER', 'DELA'):
-                tokens.append(word)  # variable name
-                last_token = word
+            if word == 'i' and prev_word is not None and prev_word.lower() in ('för', 'sätt', 'om', 'skriv', 'lagra', 'av', 'är', 'medan', 'WHILE', 'IF', 'FOR', 'SET', 'pluss', 'minus', 'gånger', 'delat', 'PLUSS', 'MINUS', 'GÅNGER', 'DELA', '+', '-', '*', '/'):
+                tokens.append(words[i])  # variable name, preserve original case
+                last_token = words[i]
             # After SET/TILL, next word is a variable name (even if it's a keyword like 'antal')
-            elif prev_word in ('sätt', 'till'):
+            elif prev_word is not None and prev_word.lower() in ('sätt', 'till'):
                 tokens.append(words[i])  # variable name, preserve original case
                 last_token = words[i]
             elif word in KEYWORDS:
